@@ -22,7 +22,8 @@ class HyToolsPRISMA(object):
         self.dtype = np.nan
         self.data = np.nan
         self.header_dict = np.nan
-    
+        self.projection = np.nan
+
     def load_data(self):
         """Load data object to memory.
         
@@ -61,10 +62,10 @@ def openPRISMA(srcFile):
         return
     
     hyObj = HyToolsPRISMA()
+    hyObj.file_name = srcFile
 
     # Load metadata and populate HyTools object
     hdfObj = h5py.File(srcFile,'r')
-    
     base_key = [key for key in hdfObj['HDFEOS']["SWATHS"].keys() if 'HCO' in key][0]  
     vnir_data = hdfObj['HDFEOS']["SWATHS"][base_key]['Data Fields']['VNIR_Cube'] 
     swir_data = hdfObj['HDFEOS']["SWATHS"][base_key]['Data Fields']['SWIR_Cube'] 
@@ -76,34 +77,29 @@ def openPRISMA(srcFile):
     if hdfObj.attrs.get('Product_center_lat') < 0:
         direction = 'S'#May not be accurate in scenes that straddle the equator....
         
-    corner_easting = hdfObj.attrs.get('Product_ULcorner_easting')
-    corner_northing = hdfObj.attrs.get('Product_ULcorner_northing')    
+    hyObj.ulX  = hdfObj.attrs.get('Product_ULcorner_easting')
+    hyObj.ulY = hdfObj.attrs.get('Product_ULcorner_northing')    
     
-    map_info_string = [projection, 1, 1,corner_easting ,
-                       corner_northing,resolution,resolution,
+    map_info_string = [projection, 1, 1,hyObj.ulX ,
+                       hyObj.ulY,resolution,resolution,
                        zone, direction, 'WGS-84','units=Meters']
     
-    hyObj.map_info = [projection, 1, 1,corner_easting ,corner_northing,resolution,resolution,zone, direction, 'WGS-84','units=Meters']
+    hyObj.map_info = map_info_string
     hyObj.transform = (float(hyObj.map_info [3]),float(hyObj.map_info [1]),0,float(hyObj.map_info [4]),0,-float(hyObj.map_info [2]))
     
     hyObj.fwhm_vnir =   hdfObj.attrs.get('List_Fwhm_Vnir')
-    hyObj.wavelengths_vnir = hdfObj.attrs.get('List_Fwhm_Vnir')
-
+    hyObj.wavelengths_vnir = hdfObj.attrs.get('List_Cw_Vnir')
     hyObj.fwhm_swir =   hdfObj.attrs.get('List_Fwhm_Swir')
-    hyObj.wavelengths_swir = hdfObj.attrs.get('List_Fwhm_Swir')
-
+    hyObj.wavelengths_swir = hdfObj.attrs.get('List_Cw_Swir')
     hyObj.wavelength_units = "nanometers"
   
-    hyObj.lines_vnir = vnir_data.shape[0]
-    hyObj.column_vnir = vnir_data.shape[1]
-    hyObj.bands_vnir = vnir_data.shape[2]
+    #Use VNIR cube for data shape  
+    hyObj.lines = vnir_data.shape[0]
+    hyObj.columns = vnir_data.shape[2]
+    hyObj.bands = vnir_data.shape[1]
+    hyObj.wavelengths= hyObj.wavelengths_vnir
     
-    hyObj.lines_swir = swir_data.shape[0]
-    hyObj.column_swir = swir_data.shape[1]
-    hyObj.bands_swir = swir_data.shape[2]
-
-    hyObj.file_name = srcFile
-
+    
     hdfObj.close()
     return hyObj
 
