@@ -44,7 +44,6 @@ class HyToolsENVI(object):
         self.solar_az = []
         self.sensor_zn = []
         self.sensor_az = []
-        self.mask = np.nan
         
     def create_bad_bands(self,bad_regions):
         """Create bad bands list based upon spectrum regions. Good: 1, bad : 0.
@@ -233,22 +232,6 @@ class HyToolsENVI(object):
 
         chunk =   envi_read_chunk(self.data,x_start,x_end,y_start,y_end,self.interleave)
         return chunk
-
-
-        
-    def set_mask(self,mask):
-        """Set mask for image analysis.
-          
-          mask: m x n numpy array 
-               A boolean mask to exclude pixels from analysis, shape should be the same
-               as the number of line and columns of the image.
-
-        """
-        
-        if mask.shape == (self.lines,self.columns):
-            self.mask = mask
-        else:
-            print("Error: Shape of mask does not match shape of image.")
 
     
     # Move to ENVI...
