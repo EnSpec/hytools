@@ -2,7 +2,7 @@
 
 HyTools is a python library for working with imaging spectroscopy data, with a focus on terrestrial scenes. 
 At it's core it consists of a series of functions for reading and writing ENVI-formatted images in addition to 
-functionalty for reading NEON and PRISMA-formatted AOP HDF files. Built on top of these functions are a series of higher
+functionalty for reading NEON AOP and PRISMA-formatted HDF files. Built on top of these functions are a series of higher
 level processing tools for data analysis which include spectral resampling, topographic and BRDF correction, spectral transforms,
 maskings and more.
 
