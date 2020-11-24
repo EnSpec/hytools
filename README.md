@@ -9,7 +9,6 @@ maskings and more.
 ## Dependencies
 - numpy
 - h5py
-- gdal
 
 ## Basic usage
 ```python
