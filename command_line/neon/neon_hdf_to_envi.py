@@ -6,7 +6,7 @@ from hytools.io.envi import writeENVI,ENVI_header_from_hdf
 
 warnings.filterwarnings("ignore")
 
-def progbar(curr, total, full_progbar):
+def progbar(curr, total, full_progbar=100):
     frac = curr/total
     filled_progbar = round(frac*full_progbar)
     print('\r', '#'*filled_progbar + '-'*(full_progbar-filled_progbar), '[{:>7.2%}]'.format(frac), end='')
@@ -37,7 +37,7 @@ def main():
     while not iterator.complete:   
         chunk = iterator.read_next()  
         pixels_processed += chunk.shape[0]*chunk.shape[1]
-        progbar(pixels_processed, hyObj.columns*hyObj.lines, 100)
+        progbar(pixels_processed, hyObj.columns*hyObj.lines)
     
         writer.write_chunk(chunk,iterator.current_line,iterator.current_column)
         if iterator.complete:
