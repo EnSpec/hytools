@@ -3,7 +3,6 @@
 """
 import h5py,os
 import numpy as np
-from .base import HyTools
 
 class HyToolsNEON(object):
     """HyTools NEON class container"""
@@ -32,6 +31,8 @@ class HyToolsNEON(object):
         self.solar_az = []
         self.sensor_zn = []
         self.sensor_az = []
+        self.path_length = []
+
         
     def create_bad_bands(self,bad_regions):
         """Create bad bands list based upon spectrum regions. Good: 1, bad : 0.
@@ -262,10 +263,12 @@ def openNEON(srcFile, no_data = -9999,load_obs = False):
     if load_obs: 
         hyObj.solar_zn = np.ones((hyObj.lines, hyObj.columns)) * np.radians(metadata['Logs']['Solar_Zenith_Angle'][()])
         hyObj.solar_az = np.ones((hyObj.lines, hyObj.columns)) * np.radians(metadata['Logs']['Solar_Azimuth_Angle'][()])
-        hyObj.sensor_zn = np.radians(metadata['to-sensor_Zenith_Angle'][:,:])
-        hyObj.sensor_az = np.radians(metadata['to-sensor_Azimuth_Angle'][:,:])
+        hyObj.sensor_zn = np.radians(metadata['to-sensor_Zenith_Angle'][()])
+        hyObj.sensor_az = np.radians(metadata['to-sensor_Azimuth_Angle'][()])
         hyObj.slope = np.radians(metadata['Ancillary_Imagery']['Slope'][()])
         hyObj.aspect =  np.radians(metadata['Ancillary_Imagery']['Aspect'][()])
+        hyObj.path_length = metadata['Ancillary_Imagery']['Path_Length'][()]
+
         
     hdfObj.close()
     return hyObj
