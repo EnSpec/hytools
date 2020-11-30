@@ -8,7 +8,7 @@ series of higher level processing tools for data analysis which
 include spectral resampling, topographic and BRDF correction, spectral
 transforms, maskings and more.
 
-For complete documentation see: [https://hytools.readthedocs.org/](https://readthedocs.org/)
+For complete documentation see: [https://hytools.readthedocs.io](https://hytools.readthedocs.io)
 
 
 ## Dependencies
