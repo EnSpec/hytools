@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 HyTools documentation
-===================================
+=====================
 HyTools is a python library for working with imaging spectroscopy
 data, with a focus on terrestrial scenes. At it's core it consists of
 a series of functions for reading and writing ENVI binary images in
@@ -17,10 +17,6 @@ include mask generation and MNF transformation.
 We have also created a series of command line tools which string
 together the processing functions and provide a more streamlined
 workflow for processing images.
-
-
-Contents
---------
 
 .. toctree::
    :maxdepth: 2

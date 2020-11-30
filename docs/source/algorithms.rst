@@ -2,7 +2,7 @@
 
 
 ==================
- Image processing
+ Image algorithms
 ==================
 
 Spectrum resampling
