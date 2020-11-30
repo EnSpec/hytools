@@ -1,7 +1,7 @@
 # HyTools
 
 HyTools is a python library for processing imaging spectroscopy data,
-with a focus on terrestrial scenes.  At it's core it consists of a
+with a focus on terrestrial scenes. At it's core it consists of a
 series of functions for reading and writing ENVI-formatted images and
 reading NEON AOP HDF files. Built on top of these functions are a
 series of higher level processing tools for data analysis which
@@ -15,9 +15,8 @@ For complete documentation see: [https://hytools.readthedocs.org/](https://readt
 - numpy
 - h5py
 - scipy
-- gdal, optional for exporting GeoTIFFs
 
-## Installation
+# Installation
 To install run:
 
 ```python
@@ -29,11 +28,11 @@ python setup.py install
 import hytools as ht
 
 #Read an ENVI file
-hyObj = ht.open_envi('envi_file.bin')
+hy_obj = ht.open_envi('envi_file.bin')
 #Map image data to numpy memmap object
-hyObj.load_data()
+hy_obj.load_data()
 
-#Calculate NDVI, retrieves closest wavelength to input lambda in nm
+#Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)
 red = hy_obj.get_wave(660)
 ndvi = (ir-red)/(ir+red)
