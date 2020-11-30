@@ -1,1 +1,4 @@
-from .io import openENVI, openNEON
+"""
+Initialize hytools
+"""
+from .base import open_envi,open_neon
