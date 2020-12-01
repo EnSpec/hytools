@@ -1,7 +1,7 @@
 .. _command:
 
 ====================
- Command Line Tools
+ Command line tools
 ====================
 
 Information about command line tools.

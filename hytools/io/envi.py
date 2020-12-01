@@ -1,8 +1,8 @@
-"""
- Functions for reading ENVI formatted binary files
+"""Functions for reading and writing ENVI formatted binary files
 See https://www.l3harrisgeospatial.com/docs/ENVIHeaderFiles.html for formatting details
 
 TODO: Implement opening of ENVI files with different byte order
+
 """
 import numpy as np
 

@@ -10,8 +10,6 @@ Dependencies
 
    * numpy
    * h5py
-   * scipy
-
 
 Installing HyTools
 ==================
