@@ -13,5 +13,4 @@ python:
   version: 3.6
   install:
 	- method: setuptools
-	- path: hytools
-        - requirements: requirements.txt
+	  path: hytools
