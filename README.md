@@ -12,7 +12,8 @@ transforms, masking and more. We have also created a series of command
 line tools which combine these functions and provide a more
 streamlined workflow for processing images.
 
-For complete documentation see: [hytools.readthedocs.io](https://hytools.readthedocs.io)
+For complete documentation see:
+[hytools.readthedocs.io](https://hytools.readthedocs.io/en/latest/contents.html)
 
 
 ## Dependencies
