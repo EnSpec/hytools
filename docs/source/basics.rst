@@ -77,7 +77,7 @@ the number of bands:
    head_dict['bands'] = 4
     
 Next we create an ENVI writer object which generates the header and image file
-using specification in the header dictionary:
+using specifications in the header dictionary:
 
 .. code-block:: python
 
