@@ -6,9 +6,9 @@ series of functions for reading and writing ENVI-formatted images and
 reading NEON AOP HDF files. Built on top of these functions are a
 series of higher level processing tools for data analysis which
 include spectral resampling, topographic and BRDF correction, spectral
-transforms, maskings and more.
+transforms, maskings and more. 
 
-For complete documentation see: [https://hytools.readthedocs.io](https://hytools.readthedocs.io)
+For complete documentation see: [hytools.readthedocs.io](https://hytools.readthedocs.io)
 
 
 ## Dependencies
