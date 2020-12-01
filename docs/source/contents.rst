@@ -22,7 +22,7 @@ BRDF correction
 .. image:: brdf_before_after.png
 
 Topographic correction
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 .. image:: topo_correct.gif	   
 
 	   
