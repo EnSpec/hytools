@@ -13,10 +13,10 @@ Spectrum resampling
 Topographic correction
 ======================
 
-.. todo:: Spectrum resampling example script
+.. todo:: Topographic correction example script
 
 BRDF correction
 ===============
 
-.. todo:: Spectrum resampling example script
+.. todo:: BRDF correction example script
 
