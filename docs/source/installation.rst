@@ -15,14 +15,14 @@ Installing HyTools
 ==================
 To download to hytools simply clone the github repository
 
-.. code-block:: bash
+.. code-block:: shell
      
-    git clone https://github.com/EnSpec/hytools.git
+   $ git clone https://github.com/EnSpec/hytools.git
  
 
-Run the following command inside the hytools folder to install
+and run the following command inside the hytools folder to install
 
-.. code-block:: bash
+.. code-block:: shell
      
-   python setup.py install
+   $ python setup.py install
 

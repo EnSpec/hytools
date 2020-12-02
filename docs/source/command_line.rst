@@ -4,5 +4,5 @@
  Command line tools
 ====================
 
-Information about command line tools.
+.. todo:: Populate command line tool documentation.
 

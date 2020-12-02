@@ -2,20 +2,21 @@
 
 
 ==================
- Image algorithms
+ Advanced use 
 ==================
 
 Spectrum resampling
 ===================
 
-TODO
+.. todo:: Spectrum resampling example script
 
 Topographic correction
 ======================
 
-TODO
+.. todo:: Spectrum resampling example script
 
 BRDF correction
 ===============
 
-TODO
+.. todo:: Spectrum resampling example script
+
