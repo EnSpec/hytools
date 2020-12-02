@@ -16,7 +16,7 @@ and NEON AOP HDF files.
    import hytools as ht
 
    #Load an ENVI file
-   envi = ht.open_envi('envi_file.bin')
+   envi = ht.open_envi('./envi_file.bin')
    envi.load_data()
    
    #Load an NEON HDF image
@@ -39,7 +39,7 @@ is to use one of the 'get' methods:
 	chunk = neon.get_chunk(x1,x2,y1,y2)
 
 
-Alternatively an iterator can be used to cycle along a
+Alternatively an :class:`~hytools.base.Iterator` can be used to cycle along a
 specified axis of the dataset either by line, column, band or
 chunk. This is useful for cycling through and image, applying
 a function/algorithm and then writing to a file.
@@ -59,15 +59,17 @@ Next cycle through the image line by line until complete:
 Writing data
 ============
 
-Currently writing is only supported for ENVI files, however data from NEON hdf
-files can be easy written to ENVI format using builtin functions.
+Currently writing is only supported for ENVI files, however data from
+NEON hdf files can be easy written to ENVI format using builtin
+functions.
 
-First and ENVI header dictionary needs to be generated to specify the
-file size, datatype, interleave and other relevant metadata.
+First an ENVI header dictionary needs to be generated to specify the
+file size, datatype, interleave and other relevant metadata. This is
+done using the :func:`~hytools.io.envi.envi_header_from_hdf` function.
 
 .. code-block:: python
 
-    header_dict = ENVI_header_from_hdf(neon)
+    header_dict = envi_header_from_hdf(neon)
 
 In this case we are going to export an RGBI image so we need to update
 the number of bands:
@@ -76,17 +78,20 @@ the number of bands:
 
    head_dict['bands'] = 4
     
-Next we create an ENVI writer object which generates the header and image file
-using specifications in the header dictionary:
+Next we create an :class:`~hytools.io.envi.WriteENVI` object which
+generates the header and image file using the specifications in the
+header dictionary:
 
 .. code-block:: python
 
     output_name = './neon.bin'
-    writer = writeENVI(output_name,header_dict)
+    writer = WriteENVI(output_name,header_dict)
 
 Finally we can write the bands to file. First we retrieve the closest
-wavelength to each input wavelength using the ``get_wave()`` method, next
-we write the band to the new file with the ``write_band()`` method.
+wavelength to each input wavelength using the
+:meth:`~hytools.base.HyTools.get_wave` method, next we write the band
+to the new file with the :meth:`~hytools.io.envi.WriteENVI.write_band`
+method.
 
 .. code-block:: python
 
