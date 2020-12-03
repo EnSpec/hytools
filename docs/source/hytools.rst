@@ -9,6 +9,7 @@ Subpackages
 
    hytools.correction
    hytools.io
+   hytools.transform
 
 Submodules
 ----------
