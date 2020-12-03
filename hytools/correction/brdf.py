@@ -1,44 +1,47 @@
+# -*- coding: utf-8 -*-
 """
 This module contains functions to calculate BRDF scattering kernels.
+
 Equations and constants can be found in the following papers:
 
 Colgan, M. S., Baldeck, C. A., Feret, J. B., & Asner, G. P. (2012).
 Mapping savanna tree species at ecosystem scales using support vector machine classification
 and BRDF correction on airborne hyperspectral and LiDAR data.
 Remote Sensing, 4(11), 3462-3480.
+https://doi.org/10.3390/rs4113462
 
 Schlapfer, D., Richter, R., & Feingersh, T. (2015).
 Operational BRDF effects correction for wide-field-of-view optical scanners (BREFCOR).
 IEEE Transactions on Geoscience and Remote Sensing, 53(4), 1855-1864.
+https://doi.org/10.1109/TGRS.2014.2349946
 
 Wanner, W., Li, X., & Strahler, A. H. (1995).
 On the derivation of kernels for kernel-driven models of bidirectional reflectance.
 Journal of Geophysical Research: Atmospheres, 100(D10), 21077-21089.
+https://doi.org/10.1029/95JD02371
+
 """
 import numpy as np
 
 def generate_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=10.,h_b =2.):
-    '''Calculate the geometric scattering kernel.
+    """Calculate geometric scattering kernel.
        Constants b_r (b/r) and h_b (h/b) from Colgan et al. RS 2012
-       All input geometry in radians.
+       All input geometry units must be in radians.
 
-    :param solar_az: Solar azimuth angle
-    :type solar_az: np.ndarray
-    :param solar_zn: Solar zenith angle
-    :type solar_zn: np.ndarray, float
-    :param sensor_az: Sensor view azimuth angle
-    :type sensor_az: np.ndarray, float
-    :param sensor_zn: Sensor view zenith angle
-    :type sensor_zn: np.ndarray, float
-    :param kernel: Li geometric scattering kernel type [li_dense,li_parse]
-    :type kernel: str
-    :param b_r: Object height, defaults to 10.
-    :type b_r: float, optional
-    :param h_b: Object shape, defaults to 2
-    :type h_b: float, optional
-    :return: Geometric scattering kernel
-    :rtype: nd.array, float
-    '''
+    Args:
+        solar_az (numpy.ndarray): Solar azimuth angle.
+        solar_zn (numpy.ndarray): Solar zenith angle.
+        sensor_az (numpy.ndarray): Sensor view azimuth angle.
+        sensor_zn (numpy.ndarray): Sensor view zenith angle.
+        kernel (str): Li geometric scattering kernel type [li_dense,li_sparse].
+        b_r (float, optional): Object height. Defaults to 10..
+        h_b (float, optional): Object shape. Defaults to 2..
+
+    Returns:
+        k_geom (numpy.ndarray): Geometric scattering kernel.
+
+    """
+
     relative_az = sensor_az - solar_az
 
     # Eq. 37,52. Wanner et al. JGRA 1995
@@ -61,26 +64,28 @@ def generate_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=10.,h_
     elif kernel == 'li_dense':
         # Eq 47. Wanner et al. JGRA 1995
         k_geom = (((1+cos_phase_) * (1/np.cos(sensor_zn_)))/ (t_denom - O)) - 2
+    else:
+        print("Unrecognized kernel type: %s" %  kernel)
+        k_geom = None
     return k_geom
 
 
 def generate_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
-    '''Calculate the volumetric scattering kernel.
-       Input geometry in radians.
+    """Calculate volume scattering kernel.
+       All input geometry units must be in radians.
 
-    :param solar_az: Solar azimuth angle
-    :type solar_az: np.ndarray
-    :param solar_zn: Solar zenith angle
-    :type solar_zn: np.ndarray, float
-    :param sensor_az: Sensor view azimuth angle
-    :type sensor_az: np.ndarray, float
-    :param sensor_zn: Sensor view zenith angle
-    :type sensor_zn: np.ndarray, float
-    :param kernel: Volume scattering kernel type [ross_thick,ross_thin]
-    :type kernel: str
-    :return: Volumetric scattering kernel
-    :rtype: nd.array, float
-    '''
+    Args:
+        solar_az (numpy.ndarray): Solar azimuth angle.
+        solar_zn (numpy.ndarray): Solar zenith angle.
+        sensor_az (numpy.ndarray): Sensor view azimuth angle.
+        sensor_zn (numpy.ndarray): Sensor view zenith angle.
+        kernel (str): Volume scattering kernel type [ross_thick,ross_thin].
+
+    Returns:
+        k_geom (numpy.ndarray): Volume scattering kernel.
+
+    """
+
     relative_az = sensor_az - solar_az
 
     # Eq 2. Schlapfer et al. IEEE-TGARS 2015
@@ -92,4 +97,7 @@ def generate_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
     elif kernel == 'ross_thick':
         # Eq 7. Wanner et al. JGRA 1995
         k_vol = ((np.pi/2 - phase)*np.cos(phase) + np.sin(phase))/ (np.cos(sensor_zn)*np.cos(solar_zn)) - np.pi/4
+    else:
+        print("Unrecognized kernel type: %s" % kernel)
+        k_vol = None
     return k_vol

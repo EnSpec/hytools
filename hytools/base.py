@@ -1,10 +1,13 @@
-"""Base
+# -*- coding: utf-8 -*-
+"""
+Base
 """
 from collections import Counter
 import os
 import numpy as np
 import h5py
-from .io import *
+from .io.envi import parse_envi_header,dtype_dict, envi_read_band
+from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
 
 
 class HyTools:
@@ -22,7 +25,7 @@ class HyTools:
         self.bands = None
         self.wavelengths = None
         self.fwhm = []
-        self.good_bands = []
+        self.bad_bands = []
         self.no_data = None
         self.map_info = None
         self.crs = None
@@ -42,31 +45,39 @@ class HyTools:
         self.projection = None
         self.byte_order = None
         self.wavelength_units = None
+        self.hdf_obj  = None
 
-    def create_good_bands(self,bad_regions):
-        """Set good bands list, Good: True, bad : False.
+    def create_band_bands(self,bad_regions):
+        """Create bad bands mask, Good: True, bad : False.
 
-        :param bad_regions: List of lists containing start and end values of wavelength
+        Args:
+            bad_regions (list of lists): start and end values of wavelength
             regions considered bad. Wavelengths should be in the same units as
-            data units. ex: [[350,400].....[2450,2500]]
-        :type bad_regions: list
+            data units. ex: [[350,400].....[2450,2500]].
+
+        Returns:
+            None.
+
         """
-        good_bands = []
+
+        bad_bands = []
 
         for wavelength in self.wavelengths:
             for start,end in bad_regions:
                 good = (wavelength >= start) & (wavelength <=end)
-            good_bands.append(good)
-        self.good_bands = np.array(good_bands)
+            bad_bands.append(good)
+        self.bad_bands = np.array(bad_bands)
 
 
     def load_data(self, mode = 'r', offset = 0):
         """Load data object to memory.
 
-        Parameters
-        ----------
-        mode: str
-            File read mode, default: read-only
+        Args:
+            mode (str, optional): File read mode. Defaults to 'r'.
+            offset (int, optional): Offset in bytes. Defaults to 0.
+
+        Returns:
+            None.
 
         """
 
@@ -79,6 +90,7 @@ class HyTools:
 
     def close_data(self):
         """Close data object.
+
         """
         if self.file_type  == "envi":
             del self.data
@@ -88,25 +100,31 @@ class HyTools:
     def iterate(self,by,chunk_size= (100,100)):
         """Create data Iterator.
 
-        :param by: Dimension along which to iterate: "line","column","band","chunk"
-        :type by: str
-        :param chunk_size: Two dimensional chunk size (Y,X).
-            Applies only when "chunk" selected, defaults to (100,100)
-        :type chunk_size: tuple, optional
-        :return: Data Iterator
-        :rtype: Iterator class object
+        Args:
+            by (str): Dimension along which to iterate: "line","column","band","chunk".
+            chunk_size (tuple, optional): Two dimensional chunk size (Y,X).
+                                          Applies only when "chunk" selected.
+                                          Defaults to (100,100).
+
+        Returns:
+            Iterator class object: Data Iterator.
+
         """
+
         return Iterator(self,by,chunk_size)
 
     def wave_to_band(self,wave):
         """Return band index corresponding to input wavelength. Return closest band if
            not an exact match.
 
-        :param wave: Wavelength of band to be retrieved in image wavelength units
-        :type wave: int, float
-        :return: Band index
-        :rtype: int
+        Args:
+            wave (float): Wavelength of band to be retrieved in image wavelength units.
+
+        Returns:
+            band_num (int): Band index.
+
         """
+
         if (wave  > self.wavelengths.max()) | (wave  < self.wavelengths.min()):
             print("Input wavelength outside image range!")
             band_num = None
@@ -115,13 +133,15 @@ class HyTools:
         return band_num
 
     def get_band(self,index):
-        """Returns band image
-
-        :param band_num: Zero-indexed band index
-        :type band_num: int
-        :return: A 2D (lines, columns) numpy array
-        :rtype: numpy.ndarray
         """
+        Args:
+            index (inr): Zero-indexed band index.
+
+        Returns:
+            band (numpy.ndarray): A 2D (lines x columns) array.
+
+        """
+
         if self.file_type == "neon":
             band =  self.data[:,:,index]
         elif self.file_type == "envi":
@@ -132,11 +152,14 @@ class HyTools:
         """Return the band image corresponding to the input wavelength.
         If not an exact match the closest wavelength will be returned.
 
-        :param wave: Wavelength of band to be retrieved in image wavelength units.
-        :type wave: int, float
-        :return: A 2D (lines, columns) numpy array
-        :rtype: numpy.ndarray
+        Args:
+            wave (float): DESCRIPTION.
+
+        Returns:
+            band (numpy.ndarray): Band image array (line,columns).
+
         """
+
         if (wave  > self.wavelengths.max()) | (wave  < self.wavelengths.min()):
             print("Input wavelength outside wavelength range!")
             band = None
@@ -146,13 +169,15 @@ class HyTools:
         return band
 
     def get_line(self,index):
-        """Return the i+1-th line of the image.
-
-        :param index: Zero-indexed line index
-        :type index: int
-        :return: Line array (columns,bands)
-        :rtype: numpy.ndarray
         """
+        Args:
+            index (int): Zero-indexed line index.
+
+        Returns:
+            line (numpy.ndarray): Line array (columns, bands).
+
+        """
+
         if self.file_type == "neon":
             line = self.data[index,:,:]
         elif self.file_type == "envi":
@@ -160,13 +185,15 @@ class HyTools:
         return line
 
     def get_column(self,index):
-        """Return the i+1-th column of the image.
-
-        :param index: Zero-indexed column index
-        :type index: int
-        :return:  Column array (lines,bands)
-        :rtype: numpy.ndarray
         """
+        Args:
+            index (int): Zero-indexed column index.
+
+        Returns:
+            column (numpy.ndarray): Column array (lines, bands).
+
+        """
+
         if self.file_type == "neon":
             column = self.data[:,index,:]
         elif self.file_type == "envi":
@@ -174,19 +201,18 @@ class HyTools:
         return column
 
     def get_chunk(self,col_start,col_end,line_start,line_end):
-        """Return chunk from image.
-
-        :param col_start: Chunk starting column
-        :type col_start: int
-        :param col_end: Chunk ending column
-        :type col_end: int
-        :param line_start: Chunk starting line
-        :type line_start: int
-        :param line_end: Chunk ending line
-        :type line_end: int
-        :return: Chunk array (line_end-line_start,col_end-col_start,bands)
-        :rtype: numpy.ndarray
         """
+        Args:
+            col_start (int): Chunk starting column.
+            col_end (int): Noninclusive chunk ending column index.
+            line_start (int): Chunk starting line.
+            line_end (int): Noninclusive chunk ending line index.
+
+        Returns:
+            chunk (numpy.ndarray): Chunk array (line_end-line_start,col_end-col_start,bands).
+
+        """
+
         if self.file_type == "neon":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
         elif self.file_type == "envi":
@@ -195,9 +221,7 @@ class HyTools:
 
 
     def load_obs(self,observables):
-        """
-        Load observables to memory.
-
+        """Map observables to memory.
         """
         if self.file_type == "envi":
             observables = open_envi(observables)
@@ -216,13 +240,16 @@ class Iterator:
 
     def __init__(self,hy_obj,by,chunk_size = None):
         """
-        :param data: Hytools class object
-        :type data: Hytools class object
-        :param by: Iterator slice dimension: "line", "column", "band"",chunk"
-        :type by: str
-        :param chunk_size: DESCRIPTION, defaults to None
-        :type chunk_size: tuple, optional
+        Args:
+            hy_obj (Hytools object): Populated Hytools file object.
+            by (str): Iterator slice dimension: "line", "column", "band"",chunk".
+            chunk_size (tuple, optional): Chunk size. Defaults to None.
+
+        Returns:
+            None.
+
         """
+
         self.chunk_size= chunk_size
         self.by = by
         self.current_column = -1
@@ -306,11 +333,14 @@ class Iterator:
 def open_envi(src_file):
     """Open ENVI formated image file and populate Hytools object.
 
-    :param src_file: Pathname of input ENVI image file, header assumed to be located in
-        same directory
-    :type src_file: str
-    :return: Populated HyTools data object
-    :rtype: HyTools class object
+
+    Args:
+        src_file (str): Pathname of input ENVI image file, header assumed to be located in
+        same directory.
+
+    Returns:
+        hy_obj (HyTools object): Populated Hytools file object.
+
     """
 
     if not os.path.isfile(os.path.splitext(src_file)[0] + ".hdr"):
@@ -371,15 +401,16 @@ def open_envi(src_file):
 
 
 def open_neon(src_file, no_data = -9999,load_obs = False):
-    """Load and parse NEON formated HDF image into a HyTools data object
+    """Load and parse NEON formated HDF image into a HyTools file object.
 
-    Parameters
-    ----------
-    srcFile : str
-        pathname of input HDF file
+    Args:
+        src_file (str): pathname of input HDF file.
+        no_data (float, optional): No data value. Defaults to -9999.
+        load_obs (bool, optional): Map observables to memory. Defaults to False.
 
-    no_data: int
-        No data value
+    Returns:
+        hy_obj (TYPE): DESCRIPTION.
+
     """
 
     if not os.path.isfile(src_file):

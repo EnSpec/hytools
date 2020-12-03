@@ -1,43 +1,44 @@
+# -*- coding: utf-8 -*-
+""" Spectral resampling functions.
+
+"""
 import numpy as np
 
 def gaussian(x,mu,fwhm):
-    """Return a gaussian distribution.
-
-    Parameters
-    ----------
-    x : Numpy array of values along which to generate gaussian.
-    mu : Mean of the gaussian function.
-    fwhm : Full width half maximum.
-
-    Returns
-    -------
-    Numpy array of gaussian along input range.
     """
+    Args:
+        x (numpy.ndarray): Values along which to generate gaussian..
+        mu (float): Mean of the gaussian function..
+        fwhm (float): Full width half maximum..
+
+    Returns:
+        numpy.ndarray: Gaussian along input range.
+
+    """
+
     c = fwhm/(2* np.sqrt(2*np.log(2)))
     return np.exp(-1*((x-mu)**2/(2*c**2)))
 
 def resample_coeff(in_wave,in_fwhm,out_wave,out_fwhm, spacing = 1):
-    """Return a set of coeffiencients for spectrum resampling.
-
-    Given a set of source and destination wavelengths and FWHMs this
+    """Given a set of source and destination wavelengths and FWHMs this
     function caculates the relative contribution or each input wavelength
     to the output wavelength. It assumes that both input and output
     response functions follow a gaussian distribution.
 
     All inputs shoud be provide in nanometers.
 
-    :param in_wave: Input wavelength centers
-    :param srcFWHMs: Input full width half maxes
-    :type srcFWHMs: list
-    :param out_wave: Output wavelength centers
-    :type out_wave: list
-    :param out_fwhm: Output full width half maxes
-    :type out_fwhm: list
-    :param spacing: Resolution at which to model the
-                    spectral response functions, defaults to 1
-    :type spacing: int, optional
-    :return: Array of transformd coeffiecients.
-    :rtype: numpy.ndarray
+
+    Args:
+        in_wave (list): Input wavelength centers.
+        in_fwhm (list): Input full width half maxes.
+        out_wave (list): Output wavelength centers.
+        out_fwhm (list): Output full width half maxes.
+        spacing (int, optional): Resolution at which to model the
+                    spectral response functions. Defaults to 1.
+
+    Returns:
+        coeffs (numpy.ndarray): Transform coeffiecients.
+
     """
 
     out_matrix = []
@@ -52,7 +53,7 @@ def resample_coeff(in_wave,in_fwhm,out_wave,out_fwhm, spacing = 1):
 
     # For each source wavelength generate the gaussion response
     in_matrix = []
-    for wave,fwhm in zip(in_wave,srcFWHMs):
+    for wave,fwhm in zip(in_wave,in_fwhm):
         in_matrix.append(gaussian(oneNM ,wave,fwhm))
     in_matrix = np.array(in_matrix)
 
@@ -66,7 +67,3 @@ def resample_coeff(in_wave,in_fwhm,out_wave,out_fwhm, spacing = 1):
     coeffs = np.trapz(ratio2)
 
     return coeffs
-
-
-
-

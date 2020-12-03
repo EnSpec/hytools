@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 """Functions for reading and writing ENVI formatted binary files
-See https://www.l3harrisgeospatial.com/docs/ENVIHeaderFiles.html for formatting details
 
 TODO: Implement opening of ENVI files with different byte order
 
@@ -78,13 +78,16 @@ class WriteENVI:
 
     """
     def __init__(self,output_name,header_dict):
-        """Constructor method
-
-        :param output_name: Pathname of output ENVI data file
-        :type output_name: str
-        :param header_dict: Dictionary containing ENVI header information
-        :type header_dict: dict
         """
+        Args:
+            output_name (str): Pathname of output ENVI data file.
+            header_dict (dict): Dictionary containing ENVI header information.
+
+        Returns:
+            None.
+
+        """
+
 
         self.interleave = header_dict['interleave']
         self.header_dict = header_dict
@@ -106,13 +109,16 @@ class WriteENVI:
         write_envi_header(self.output_name,self.header_dict)
 
     def write_line(self,line,index):
-        """Write line to ENVI file.
-
-        :param line: Line array (columns,bands)
-        :type line: numpy.ndarray
-        :param index: Zero-based line index
-        :type index: int
         """
+        Args:
+            line (numpy.ndarray): Line array (columns,bands).
+            index (int): Zero-based line index.
+
+        Returns:
+            None.
+
+        """
+
 
         if self.interleave == "bip":
             self.data[index,:,:] = line
@@ -124,12 +130,14 @@ class WriteENVI:
             self.data[:,index,:] = line
 
     def write_column(self,column,index):
-        """Write column to ENVI file.
+        """
+        Args:
+            column (numpy.ndarray): Column array (lines,bands).
+            index (int): Zero-based column index.
 
-        :param column: Column array (lines,bands)
-        :type column: numpy.ndarray
-        :param index: Zero-based column index
-        :type index: int
+        Returns:
+            None.
+
         """
 
         if self.interleave == "bip":
@@ -140,13 +148,16 @@ class WriteENVI:
             self.data[:,:,index] = column
 
     def write_band(self,band,index):
-        """Write band to ENVI file.
-
-        :param band: Band array (lines,columns)
-        :type band: numpy.ndarray
-        :param index: Zero-based band index
-        :type index: int
         """
+        Args:
+            band (numpy.ndarray): Band array (lines,columns).
+            index (int): Zero-based band index.
+
+        Returns:
+            None.
+
+        """
+
         if self.interleave == "bip":
             self.data[:,:,index]  = band
         elif self.interleave == "bil":
@@ -155,15 +166,17 @@ class WriteENVI:
             self.data[index,:,:]= band
 
     def write_chunk(self,chunk,line_index,column_index):
-        """Write chunk to ENVI file.
-
-        :param line: Chunks array (chunk lines,chunk columns,bands)
-        :type line: numpy.ndarray
-        :param line_index: Zero-based upper line index
-        :type line_index: int
-        :param column_index: Zero-based left column index
-        :type column_index: int
         """
+        Args:
+            chunk (TYPE): Chunks array (chunk lines,chunk columns,bands).
+            line_index (int): Zero-based upper line index.
+            column_index (int): Zero-based left column index.
+
+        Returns:
+            None.
+
+        """
+
         x_start = column_index
         x_end = column_index + chunk.shape[1]
         y_start = line_index
@@ -177,7 +190,7 @@ class WriteENVI:
             self.data[:,y_start:y_end,x_start:x_end] = np.moveaxis(chunk,-1,0)
 
     def close(self):
-        """Delete numpy memmap
+        """Delete numpy memmap.
         """
         del self.data
 
@@ -186,12 +199,13 @@ class WriteENVI:
 def envi_header_from_hdf(hy_obj, interleave = 'bil'):
     """Create an ENVI header dictionary from HDF metadata
 
-    :param hy_obj: Populated HyTools class object
-    :type hy_obj: HyTools class object
-    :param interleave: Date interleave type, defaults to 'bil'
-    :type interleave: str, optional
-    :return: ENVI header dictionary
-    :rtype: dict
+    Args:
+        hy_obj (Hytools object): Populated HyTools file object.
+        interleave (str, optional): Date interleave type. Defaults to 'bil'.
+
+    Returns:
+        header_dict (dict): Populated ENVI header dictionary.
+
     """
 
     header_dict = {}
@@ -214,12 +228,15 @@ def envi_header_from_hdf(hy_obj, interleave = 'bil'):
 
 
 def write_envi_header(output_name,header_dict):
-    """Write ENVI header to disk.
+    """Write ENVI header file to disk.
 
-    :param output_name: Header file pathname
-    :type output_name: str
-    :param header_dict: ENVI header dictionary
-    :type header_dict: dict
+    Args:
+        output_name (str): Header file pathname.
+        header_dict (dict): Populated ENVI header dictionary..
+
+    Returns:
+        None.
+
     """
 
     header_file = open(output_name + ".hdr",'w+')
@@ -240,26 +257,26 @@ def write_envi_header(output_name,header_dict):
 
 
 def envi_header_dict():
-    """Returns empty dictionary with all ENVI header data fields.
+    """
+    Returns:
+        dict: Empty ENVI header dictionary.
 
-    :return: Empty ENVI header dictionary
-    :rtype: dict
     """
     return {key:None for (key,value) in field_dict.items()}
 
 
 def envi_read_line(data,index,interleave):
-    """Read line from ENVI file.
-
-    :param data: hyTools data method
-    :type data: hyTools data method
-    :param index: Zero based line index
-    :type index: int
-    :param interleave: Data interleave type
-    :type index: str
-    :return: Line array (columns,bands)
-    :rtype: numpy.ndarray
     """
+    Args:
+        data (numpy.memmap): Numpy memory-map.
+        index (int): Zero-based line index.
+        interleave (str): Data interleave type.
+
+    Returns:
+        line (numpy.ndarray): Line array (columns, bands).
+
+    """
+
     if interleave == "bip":
         line = data[index,:,:]
     elif interleave == "bil":
@@ -269,17 +286,17 @@ def envi_read_line(data,index,interleave):
     return line
 
 def envi_read_column(data,index,interleave):
-    """Read column from ENVI file.
-
-    :param data: hyTools data method
-    :type data: hyTools data method
-    :param index: Zero based line index
-    :type index: int
-    :param interleave: Data interleave type
-    :type index: str
-    :return: Column array (lines,bands)
-    :rtype: numpy.ndarray
     """
+    Args:
+        data (numpy.memmap): Numpy memory-map.
+        index (int): Zero-based column index.
+        interleave (str): Data interleave type.
+
+    Returns:
+        column (numpy.ndarray): Column array (lines,bands).
+
+    """
+
     if interleave == "bip":
         column = data[:,index,:]
     elif interleave == "bil":
@@ -289,17 +306,17 @@ def envi_read_column(data,index,interleave):
     return column
 
 def envi_read_band(data,index,interleave):
-    """Read band from ENVI file.
-
-    :param data: hyTools data method
-    :type data: hyTools data method
-    :param index: Zero based line index
-    :type index: int
-    :param interleave: Data interleave type
-    :type index: str
-    :return: Band array (lines,columns)
-    :rtype: numpy.ndarray
     """
+    Args:
+        data (numpy.memmap): Numpy memory-map.
+        index (int): Zero-based line index.
+        interleave (str): Data interleave type.
+
+    Returns:
+        band (numpy.ndarray): Band array (lines,columns).
+
+    """
+
     if interleave == "bip":
         band =  data[:,:,index]
     elif interleave == "bil":
@@ -310,23 +327,20 @@ def envi_read_band(data,index,interleave):
 
 
 def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
-    """Read chunk from ENVI file.
-
-    :param data: hyTools data method
-    :type data: hyTools data method
-    :param col_start: Zero based left column index
-    :type col_start: int
-    :param col_end: Zero based right column index
-    :type col_end: int
-    :param line_start: Zero based top line index
-    :type line_start: int
-    :param line_end: Zero based bottom line index
-    :type line_end: int
-    :param interleave: Data interleave type
-    :type interleave: str
-    :return: Chunk array
-    :rtype: numpy.ndarray
     """
+    Args:
+        data (numpy.memmap): Numpy memory-map.
+        col_start (int):  Zero-based left column index.
+        col_end (int): Non-inclusive zero-based right column index.
+        line_start (int): Zero -ased top line index.
+        line_end (int): Non-inclusive zero-based bottom line index.
+        interleave (str): Data interleave type.
+
+    Returns:
+        chunk (numpy.ndarray):Chunk array (line_end-line_start,col_end-col_start,bands).
+
+    """
+
     if interleave == "bip":
         chunk = data[line_start:line_end,col_start:col_end,:]
     elif interleave == "bil":
@@ -338,13 +352,15 @@ def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
 
 
 def parse_envi_header(header_file):
-    """Parse ENVI header file into dictionary.
-
-    :param header_file: Header file pathname
-    :type header_file: str
-    :return: Populated header dictionary
-    :rtype: dict
     """
+    Args:
+        header_file (str): Header file pathname.
+
+    Returns:
+        header_dict (dict): Populated header dictionary.
+
+    """
+
     header_dict = envi_header_dict()
     header_file = open(header_file,'r')
     line = header_file.readline()
@@ -352,7 +368,7 @@ def parse_envi_header(header_file):
     while line :
         if "=" in line:
             key,value = line.rstrip().split("=",1)
-            # Add field not in ENVI default list
+            # Add fields not in ENVI default list
             if key.strip() not in field_dict.keys():
                 field_dict[key.strip()] = "str"
             val_type = field_dict[key.strip()]
