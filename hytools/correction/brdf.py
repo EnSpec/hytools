@@ -38,7 +38,7 @@ def generate_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=10.,h_
         h_b (float, optional): Object shape. Defaults to 2..
 
     Returns:
-        k_geom (numpy.ndarray): Geometric scattering kernel.
+        numpy.ndarray: Geometric scattering kernel.
 
     """
 
@@ -82,7 +82,7 @@ def generate_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
         kernel (str): Volume scattering kernel type [ross_thick,ross_thin].
 
     Returns:
-        k_geom (numpy.ndarray): Volume scattering kernel.
+        numpy.ndarray: Volume scattering kernel.
 
     """
 

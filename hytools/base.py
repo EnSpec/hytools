@@ -121,7 +121,7 @@ class HyTools:
             wave (float): Wavelength of band to be retrieved in image wavelength units.
 
         Returns:
-            band_num (int): Band index.
+            int: Band index.
 
         """
 
@@ -138,7 +138,7 @@ class HyTools:
             index (inr): Zero-indexed band index.
 
         Returns:
-            band (numpy.ndarray): A 2D (lines x columns) array.
+            numpy.ndarray: A 2D (lines x columns) array.
 
         """
 
@@ -156,7 +156,7 @@ class HyTools:
             wave (float): DESCRIPTION.
 
         Returns:
-            band (numpy.ndarray): Band image array (line,columns).
+            numpy.ndarray: Band image array (line,columns).
 
         """
 
@@ -175,7 +175,7 @@ class HyTools:
             columns (list): List of zero-indexed column indices.
 
         Returns:
-            pixels (numpy.ndarray): Pixel array (pixels,bands).
+            numpy.ndarray: Pixel array (pixels,bands).
 
         """
         if self.file_type == "neon":
@@ -193,7 +193,7 @@ class HyTools:
             index (int): Zero-indexed line index.
 
         Returns:
-            line (numpy.ndarray): Line array (columns, bands).
+            numpy.ndarray: Line array (columns, bands).
 
         """
 
@@ -209,7 +209,7 @@ class HyTools:
             index (int): Zero-indexed column index.
 
         Returns:
-            column (numpy.ndarray): Column array (lines, bands).
+            numpy.ndarray: Column array (lines, bands).
 
         """
 
@@ -228,7 +228,7 @@ class HyTools:
             line_end (int): Noninclusive chunk ending line index.
 
         Returns:
-            chunk (numpy.ndarray): Chunk array (line_end-line_start,col_end-col_start,bands).
+            numpy.ndarray: Chunk array (line_end-line_start,col_end-col_start,bands).
 
         """
 
@@ -359,7 +359,7 @@ def open_envi(src_file):
         same directory.
 
     Returns:
-        hy_obj (HyTools file object): Populated HyTools file object.
+        HyTools file object: Populated HyTools file object.
 
     """
 
@@ -429,7 +429,7 @@ def open_neon(src_file, no_data = -9999,load_obs = False):
         load_obs (bool, optional): Map observables to memory. Defaults to False.
 
     Returns:
-        hy_obj (HyTools file object): Populated HyTools file object.
+        HyTools file object: Populated HyTools file object.
 
     """
 

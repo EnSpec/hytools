@@ -205,7 +205,7 @@ def envi_header_from_hdf(hy_obj, interleave = 'bil'):
         interleave (str, optional): Date interleave type. Defaults to 'bil'.
 
     Returns:
-        header_dict (dict): Populated ENVI header dictionary.
+        dict: Populated ENVI header dictionary.
 
     """
 
@@ -274,7 +274,7 @@ def envi_read_line(data,index,interleave):
         interleave (str): Data interleave type.
 
     Returns:
-        line (numpy.ndarray): Line array (columns, bands).
+        numpy.ndarray: Line array (columns, bands).
 
     """
 
@@ -294,7 +294,7 @@ def envi_read_column(data,index,interleave):
         interleave (str): Data interleave type.
 
     Returns:
-        column (numpy.ndarray): Column array (lines,bands).
+        numpy.ndarray: Column array (lines,bands).
 
     """
 
@@ -314,7 +314,7 @@ def envi_read_band(data,index,interleave):
         interleave (str): Data interleave type.
 
     Returns:
-        band (numpy.ndarray): Band array (lines,columns).
+        numpy.ndarray: Band array (lines,columns).
 
     """
 
@@ -335,7 +335,7 @@ def envi_read_pixels(data,lines,columns,interleave):
         interleave (str): Data interleave type.
 
     Returns:
-        pixels (numpy.ndarray): Pixel array (pixels,bands).
+        numpy.ndarray: Pixel array (pixels,bands).
 
     """
     if interleave == "bip":
@@ -358,7 +358,7 @@ def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
         interleave (str): Data interleave type.
 
     Returns:
-        chunk (numpy.ndarray):Chunk array (line_end-line_start,col_end-col_start,bands).
+        numpy.ndarray: Chunk array (line_end-line_start,col_end-col_start,bands).
 
     """
 
@@ -378,7 +378,7 @@ def parse_envi_header(header_file):
         header_file (str): Header file pathname.
 
     Returns:
-        header_dict (dict): Populated header dictionary.
+        dict: Populated header dictionary.
 
     """
 

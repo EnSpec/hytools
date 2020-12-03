@@ -31,7 +31,7 @@ def gen_cosine_i(solar_zn, solar_az, aspect ,slope):
         slope (numpy.ndarray): Ground slope.
 
     Returns:
-        cosine_i (numpy.ndarray): Cosine i image.
+        cnumpy.ndarray: Cosine i image.
 
     """
 
@@ -48,7 +48,7 @@ def calc_scsc_c(data,cosine_i):
         cosine_i (numpy.ndarray): Cosine i array.
 
     Returns:
-        scsc_c (numpy.ndarray): Topographic correction coefficient.
+        numpy.ndarray: Topographic correction coefficient.
 
     """
 
@@ -75,7 +75,7 @@ def calc_scsc_c1(solar_zn,slope):
         slope (numpy.ndarray): Ground slope.
 
     Returns:
-        scsc_c1 (numpy.ndarray): C1.
+        numpy.ndarray: C1.
 
     """
 

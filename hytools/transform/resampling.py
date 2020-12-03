@@ -37,7 +37,7 @@ def resample_coeff(in_wave,in_fwhm,out_wave,out_fwhm, spacing = 1):
                     spectral response functions. Defaults to 1.
 
     Returns:
-        coeffs (numpy.ndarray): Transform coeffiecients.
+        numpy.ndarray: Transform coeffiecients.
 
     """
 
