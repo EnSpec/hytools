@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Functions for reading and writing ENVI formatted binary files
 
-TODO: Implement opening of ENVI files with different byte order
+Todo:
+    * Implement opening of ENVI files with different byte order
 
 """
 import numpy as np
