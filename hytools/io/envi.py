@@ -325,6 +325,26 @@ def envi_read_band(data,index,interleave):
         band = data[index,:,:]
     return band
 
+def envi_read_pixels(data,lines,columns,interleave):
+    """
+    Args:
+        data (numpy.memmap): Numpy memory-map.
+        lines (list): List of zero-indexed line indices.
+        columns (list): List of zero-indexed column indices.
+        interleave (str): Data interleave type.
+
+    Returns:
+        pixels (numpy.ndarray): Pixel array (pixels,bands).
+
+    """
+    if interleave == "bip":
+        pixels =  data[lines,columns,:]
+    elif interleave == "bil":
+        pixels = data[lines,:,columns]
+    elif interleave == "bsq":
+        pixels = data[:,lines,columns]
+    return pixels
+
 
 def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
     """

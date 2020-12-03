@@ -6,12 +6,12 @@ from collections import Counter
 import os
 import numpy as np
 import h5py
-from .io.envi import parse_envi_header,dtype_dict, envi_read_band
+from .io.envi import parse_envi_header,dtype_dict, envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
 
 
 class HyTools:
-    """HyTools  class object"""
+    """HyTools file object"""
 
     def __init__(self):
         """Constructor method
@@ -47,7 +47,7 @@ class HyTools:
         self.wavelength_units = None
         self.hdf_obj  = None
 
-    def create_band_bands(self,bad_regions):
+    def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
 
         Args:
@@ -61,11 +61,11 @@ class HyTools:
         """
 
         bad_bands = []
-
         for wavelength in self.wavelengths:
+            bad=False
             for start,end in bad_regions:
-                good = (wavelength >= start) & (wavelength <=end)
-            bad_bands.append(good)
+                bad = ((wavelength >= start) & (wavelength <=end)) or bad
+            bad_bands.append(bad)
         self.bad_bands = np.array(bad_bands)
 
 
@@ -168,6 +168,25 @@ class HyTools:
             band = self.get_band(band_num)
         return band
 
+    def get_pixels(self,lines,columns):
+        """
+        Args:
+            lines (list): List of zero-indexed line indices.
+            columns (list): List of zero-indexed column indices.
+
+        Returns:
+            pixels (numpy.ndarray): Pixel array (pixels,bands).
+
+        """
+        if self.file_type == "neon":
+            pixels = []
+            for line,column in zip(lines,columns):
+                pixels.append(self.data[line,column,:])
+            pixels = np.array(pixels)
+        elif self.file_type == "envi":
+            pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
+        return pixels
+
     def get_line(self,index):
         """
         Args:
@@ -216,7 +235,8 @@ class HyTools:
         if self.file_type == "neon":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
         elif self.file_type == "envi":
-            chunk =   envi_read_chunk(self.data,col_start,col_end,line_start,line_end,self.interleave)
+            chunk =  envi_read_chunk(self.data,col_start,col_end,
+                                     line_start,line_end,self.interleave)
         return chunk
 
 
@@ -339,7 +359,7 @@ def open_envi(src_file):
         same directory.
 
     Returns:
-        hy_obj (HyTools object): Populated Hytools file object.
+        hy_obj (HyTools file object): Populated HyTools file object.
 
     """
 
@@ -409,7 +429,7 @@ def open_neon(src_file, no_data = -9999,load_obs = False):
         load_obs (bool, optional): Map observables to memory. Defaults to False.
 
     Returns:
-        hy_obj (TYPE): DESCRIPTION.
+        hy_obj (HyTools file object): Populated HyTools file object.
 
     """
 
