@@ -8,7 +8,7 @@ import numpy as np
 import h5py
 from .io.envi import parse_envi_header,dtype_dict, envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
-
+from .correction.brdf import calc_volume_kernel,calc_geom_kernel
 
 class HyTools:
     """HyTools file object"""
@@ -46,6 +46,8 @@ class HyTools:
         self.byte_order = None
         self.wavelength_units = None
         self.hdf_obj  = None
+        self.offset = 0
+        self.base_key = None
 
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
@@ -69,7 +71,7 @@ class HyTools:
         self.bad_bands = np.array(bad_bands)
 
 
-    def load_data(self, mode = 'r', offset = 0):
+    def load_data(self, mode = 'r'):
         """Load data object to memory.
 
         Args:
@@ -82,11 +84,11 @@ class HyTools:
         """
 
         if self.file_type  == "envi":
-            self.data = np.memmap(self.file_name,dtype = self.dtype, mode=mode, shape = self.shape,offset=offset)
+            self.data = np.memmap(self.file_name,dtype = self.dtype, mode=mode,
+                                  shape = self.shape,offset=self.offset)
         elif self.file_type  == "neon":
             self.hdf_obj = h5py.File(self.file_name,'r')
-            base_key = list(self.hdf_obj.keys())[0]
-            self.data = self.hdf_obj[base_key]["Reflectance"]["Reflectance_Data"]
+            self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
 
     def close_data(self):
         """Close data object.
@@ -96,6 +98,9 @@ class HyTools:
             del self.data
         elif self.file_type  == "neon":
             self.hdf_obj.close()
+            self.hdf_obj = None
+        self.data = None
+
 
     def iterate(self,by,chunk_size= (100,100)):
         """Create data Iterator.
@@ -142,11 +147,15 @@ class HyTools:
 
         """
 
+        self.load_data()
         if self.file_type == "neon":
             band =  self.data[:,:,index]
         elif self.file_type == "envi":
             band = envi_read_band(self.data,index,self.interleave)
+        self.close_data()
+
         return band
+
 
     def get_wave(self,wave):
         """Return the band image corresponding to the input wavelength.
@@ -178,6 +187,8 @@ class HyTools:
             numpy.ndarray: Pixel array (pixels,bands).
 
         """
+
+        self.load_data()
         if self.file_type == "neon":
             pixels = []
             for line,column in zip(lines,columns):
@@ -185,6 +196,7 @@ class HyTools:
             pixels = np.array(pixels)
         elif self.file_type == "envi":
             pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
+        self.close_data()
         return pixels
 
     def get_line(self,index):
@@ -197,10 +209,12 @@ class HyTools:
 
         """
 
+        self.load_data()
         if self.file_type == "neon":
             line = self.data[index,:,:]
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
+        self.close_data()
         return line
 
     def get_column(self,index):
@@ -213,10 +227,12 @@ class HyTools:
 
         """
 
+        self.load_data()
         if self.file_type == "neon":
             column = self.data[:,index,:]
         elif self.file_type == "envi":
             column = envi_read_column(self.data,index,self.interleave)
+        self.close_data()
         return column
 
     def get_chunk(self,col_start,col_end,line_start,line_end):
@@ -232,20 +248,23 @@ class HyTools:
 
         """
 
+        self.load_data()
         if self.file_type == "neon":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
         elif self.file_type == "envi":
             chunk =  envi_read_chunk(self.data,col_start,col_end,
                                      line_start,line_end,self.interleave)
+        self.close_data()
         return chunk
 
 
-    def load_obs(self,observables):
+    def load_obs(self,observables = ''):
         """Map observables to memory.
         """
         if self.file_type == "envi":
             observables = open_envi(observables)
             observables.load_data()
+            self.path_length = observables.get_band(0)
             self.sensor_az = np.radians(observables.get_band(1))
             self.sensor_zn = np.radians(observables.get_band(2))
             self.solar_az = np.radians(observables.get_band(3))
@@ -253,6 +272,36 @@ class HyTools:
             self.slope = np.radians(observables.get_band(6))
             self.aspect = np.radians(observables.get_band(7))
             observables.close_data()
+
+        else:
+            hdf_obj = h5py.File(self.file_name,'r')
+            metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
+            self.solar_zn = np.ones((self.lines, self.columns)) * np.radians(metadata['Logs']['Solar_Zenith_Angle'][()])
+            self.solar_az = np.ones((self.lines, self.columns)) * np.radians(metadata['Logs']['Solar_Azimuth_Angle'][()])
+            self.sensor_zn = np.radians(metadata['to-sensor_Zenith_Angle'][()])
+            self.sensor_az = np.radians(metadata['to-sensor_Azimuth_Angle'][()])
+            self.slope = np.radians(metadata['Ancillary_Imagery']['Slope'][()])
+            self.aspect =  np.radians(metadata['Ancillary_Imagery']['Aspect'][()])
+            self.path_length = metadata['Ancillary_Imagery']['Path_Length'][()]
+            hdf_obj.close()
+
+
+
+    def gen_volume_kernel(self,kernel):
+        """Calculate volume scattering kernel.
+        """
+
+        self.vol_knl = calc_volume_kernel(self.solar_az, self.solar_zn,
+                                           self.sensor_az, self.sensor_zn, kernel)
+
+
+    def gen_geom_kernel(self,kernel,b_r=10.,h_b =2.):
+        """Calculate volume scattering kernel.
+        """
+        self.geom_knl = calc_geom_kernel(self.solar_az, self.solar_zn,
+                                           self.sensor_az, self.sensor_zn,
+                                           kernel,b_r=10.,h_b =2.)
+
 
 class Iterator:
     """Iterator class
@@ -264,6 +313,8 @@ class Iterator:
             hy_obj (Hytools object): Populated Hytools file object.
             by (str): Iterator slice dimension: "line", "column", "band"",chunk".
             chunk_size (tuple, optional): Chunk size. Defaults to None.
+
+        Iterator cannot be pickled when reading HDF files.
 
         Returns:
             None.
@@ -277,10 +328,12 @@ class Iterator:
         self.current_band = -1
         self.complete = False
         self.hy_obj = hy_obj
+        self.hy_obj.load_data()
 
     def read_next(self):
         """ Return next line/column/band/chunk.
         """
+
         if self.by == "line":
             self.current_line +=1
             if self.current_line == self.hy_obj.lines-1:
@@ -322,7 +375,6 @@ class Iterator:
                 self.current_column = 0
                 self.current_line += self.chunk_size[0]
 
-            # Set array indices for current chunk and update current line and column.
             y_start = self.current_line
             y_end = self.current_line + self.chunk_size[0]
             if y_end >= self.hy_obj.lines:
@@ -339,6 +391,10 @@ class Iterator:
                                           y_start,y_end,self.hy_obj.interleave)
             if (y_end == self.hy_obj.lines) and (x_end == self.hy_obj.columns):
                 self.complete = True
+
+        if self.complete:
+            self.hy_obj.close_data()
+
         return subset
 
     def reset(self):
@@ -389,7 +445,6 @@ def open_envi(src_file):
 
     if isinstance(header_dict['bbl'],np.ndarray):
         hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
-
     if header_dict["interleave"] == 'bip':
         hy_obj.shape = (hy_obj.lines, hy_obj.columns, hy_obj.bands)
     elif header_dict["interleave"] == 'bil':
@@ -440,31 +495,20 @@ def open_neon(src_file, no_data = -9999,load_obs = False):
     hy_obj = HyTools()
     hy_obj.file_type = 'neon'
     hdf_obj = h5py.File(src_file,'r')
-
-    base_key = list(hdf_obj.keys())[0]
-    metadata = hdf_obj[base_key]["Reflectance"]["Metadata"]
-    data = hdf_obj[base_key]["Reflectance"]["Reflectance_Data"]
+    hy_obj.base_key = list(hdf_obj.keys())[0]
+    metadata = hdf_obj[hy_obj.base_key]["Reflectance"]["Metadata"]
+    data = hdf_obj[hy_obj.base_key]["Reflectance"]["Reflectance_Data"]
 
     hy_obj.projection = metadata['Coordinate_System']['Coordinate_System_String'][()].decode("utf-8")
     hy_obj.map_info = metadata['Coordinate_System']['Map_Info'][()].decode("utf-8").split(',')
     hy_obj.transform = (float(hy_obj.map_info [3]),float(hy_obj.map_info [1]),0,float(hy_obj.map_info [4]),0,-float(hy_obj.map_info [2]))
     hy_obj.fwhm =  metadata['Spectral_Data']['FWHM'][()]
     hy_obj.wavelengths = metadata['Spectral_Data']['Wavelength'][()]
-    hy_obj.wavelength_units = metadata['Spectral_Data']['Wavelength'].attrs['Units']
+    #hy_obj.wavelength_units = metadata['Spectral_Data']['Wavelength'].attrs['Units']
     hy_obj.lines = data.shape[0]
     hy_obj.columns = data.shape[1]
     hy_obj.bands = data.shape[2]
     hy_obj.no_data = no_data
     hy_obj.file_name = src_file
 
-    if load_obs:
-        hy_obj.solar_zn = np.ones((hy_obj.lines, hy_obj.columns)) * np.radians(metadata['Logs']['Solar_Zenith_Angle'][()])
-        hy_obj.solar_az = np.ones((hy_obj.lines, hy_obj.columns)) * np.radians(metadata['Logs']['Solar_Azimuth_Angle'][()])
-        hy_obj.sensor_zn = np.radians(metadata['to-sensor_Zenith_Angle'][()])
-        hy_obj.sensor_az = np.radians(metadata['to-sensor_Azimuth_Angle'][()])
-        hy_obj.slope = np.radians(metadata['Ancillary_Imagery']['Slope'][()])
-        hy_obj.aspect =  np.radians(metadata['Ancillary_Imagery']['Aspect'][()])
-        hy_obj.path_length = metadata['Ancillary_Imagery']['Path_Length'][()]
-
-    hdf_obj.close()
     return hy_obj

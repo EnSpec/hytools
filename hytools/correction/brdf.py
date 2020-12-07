@@ -23,7 +23,7 @@ https://doi.org/10.1029/95JD02371
 """
 import numpy as np
 
-def generate_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=10.,h_b =2.):
+def calc_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=10.,h_b =2.):
     """Calculate geometric scattering kernel.
        Constants b_r (b/r) and h_b (h/b) from Colgan et al. RS 2012
        All input geometry units must be in radians.
@@ -70,7 +70,7 @@ def generate_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=10.,h_
     return k_geom
 
 
-def generate_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
+def calc_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
     """Calculate volume scattering kernel.
        All input geometry units must be in radians.
 
@@ -101,3 +101,7 @@ def generate_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
         print("Unrecognized kernel type: %s" % kernel)
         k_vol = None
     return k_vol
+
+
+
+
