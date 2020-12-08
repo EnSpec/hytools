@@ -17,13 +17,11 @@ and NEON AOP HDF files.
 
    #Load an ENVI file
    envi = ht.open_envi('./envi_file.bin')
-   envi.load_data()
-   
+
    #Load an NEON HDF image
    neon = ht.open_neon('./neon_file.h5')
-   neon.load_data()
-   
 
+  
 Reading data
 ============
 
