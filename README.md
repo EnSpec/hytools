@@ -26,15 +26,12 @@ To install run:
 ```python
 python setup.py install
 ```
-
 ## Basic usage
 ```python
 import hytools as ht
 
 #Read an ENVI file
 hy_obj = ht.open_envi('envi_file.bin')
-#Map image data to numpy memmap object
-hy_obj.load_data()
 
 #Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)
