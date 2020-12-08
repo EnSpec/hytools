@@ -34,20 +34,14 @@ class HyTools:
         self.dtype = None
         self.data = None
         self.header_dict = None
-        self.solar_zn =None
-        self.solar_az = None
-        self.sensor_zn = None
-        self.sensor_az = None
-        self.slope = None
-        self.aspect = None
-        self.transform = None
-        self.path_length = None
         self.projection = None
         self.byte_order = None
         self.wavelength_units = None
         self.hdf_obj  = None
         self.offset = 0
         self.base_key = None
+        self.observables = None
+
 
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
@@ -258,49 +252,61 @@ class HyTools:
         return chunk
 
 
-    def load_obs(self,observables = ''):
-        """Map observables to memory.
+    def get_obs(self,obs, radians = True):
+        """ Read observable dataset to memory.
+
+        Args:
+            obs (str): Observable name.
+            radians (bool, optional): Convert angular measures to radians. Defaults to True.
+
+        Returns:
+            obs_data (numpy.ndarray)
+
         """
+
+        angular_obs = ['slope','sensor_az','sensor_zn','aspect','solar_zn','solar_az']
+
         if self.file_type == "envi":
-            observables = open_envi(observables)
+            observables = open_envi(self.observables[obs][0])
             observables.load_data()
-            self.path_length = observables.get_band(0)
-            self.sensor_az = np.radians(observables.get_band(1))
-            self.sensor_zn = np.radians(observables.get_band(2))
-            self.solar_az = np.radians(observables.get_band(3))
-            self.solar_zn = np.radians(observables.get_band(4))
-            self.slope = np.radians(observables.get_band(6))
-            self.aspect = np.radians(observables.get_band(7))
+            obs_data = np.copy(observables.get_band(self.observables[obs][1]))
             observables.close_data()
 
         else:
             hdf_obj = h5py.File(self.file_name,'r')
             metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
-            self.solar_zn = np.ones((self.lines, self.columns)) * np.radians(metadata['Logs']['Solar_Zenith_Angle'][()])
-            self.solar_az = np.ones((self.lines, self.columns)) * np.radians(metadata['Logs']['Solar_Azimuth_Angle'][()])
-            self.sensor_zn = np.radians(metadata['to-sensor_Zenith_Angle'][()])
-            self.sensor_az = np.radians(metadata['to-sensor_Azimuth_Angle'][()])
-            self.slope = np.radians(metadata['Ancillary_Imagery']['Slope'][()])
-            self.aspect =  np.radians(metadata['Ancillary_Imagery']['Aspect'][()])
-            self.path_length = metadata['Ancillary_Imagery']['Path_Length'][()]
+            keys = self.observables[obs]
+            for key in keys:
+                metadata = metadata[key]
+            obs_data = metadata[()]
+
+            #Make solar geometry into 2D array
+            if obs in ['solar_zn','solar_az']:
+                obs_data = np.ones((self.lines, self.columns)) * obs_data
             hdf_obj.close()
 
+        if radians and (obs in angular_obs):
+            obs_data= np.radians(obs_data)
+
+        return obs_data
 
 
-    def gen_volume_kernel(self,kernel):
+    def volume_kernel(self,kernel):
         """Calculate volume scattering kernel.
         """
 
-        self.vol_knl = calc_volume_kernel(self.solar_az, self.solar_zn,
-                                           self.sensor_az, self.sensor_zn, kernel)
+        return calc_volume_kernel(self.get_obs('solar_az'), self.get_obs('solar_zn'),
+                                  self.get_obs('sensor_az'), self.get_obs('sensor_zn'),
+                                               kernel)
 
 
-    def gen_geom_kernel(self,kernel,b_r=10.,h_b =2.):
+    def geom_kernel(self,kernel,b_r=10.,h_b =2.):
         """Calculate volume scattering kernel.
         """
-        self.geom_knl = calc_geom_kernel(self.solar_az, self.solar_zn,
-                                           self.sensor_az, self.sensor_zn,
-                                           kernel,b_r=10.,h_b =2.)
+
+        return calc_geom_kernel(self.get_obs('solar_az'),self.get_obs('solar_zn'),
+                                self.get_obs('sensor_az'),self.get_obs('sensor_zn'),
+                                kernel,b_r=b_r,h_b =h_b)
 
 
 class Iterator:
@@ -406,7 +412,7 @@ class Iterator:
         self.complete = False
 
 
-def open_envi(src_file):
+def open_envi(src_file,observables):
     """Open ENVI formated image file and populate Hytools object.
 
 
@@ -440,6 +446,7 @@ def open_envi(src_file):
     hy_obj.map_info = header_dict['map info']
     hy_obj.byte_order = header_dict['byte order']
     hy_obj.header_dict =  header_dict
+    hy_obj.observables =  obs
 
     hy_obj.file_name = src_file
 
@@ -455,12 +462,8 @@ def open_envi(src_file):
         print("ERROR: Unrecognized interleave type.")
         hy_obj = None
 
-    if hy_obj.wavelength_units is None:
-        print("Wavelength units not specified!")
-
     # If no_data value is not specified guess using image corners.
     if hy_obj.no_data is None:
-        print("No data value specified, guessing.")
         hy_obj.load_data()
         up_l = hy_obj.data[0,0,0]
         up_r = hy_obj.data[0,-1,0]
@@ -475,7 +478,7 @@ def open_envi(src_file):
 
 
 
-def open_neon(src_file, no_data = -9999,load_obs = False):
+def open_neon(src_file, no_data = -9999):
     """Load and parse NEON formated HDF image into a HyTools file object.
 
     Args:
@@ -504,11 +507,19 @@ def open_neon(src_file, no_data = -9999,load_obs = False):
     hy_obj.transform = (float(hy_obj.map_info [3]),float(hy_obj.map_info [1]),0,float(hy_obj.map_info [4]),0,-float(hy_obj.map_info [2]))
     hy_obj.fwhm =  metadata['Spectral_Data']['FWHM'][()]
     hy_obj.wavelengths = metadata['Spectral_Data']['Wavelength'][()]
-    #hy_obj.wavelength_units = metadata['Spectral_Data']['Wavelength'].attrs['Units']
+    hy_obj.wavelength_units = metadata['Spectral_Data']['Wavelength'].attrs['Units']
     hy_obj.lines = data.shape[0]
     hy_obj.columns = data.shape[1]
     hy_obj.bands = data.shape[2]
     hy_obj.no_data = no_data
     hy_obj.file_name = src_file
+    hy_obj.observables = {'path_length': ['Ancillary_Imagery','Path_Length'],
+                        'sensor_az': ['to-sensor_Azimuth_Angle'],
+                        'sensor_zn': ['to-sensor_Zenith_Angle'],
+                        'solar_az': ['Logs','Solar_Azimuth_Angle'],
+                        'solar_zn': ['Logs','Solar_Zenith_Angle'],
+                        'slope': ['Ancillary_Imagery','Slope'],
+                        'aspect':['Ancillary_Imagery','Aspect']}
+
 
     return hy_obj
