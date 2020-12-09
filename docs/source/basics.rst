@@ -15,17 +15,25 @@ and NEON AOP HDF files.
 
    import hytools as ht
 
-   #Load an ENVI file
-   envi = ht.open_envi('./envi_file.bin')
+   #Create a HyTools container object 
+   envi = ht.HyTools()
 
+   #Read and load file metadata
+   envi.read_data('./envi_file.bin',file_type= 'envi')
+
+For reading NEON data the process is the same:
+
+.. code-block:: python
+		
    #Load an NEON HDF image
-   neon = ht.open_neon('./neon_file.h5')
-
+   neon = ht.HyTools()
+   neon.read_data("./neon_file.h5",'neon')
+     
   
 Reading data
 ============
 
-There are several ways to read data using a hytools object. One option
+There are several ways to read data using a :class:`~hytools.base.HyTools` object. One option
 is to use one of the 'get' methods:
 
 .. code-block:: python
@@ -35,7 +43,30 @@ is to use one of the 'get' methods:
 	column = neon.get_column(1)
 	line = neon.get_line(234)
 	chunk = neon.get_chunk(x1,x2,y1,y2)
+	pixels = neon.get_pixels([0,1,2],[3,4,5])
+	
+We can also retrieve masked data, where a binary mask is used to
+return a subset of the data. Currently masking only works using the
+:meth:`~hytools.base.HyTools.get_band` or
+:meth:`~hytools.base.HyTools.get_wave` methods. First we need to
+generate a mask, which can be done using the
+:meth:`~hytools.base.HyTools.gen_mask` method.
 
+.. code-block:: python
+
+	# NDVI masking function	
+	def masker(hy_obj):
+	    ir = hy_obj.get_wave(900)
+	    red = hy_obj.get_wave(660)
+	    ndvi = (ir-red)/(ir+red)
+	    return ndvi > .5	
+
+	# Generate mask
+	neon.gen_mask(masker)
+
+	# Retrieve pixels where mask is True
+	pixels = neon.get_band(100, mask_values = True)
+	
 
 Alternatively an :class:`~hytools.base.Iterator` can be used to cycle along a
 specified axis of the dataset either by line, column, band or

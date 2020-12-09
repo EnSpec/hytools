@@ -5,6 +5,8 @@ Todo:
     * Implement opening of ENVI files with different byte order
 
 """
+import os
+from collections import Counter
 import numpy as np
 
 # ENVI datatype conversion dictionary
@@ -72,6 +74,62 @@ field_dict = {"acquisition time": "str",
               "z plot titles": "str"}
 
 
+def open_envi(hy_obj):
+    """Open ENVI formated image file and populate Hytools object.
+
+
+    Args:
+        src_file (str): Pathname of input ENVI image file, header assumed to be located in
+        same directory.
+
+    Returns:
+        HyTools file object: Populated HyTools file object.
+
+    """
+
+    if not os.path.isfile(os.path.splitext(hy_obj.file_name)[0] + ".hdr"):
+        print("ERROR: Header file not found.")
+        return None
+
+    header_dict = parse_envi_header(os.path.splitext(hy_obj.file_name)[0] + ".hdr")
+    hy_obj.lines =  header_dict["lines"]
+    hy_obj.columns =  header_dict["samples"]
+    hy_obj.bands =   header_dict["bands"]
+    hy_obj.interleave =  header_dict["interleave"]
+    hy_obj.fwhm =  header_dict["fwhm"]
+    hy_obj.wavelengths = header_dict["wavelength"]
+    hy_obj.wavelength_units = header_dict["wavelength units"]
+    hy_obj.dtype = dtype_dict[header_dict["data type"]]
+    hy_obj.no_data = header_dict['data ignore value']
+    hy_obj.map_info = header_dict['map info']
+    hy_obj.byte_order = header_dict['byte order']
+    hy_obj.header_dict =  header_dict
+
+    if isinstance(header_dict['bbl'],np.ndarray):
+        hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
+    if header_dict["interleave"] == 'bip':
+        hy_obj.shape = (hy_obj.lines, hy_obj.columns, hy_obj.bands)
+    elif header_dict["interleave"] == 'bil':
+        hy_obj.shape = (hy_obj.lines, hy_obj.bands, hy_obj.columns)
+    elif header_dict["interleave"] == 'bsq':
+        hy_obj.shape = (hy_obj.bands, hy_obj.lines, hy_obj.columns)
+    else:
+        print("ERROR: Unrecognized interleave type.")
+        hy_obj = None
+
+    # If no_data value is not specified guess using image corners.
+    if hy_obj.no_data is None:
+        hy_obj.load_data()
+        up_l = hy_obj.data[0,0,0]
+        up_r = hy_obj.data[0,-1,0]
+        low_l = hy_obj.data[-1,0,0]
+        low_r = hy_obj.data[-1,-1,0]
+        counts = {v: k for k, v in Counter([up_l,up_r,low_l,low_r]).items()}
+        hy_obj.no_data = counts[max(counts.keys())]
+        hy_obj.close_data()
+
+    del header_dict
+    return hy_obj
 
 
 class WriteENVI:

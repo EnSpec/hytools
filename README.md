@@ -19,6 +19,7 @@ For complete documentation see:
 ## Dependencies
 - numpy
 - h5py
+- ray
 
 # Installation
 To install run:
@@ -28,10 +29,14 @@ python setup.py install
 ```
 ## Basic usage
 ```python
+
 import hytools as ht
 
-#Read an ENVI file
-hy_obj = ht.open_envi('envi_file.bin')
+#Create a HyTools container object 
+envi = ht.HyTools()
+
+#Read and load file metadata
+envi.read_data('./envi_file.bin',file_type= 'envi')
 
 #Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)

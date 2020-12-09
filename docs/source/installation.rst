@@ -10,7 +10,8 @@ Dependencies
 
    * numpy
    * h5py
-
+   * ray
+     
 Installing HyTools
 ==================
 To download to hytools simply clone the github repository

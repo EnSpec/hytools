@@ -12,6 +12,14 @@ hytools.io.envi module
    :undoc-members:
    :show-inheritance:
 
+hytools.io.neon module
+----------------------
+
+.. automodule:: hytools.io.neon
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

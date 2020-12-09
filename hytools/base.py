@@ -2,14 +2,16 @@
 """
 Base
 """
-from collections import Counter
-import os
 import numpy as np
 import h5py
-from .io.envi import parse_envi_header,dtype_dict, envi_read_band,envi_read_pixels
+import ray
+from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
+from .io.envi import open_envi
+from .io.neon import open_neon
 from .correction.brdf import calc_volume_kernel,calc_geom_kernel
 
+@ray.remote
 class HyTools:
     """HyTools file object"""
 
@@ -41,7 +43,22 @@ class HyTools:
         self.offset = 0
         self.base_key = None
         self.observables = None
+        self.mask = None
 
+
+    def read_file(self,file_name,file_type):
+
+        self.file_name = file_name
+        self.file_type = file_type
+
+        if file_type == 'envi':
+            open_envi(self)
+        elif file_type == "neon":
+            open_neon(self)
+        elif file_type == "prisma":
+            print("PRISMA not yet supported.")
+        else:
+            print("Unrecognized file type.")
 
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
@@ -131,13 +148,15 @@ class HyTools:
             band_num = np.argmin(np.abs(self.wavelengths - wave))
         return band_num
 
-    def get_band(self,index):
+    def get_band(self,index,mask_values =False):
         """
         Args:
-            index (inr): Zero-indexed band index.
+            index (int): Zero-indexed band index.
+            mask_values (bool): Return only masked values,
+            requires that a mask is set.
 
         Returns:
-            numpy.ndarray: A 2D (lines x columns) array.
+            numpy.ndarray: A 2D (lines x columns) array or 1D if masked.
 
         """
 
@@ -148,15 +167,20 @@ class HyTools:
             band = envi_read_band(self.data,index,self.interleave)
         self.close_data()
 
+        if mask_values and isinstance(self.mask, np.ndarray):
+            band = band[self.mask]
+
         return band
 
 
-    def get_wave(self,wave):
+    def get_wave(self,wave,mask_values =False):
         """Return the band image corresponding to the input wavelength.
         If not an exact match the closest wavelength will be returned.
 
         Args:
             wave (float): DESCRIPTION.
+            mask_values (bool): Return only masked values,
+            requires that a mask is set.
 
         Returns:
             numpy.ndarray: Band image array (line,columns).
@@ -168,7 +192,7 @@ class HyTools:
             band = None
         else:
             band_num = np.argmin(np.abs(self.wavelengths - wave))
-            band = self.get_band(band_num)
+            band = self.get_band(band_num,mask_values)
         return band
 
     def get_pixels(self,lines,columns):
@@ -309,6 +333,24 @@ class HyTools:
                                 kernel,b_r=b_r,h_b =h_b)
 
 
+    def set_mask(self,mask):
+        """Generate mask using masking function which takes a HyTools object as
+        an argument.
+        """
+        self.mask = mask
+
+    def gen_mask(self,masker):
+        """Generate mask using masking function which takes a HyTools object as
+        an argument.
+        """
+        self.mask = masker(self)
+
+    def do(self,function):
+        """Run a function and return the results
+        """
+        return function(self)
+
+
 class Iterator:
     """Iterator class
     """
@@ -412,114 +454,5 @@ class Iterator:
         self.complete = False
 
 
-def open_envi(src_file,observables):
-    """Open ENVI formated image file and populate Hytools object.
 
 
-    Args:
-        src_file (str): Pathname of input ENVI image file, header assumed to be located in
-        same directory.
-
-    Returns:
-        HyTools file object: Populated HyTools file object.
-
-    """
-
-    if not os.path.isfile(os.path.splitext(src_file)[0] + ".hdr"):
-        print("ERROR: Header file not found.")
-        return None
-
-    hy_obj = HyTools()
-    hy_obj.file_type = 'envi'
-
-    header_dict = parse_envi_header(os.path.splitext(src_file)[0] + ".hdr")
-
-    hy_obj.lines =  header_dict["lines"]
-    hy_obj.columns =  header_dict["samples"]
-    hy_obj.bands =   header_dict["bands"]
-    hy_obj.interleave =  header_dict["interleave"]
-    hy_obj.fwhm =  header_dict["fwhm"]
-    hy_obj.wavelengths = header_dict["wavelength"]
-    hy_obj.wavelength_units = header_dict["wavelength units"]
-    hy_obj.dtype = dtype_dict[header_dict["data type"]]
-    hy_obj.no_data = header_dict['data ignore value']
-    hy_obj.map_info = header_dict['map info']
-    hy_obj.byte_order = header_dict['byte order']
-    hy_obj.header_dict =  header_dict
-    hy_obj.observables =  obs
-
-    hy_obj.file_name = src_file
-
-    if isinstance(header_dict['bbl'],np.ndarray):
-        hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
-    if header_dict["interleave"] == 'bip':
-        hy_obj.shape = (hy_obj.lines, hy_obj.columns, hy_obj.bands)
-    elif header_dict["interleave"] == 'bil':
-        hy_obj.shape = (hy_obj.lines, hy_obj.bands, hy_obj.columns)
-    elif header_dict["interleave"] == 'bsq':
-        hy_obj.shape = (hy_obj.bands, hy_obj.lines, hy_obj.columns)
-    else:
-        print("ERROR: Unrecognized interleave type.")
-        hy_obj = None
-
-    # If no_data value is not specified guess using image corners.
-    if hy_obj.no_data is None:
-        hy_obj.load_data()
-        up_l = hy_obj.data[0,0,0]
-        up_r = hy_obj.data[0,-1,0]
-        low_l = hy_obj.data[-1,0,0]
-        low_r = hy_obj.data[-1,-1,0]
-        counts = {v: k for k, v in Counter([up_l,up_r,low_l,low_r]).items()}
-        hy_obj.no_data = counts[max(counts.keys())]
-        hy_obj.close_data()
-
-    del header_dict
-    return hy_obj
-
-
-
-def open_neon(src_file, no_data = -9999):
-    """Load and parse NEON formated HDF image into a HyTools file object.
-
-    Args:
-        src_file (str): pathname of input HDF file.
-        no_data (float, optional): No data value. Defaults to -9999.
-        load_obs (bool, optional): Map observables to memory. Defaults to False.
-
-    Returns:
-        HyTools file object: Populated HyTools file object.
-
-    """
-
-    if not os.path.isfile(src_file):
-        print("File not found.")
-        return None
-
-    hy_obj = HyTools()
-    hy_obj.file_type = 'neon'
-    hdf_obj = h5py.File(src_file,'r')
-    hy_obj.base_key = list(hdf_obj.keys())[0]
-    metadata = hdf_obj[hy_obj.base_key]["Reflectance"]["Metadata"]
-    data = hdf_obj[hy_obj.base_key]["Reflectance"]["Reflectance_Data"]
-
-    hy_obj.projection = metadata['Coordinate_System']['Coordinate_System_String'][()].decode("utf-8")
-    hy_obj.map_info = metadata['Coordinate_System']['Map_Info'][()].decode("utf-8").split(',')
-    hy_obj.transform = (float(hy_obj.map_info [3]),float(hy_obj.map_info [1]),0,float(hy_obj.map_info [4]),0,-float(hy_obj.map_info [2]))
-    hy_obj.fwhm =  metadata['Spectral_Data']['FWHM'][()]
-    hy_obj.wavelengths = metadata['Spectral_Data']['Wavelength'][()]
-    hy_obj.wavelength_units = metadata['Spectral_Data']['Wavelength'].attrs['Units']
-    hy_obj.lines = data.shape[0]
-    hy_obj.columns = data.shape[1]
-    hy_obj.bands = data.shape[2]
-    hy_obj.no_data = no_data
-    hy_obj.file_name = src_file
-    hy_obj.observables = {'path_length': ['Ancillary_Imagery','Path_Length'],
-                        'sensor_az': ['to-sensor_Azimuth_Angle'],
-                        'sensor_zn': ['to-sensor_Zenith_Angle'],
-                        'solar_az': ['Logs','Solar_Azimuth_Angle'],
-                        'solar_zn': ['Logs','Solar_Zenith_Angle'],
-                        'slope': ['Ancillary_Imagery','Slope'],
-                        'aspect':['Ancillary_Imagery','Aspect']}
-
-
-    return hy_obj
