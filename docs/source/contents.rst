@@ -19,6 +19,28 @@ Examples
 BRDF correction
 ~~~~~~~~~~~~~~~
 
+.. raw:: html
+	 
+  <embed>
+
+  <link rel="stylesheet" href="/_static/css/slider.css">
+  <script src="/_static/js/slider.js" type="text/javascript" ></script>
+
+  <div id="slider" class="beer-slider" data-beer-label="">
+     <img src="/_static/images/research/3d_rgb.jpg" alt="">
+     <div class="beer-reveal" data-beer-label="">
+        <img src="/_static/images/research/rgb_rgb.jpg" alt="">
+     </div>
+   </div>
+
+   <script type="text/javascript">
+       new BeerSlider(document.getElementById('slider'));
+   </script>
+
+   </embed>
+
+  
+
 .. image:: brdf_before_after.png
 
 Topographic correction

@@ -26,6 +26,16 @@ author = 'Adam Chlus'
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
 
+html_static_path = ['_static']
+
+html_css_files = [
+    'css/slider.css',
+]
+
+html_js_files = [
+    'js/slider.js',
+]
+
 
 # -- General configuration ---------------------------------------------------
 
