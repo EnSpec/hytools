@@ -4,14 +4,14 @@ Base
 """
 import numpy as np
 import h5py
-import ray
 from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
 from .io.envi import open_envi
 from .io.neon import open_neon
-from .correction.brdf import calc_volume_kernel,calc_geom_kernel
+from .brdf import brdf_correct_band
+from .brdf.kernels import  calc_volume_kernel,calc_geom_kernel
+from .topo import calc_cosine_i,topo_correct_band
 
-@ray.remote
 class HyTools:
     """HyTools file object"""
 
@@ -42,17 +42,18 @@ class HyTools:
         self.hdf_obj  = None
         self.offset = 0
         self.base_key = None
-        self.observables = None
-        self.mask = None
+        self.ancillary = None
+        self.mask = {}
+        self.topo = {'type': None}
+        self.brdf = {'type': None}
 
 
-    def read_file(self,file_name,file_type):
-
+    def read_file(self,file_name,file_type,anc_dict = None):
         self.file_name = file_name
         self.file_type = file_type
 
         if file_type == 'envi':
-            open_envi(self)
+            open_envi(self,anc_dict)
         elif file_type == "neon":
             open_neon(self)
         elif file_type == "prisma":
@@ -148,12 +149,11 @@ class HyTools:
             band_num = np.argmin(np.abs(self.wavelengths - wave))
         return band_num
 
-    def get_band(self,index,mask_values =False):
+    def get_band(self,index,correct = False, mask =None):
         """
         Args:
             index (int): Zero-indexed band index.
-            mask_values (bool): Return only masked values,
-            requires that a mask is set.
+            mask (str): Return masked values using named mask.
 
         Returns:
             numpy.ndarray: A 2D (lines x columns) array or 1D if masked.
@@ -167,20 +167,24 @@ class HyTools:
             band = envi_read_band(self.data,index,self.interleave)
         self.close_data()
 
-        if mask_values and isinstance(self.mask, np.ndarray):
-            band = band[self.mask]
+        if correct:
+            band =  topo_correct_band(self,band,index)
+            band =  brdf_correct_band(self,band,index)
+
+        if mask:
+            band = band[self.mask[mask]]
 
         return band
 
 
-    def get_wave(self,wave,mask_values =False):
+    def get_wave(self,wave,mask =None):
         """Return the band image corresponding to the input wavelength.
         If not an exact match the closest wavelength will be returned.
 
         Args:
-            wave (float): DESCRIPTION.
-            mask_values (bool): Return only masked values,
-            requires that a mask is set.
+            wave (float): Wavelength in image units.
+            mask (str): Return masked values using named mask.
+
 
         Returns:
             numpy.ndarray: Band image array (line,columns).
@@ -192,7 +196,7 @@ class HyTools:
             band = None
         else:
             band_num = np.argmin(np.abs(self.wavelengths - wave))
-            band = self.get_band(band_num,mask_values)
+            band = self.get_band(band_num,mask)
         return band
 
     def get_pixels(self,lines,columns):
@@ -276,51 +280,52 @@ class HyTools:
         return chunk
 
 
-    def get_obs(self,obs, radians = True):
-        """ Read observable dataset to memory.
+    def get_anc(self,anc,radians = True):
+        """Read ancillary datasets to memory.
 
         Args:
-            obs (str): Observable name.
+            anc (str): Ancillary dataset name.
             radians (bool, optional): Convert angular measures to radians. Defaults to True.
 
         Returns:
-            obs_data (numpy.ndarray)
+            anc_data (numpy.ndarray)
 
         """
 
-        angular_obs = ['slope','sensor_az','sensor_zn','aspect','solar_zn','solar_az']
+        angular_anc = ['slope','sensor_az','sensor_zn','aspect','solar_zn','solar_az']
 
         if self.file_type == "envi":
-            observables = open_envi(self.observables[obs][0])
-            observables.load_data()
-            obs_data = np.copy(observables.get_band(self.observables[obs][1]))
-            observables.close_data()
+            ancillary = HyTools()
+            ancillary.read_file(self.ancillary[anc][0],'envi')
+            ancillary.load_data()
+            anc_data = np.copy(ancillary.get_band(self.ancillary[anc][1]))
+            ancillary.close_data()
 
         else:
             hdf_obj = h5py.File(self.file_name,'r')
             metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
-            keys = self.observables[obs]
+            keys = self.ancillary[anc]
             for key in keys:
                 metadata = metadata[key]
-            obs_data = metadata[()]
+            anc_data = metadata[()]
 
             #Make solar geometry into 2D array
-            if obs in ['solar_zn','solar_az']:
-                obs_data = np.ones((self.lines, self.columns)) * obs_data
+            if anc in ['solar_zn','solar_az']:
+                anc_data = np.ones((self.lines, self.columns)) * anc_data
             hdf_obj.close()
 
-        if radians and (obs in angular_obs):
-            obs_data= np.radians(obs_data)
+        if radians and (anc in angular_anc):
+            anc_data= np.radians(anc_data)
 
-        return obs_data
+        return anc_data
 
 
     def volume_kernel(self,kernel):
         """Calculate volume scattering kernel.
         """
 
-        return calc_volume_kernel(self.get_obs('solar_az'), self.get_obs('solar_zn'),
-                                  self.get_obs('sensor_az'), self.get_obs('sensor_zn'),
+        return calc_volume_kernel(self.get_anc('solar_az'), self.get_anc('solar_zn'),
+                                  self.get_anc('sensor_az'), self.get_anc('sensor_zn'),
                                                kernel)
 
 
@@ -328,26 +333,45 @@ class HyTools:
         """Calculate volume scattering kernel.
         """
 
-        return calc_geom_kernel(self.get_obs('solar_az'),self.get_obs('solar_zn'),
-                                self.get_obs('sensor_az'),self.get_obs('sensor_zn'),
+        return calc_geom_kernel(self.get_anc('solar_az'),self.get_anc('solar_zn'),
+                                self.get_anc('sensor_az'),self.get_anc('sensor_zn'),
                                 kernel,b_r=b_r,h_b =h_b)
 
+    def cosine_i(self):
+        """ Calculate the cosine of the solar incidence angle. Assumes
+        path to required ancillary datasets have been specified.
 
-    def set_mask(self,mask):
+        Returns:
+            cos_i numpy.ndarray: Cosine of solar incidence angle.
+
+        """
+
+        cos_i = calc_cosine_i(self.get_anc('solar_zn'), self.get_anc('solar_az'),
+                          self.get_anc('aspect') ,self.get_anc('slope'))
+
+        return cos_i
+
+    def set_mask(self,mask,name):
         """Generate mask using masking function which takes a HyTools object as
         an argument.
         """
-        self.mask = mask
+        self.mask[name] = mask
 
-    def gen_mask(self,masker):
+    def gen_mask(self,masker,name):
         """Generate mask using masking function which takes a HyTools object as
         an argument.
         """
-        self.mask = masker(self)
+        self.mask[name] = masker(self)
 
-    def do(self,function):
+    def do(self,function,args=None):
         """Run a function and return the results
+
+            There may be prettier way to write
+            conditional statement below....
         """
+        if args:
+            return function(self, args)
+
         return function(self)
 
 
@@ -452,7 +476,3 @@ class Iterator:
         self.current_line = -1
         self.current_band = -1
         self.complete = False
-
-
-
-
