@@ -2,15 +2,18 @@
 """
 Base
 """
+import os
+import json
 import numpy as np
 import h5py
 from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
-from .io.envi import open_envi
+from .io.envi import open_envi,parse_envi_header,envi_header_from_neon
 from .io.neon import open_neon
-from .brdf import brdf_correct_band
-from .brdf.kernels import  calc_volume_kernel,calc_geom_kernel
-from .topo import calc_cosine_i,topo_correct_band
+from .brdf import apply_brdf_correct
+from .brdf.kernels import calc_volume_kernel,calc_geom_kernel
+from .topo import calc_cosine_i,apply_topo_correct
+from .transform.resampling import *
 
 class HyTools:
     """HyTools file object"""
@@ -18,46 +21,45 @@ class HyTools:
     def __init__(self):
         """Constructor method
         """
-        self.file_type = None
-        self.interleave = None
-        self.file_name = None
-        self.shape = None
-        self.lines = None
-        self.columns = None
-        self.bands = None
-        self.wavelengths = None
-        self.fwhm = []
+        self.anc_path = {}
+        self.ancillary = {}
         self.bad_bands = []
-        self.no_data = None
-        self.map_info = None
+        self.bands = None
+        self.base_key = None
+        self.brdf = {'type': None}
+        self.byte_order = None
+        self.columns = None
+        self.corrections = []
         self.crs = None
+        self.data = None
+        self.dtype = None
+        self.file_name = None
+        self.file_type = None
+        self.fwhm = []
+        self.hdf_obj  = None
+        self.interleave = None
+        self.lines = None
+        self.map_info = None
+        self.mask = {}
+        self.no_data = None
+        self.offset = 0
+        self.projection = None
+        self.resampler = {'type': None}
+        self.shape = None
+        self.topo = {'type': None}
         self.ulx = None
         self.uly = None
-        self.dtype = None
-        self.data = None
-        self.header_dict = None
-        self.projection = None
-        self.byte_order = None
         self.wavelength_units = None
-        self.hdf_obj  = None
-        self.offset = 0
-        self.base_key = None
-        self.ancillary = None
-        self.mask = {}
-        self.topo = {'type': None}
-        self.brdf = {'type': None}
+        self.wavelengths = []
 
-
-    def read_file(self,file_name,file_type,anc_dict = None):
+    def read_file(self,file_name,file_type,anc_path = None):
         self.file_name = file_name
         self.file_type = file_type
 
         if file_type == 'envi':
-            open_envi(self,anc_dict)
+            open_envi(self,anc_path)
         elif file_type == "neon":
             open_neon(self)
-        elif file_type == "prisma":
-            print("PRISMA not yet supported.")
         else:
             print("Unrecognized file type.")
 
@@ -114,7 +116,7 @@ class HyTools:
         self.data = None
 
 
-    def iterate(self,by,chunk_size= (100,100)):
+    def iterate(self,by,chunk_size= (100,100),corrections = [],resample=False):
         """Create data Iterator.
 
         Args:
@@ -128,7 +130,7 @@ class HyTools:
 
         """
 
-        return Iterator(self,by,chunk_size)
+        return Iterator(self,by,chunk_size,corrections =corrections,resample=resample)
 
     def wave_to_band(self,wave):
         """Return band index corresponding to input wavelength. Return closest band if
@@ -149,11 +151,13 @@ class HyTools:
             band_num = np.argmin(np.abs(self.wavelengths - wave))
         return band_num
 
-    def get_band(self,index,correct = False, mask =None):
+    def get_band(self,index,corrections= [], mask =None):
         """
         Args:
             index (int): Zero-indexed band index.
             mask (str): Return masked values using named mask.
+            corrections(list): Corrections to apply, will be applied in
+            order listed.
 
         Returns:
             numpy.ndarray: A 2D (lines x columns) array or 1D if masked.
@@ -167,9 +171,7 @@ class HyTools:
             band = envi_read_band(self.data,index,self.interleave)
         self.close_data()
 
-        if correct:
-            band =  topo_correct_band(self,band,index)
-            band =  brdf_correct_band(self,band,index)
+        band = self.correct(band,'band',index,corrections)
 
         if mask:
             band = band[self.mask[mask]]
@@ -177,7 +179,7 @@ class HyTools:
         return band
 
 
-    def get_wave(self,wave,mask =None):
+    def get_wave(self,wave,corrections= [],mask =None):
         """Return the band image corresponding to the input wavelength.
         If not an exact match the closest wavelength will be returned.
 
@@ -196,10 +198,10 @@ class HyTools:
             band = None
         else:
             band_num = np.argmin(np.abs(self.wavelengths - wave))
-            band = self.get_band(band_num,mask)
+            band = self.get_band(band_num,corrections= corrections, mask=mask)
         return band
 
-    def get_pixels(self,lines,columns):
+    def get_pixels(self,lines,columns,corrections= [],resample = False):
         """
         Args:
             lines (list): List of zero-indexed line indices.
@@ -219,9 +221,17 @@ class HyTools:
         elif self.file_type == "envi":
             pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
         self.close_data()
+
+        pixels = self.correct(pixels,'pixels',
+                         [lines,columns],corrections)
+
+        if resample:
+            pixels = pixels[np.newaxis,:,~self.bad_bands]
+            pixels = apply_resampler(self,pixels)[0,:,:]
+
         return pixels
 
-    def get_line(self,index):
+    def get_line(self,index, corrections= [],resample = False):
         """
         Args:
             index (int): Zero-indexed line index.
@@ -237,9 +247,16 @@ class HyTools:
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
         self.close_data()
+
+        line = self.correct(line,'line',index,corrections)
+
+        if resample:
+            line = line[np.newaxis,:,~self.bad_bands]
+            line = apply_resampler(self,line)[0,:,:]
+            
         return line
 
-    def get_column(self,index):
+    def get_column(self,index,corrections = [],resample = False):
         """
         Args:
             index (int): Zero-indexed column index.
@@ -255,15 +272,25 @@ class HyTools:
         elif self.file_type == "envi":
             column = envi_read_column(self.data,index,self.interleave)
         self.close_data()
+
+        column = self.correct(column,'column',index,corrections)
+
+        if resample:
+            column = column[:,np.newaxis,~self.bad_bands]
+            column = apply_resampler(self,column)[:,0,:]
+
         return column
 
-    def get_chunk(self,col_start,col_end,line_start,line_end):
+    def get_chunk(self,col_start,col_end,line_start,line_end, corrections= [],resample = False):
         """
         Args:
             col_start (int): Chunk starting column.
             col_end (int): Noninclusive chunk ending column index.
             line_start (int): Chunk starting line.
             line_end (int): Noninclusive chunk ending line index.
+            corrections(list): Corrections to apply, will be applied in
+            order listed.
+            resample (bool): Resample wavelengths. Defaults to False.
 
         Returns:
             numpy.ndarray: Chunk array (line_end-line_start,col_end-col_start,bands).
@@ -277,8 +304,21 @@ class HyTools:
             chunk =  envi_read_chunk(self.data,col_start,col_end,
                                      line_start,line_end,self.interleave)
         self.close_data()
+
+        chunk = self.correct(chunk,'chunk',
+                        [col_start,col_end,line_start,line_end],
+                        corrections)
+        if resample:
+            chunk = apply_resampler(self,chunk[:,:,~self.bad_bands])
         return chunk
 
+    def correct(self,data,dimension,index,corrections):
+        for correction in corrections:
+            if correction == 'topo':
+                data =  apply_topo_correct(self,data,dimension,index)
+            elif correction == 'brdf':
+                data =  apply_brdf_correct(self,data,dimension,index)
+        return data
 
     def get_anc(self,anc,radians = True):
         """Read ancillary datasets to memory.
@@ -296,15 +336,15 @@ class HyTools:
 
         if self.file_type == "envi":
             ancillary = HyTools()
-            ancillary.read_file(self.ancillary[anc][0],'envi')
+            ancillary.read_file(self.anc_path[anc][0],'envi')
             ancillary.load_data()
-            anc_data = np.copy(ancillary.get_band(self.ancillary[anc][1]))
+            anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
             ancillary.close_data()
 
         else:
             hdf_obj = h5py.File(self.file_name,'r')
             metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
-            keys = self.ancillary[anc]
+            keys = self.anc_path[anc]
             for key in keys:
                 metadata = metadata[key]
             anc_data = metadata[()]
@@ -319,6 +359,8 @@ class HyTools:
 
         return anc_data
 
+    def load_anc(self,anc,radians = True):
+        self.ancillary[anc] = self.get_anc(self,anc,radians = radians)
 
     def volume_kernel(self,kernel):
         """Calculate volume scattering kernel.
@@ -328,8 +370,7 @@ class HyTools:
                                   self.get_anc('sensor_az'), self.get_anc('sensor_zn'),
                                                kernel)
 
-
-    def geom_kernel(self,kernel,b_r=10.,h_b =2.):
+    def geom_kernel(self,kernel,b_r=1.,h_b =2.):
         """Calculate volume scattering kernel.
         """
 
@@ -348,7 +389,6 @@ class HyTools:
 
         cos_i = calc_cosine_i(self.get_anc('solar_zn'), self.get_anc('solar_az'),
                           self.get_anc('aspect') ,self.get_anc('slope'))
-
         return cos_i
 
     def set_mask(self,mask,name):
@@ -363,23 +403,41 @@ class HyTools:
         """
         self.mask[name] = masker(self)
 
-    def do(self,function,args=None):
+    def do(self,function,arg_dict = {}):
         """Run a function and return the results
-
-            There may be prettier way to write
-            conditional statement below....
+                    
         """
-        if args:
-            return function(self, args)
+        if len(arg_dict) > 0:
+            return function(self, arg_dict)
+        else:
+            return function(self)
 
-        return function(self)
+        
+    def get_header(self):
+        """ Return header dictionary
+
+        """
+        if self.file_type == "neon":
+            header_dict = envi_header_from_neon(self)
+        elif self.file_type == "envi":
+            header_file = os.path.splitext(self.file_name)[0] + ".hdr"
+            header_dict = parse_envi_header(header_file)
+        return header_dict
+
+
+    def load_coeffs(self, coeff_file,kind):
+        with open(coeff_file, 'r') as outfile:
+            if kind == 'brdf':
+                self.brdf = json.load(outfile, cls =Decoder)
+            elif  kind == 'topo':
+                self.topo = json.load(outfile, cls =Decoder)
 
 
 class Iterator:
     """Iterator class
     """
 
-    def __init__(self,hy_obj,by,chunk_size = None):
+    def __init__(self,hy_obj,by,chunk_size = None,corrections = [],resample = False):
         """
         Args:
             hy_obj (Hytools object): Populated Hytools file object.
@@ -400,7 +458,9 @@ class Iterator:
         self.current_band = -1
         self.complete = False
         self.hy_obj = hy_obj
-        self.hy_obj.load_data()
+        self.resample = resample
+        self.corrections = corrections
+
 
     def read_next(self):
         """ Return next line/column/band/chunk.
@@ -410,33 +470,23 @@ class Iterator:
             self.current_line +=1
             if self.current_line == self.hy_obj.lines-1:
                 self.complete = True
-                subset = None
-            if self.hy_obj.file_type == "neon":
-                subset =  self.hy_obj.data[self.current_band,:,:]
-            else:
-                subset =  envi_read_line(self.hy_obj.data,self.current_line,
-                                         self.hy_obj.interleave)
-
+            subset = self.hy_obj.get_line(self.current_line,
+                                            corrections =self.corrections,
+                                            resample = self.resample)
         elif self.by == "column":
             self.current_column +=1
             if self.current_column == self.hy_obj.columns-1:
                 self.complete = True
-            if self.hy_obj.file_type == "neon":
-                subset =  self.hy_obj.data[:,self.current_band,:]
-            else:
-                subset =  envi_read_column(self.hy_obj.data,self.current_column,
-                                           self.hy_obj.interleave)
-
+            subset = self.hy_obj.get_column(self.current_column,
+                                            corrections =self.corrections,
+                                            resample = self.resample)
         elif self.by == "band":
             self.current_band +=1
             if self.current_band == self.hy_obj.bands-1:
                 self.complete = True
-            if self.hy_obj.file_type == "neon":
-                subset =  self.hy_obj.data[:,:,self.current_band]
-            else:
-                subset =  envi_read_band(self.hy_obj.data,self.current_band,
-                                         self.hy_obj.interleave)
-
+            subset = self.hy_obj.get_band(self.current_band,
+                                            corrections =self.corrections)
+            
         elif self.by == "chunk":
             if self.current_column == -1:
                 self.current_column +=1
@@ -456,17 +506,12 @@ class Iterator:
             if x_end >= self.hy_obj.columns:
                 x_end = self.hy_obj.columns
 
-            if self.hy_obj.file_type == "neon":
-                subset = self.hy_obj.data[y_start:y_end,x_start:x_end,:]
-            else:
-                subset =  envi_read_chunk(self.hy_obj.data,x_start,x_end,
-                                          y_start,y_end,self.hy_obj.interleave)
             if (y_end == self.hy_obj.lines) and (x_end == self.hy_obj.columns):
                 self.complete = True
-
-        if self.complete:
-            self.hy_obj.close_data()
-
+                
+            subset = self.hy_obj.get_chunk(x_start,x_end, y_start,y_end,
+                                            corrections =self.corrections,
+                                            resample = self.resample)
         return subset
 
     def reset(self):
@@ -476,3 +521,22 @@ class Iterator:
         self.current_line = -1
         self.current_band = -1
         self.complete = False
+
+
+class Decoder(json.JSONDecoder):
+    def decode(self, s):
+        result = super().decode(s)  # result = super(Decoder, self).decode(s) for Python 2.x
+        return self._decode(result)
+
+    def _decode(self, o):
+        if isinstance(o, str):
+            try:
+                return int(o)
+            except ValueError:
+                return o
+        elif isinstance(o, dict):
+            return {k: self._decode(v) for k, v in o.items()}
+        elif isinstance(o, list):
+            return [self._decode(v) for v in o]
+        else:
+            return o

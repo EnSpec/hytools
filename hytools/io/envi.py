@@ -74,13 +74,14 @@ field_dict = {"acquisition time": "str",
               "z plot titles": "str"}
 
 
-def open_envi(hy_obj):
+def open_envi(hy_obj,anc_path = {}):
     """Open ENVI formated image file and populate Hytools object.
 
 
     Args:
         src_file (str): Pathname of input ENVI image file, header assumed to be located in
         same directory.
+        anc_path (dict): Dictionary with pathnames and band numbers of ancillary datasets.
 
     Returns:
         HyTools file object: Populated HyTools file object.
@@ -94,7 +95,8 @@ def open_envi(hy_obj):
     header_dict = parse_envi_header(os.path.splitext(hy_obj.file_name)[0] + ".hdr")
     hy_obj.lines =  header_dict["lines"]
     hy_obj.columns =  header_dict["samples"]
-    hy_obj.bands =   header_dict["bands"]
+    hy_obj.bands =   header_dict["bands"]    
+    hy_obj.bad_bands = np.array([False for band in range(hy_obj.bands)])
     hy_obj.interleave =  header_dict["interleave"]
     hy_obj.fwhm =  header_dict["fwhm"]
     hy_obj.wavelengths = header_dict["wavelength"]
@@ -103,7 +105,7 @@ def open_envi(hy_obj):
     hy_obj.no_data = header_dict['data ignore value']
     hy_obj.map_info = header_dict['map info']
     hy_obj.byte_order = header_dict['byte order']
-    hy_obj.header_dict =  header_dict
+    hy_obj.anc_path = anc_path
 
     if isinstance(header_dict['bbl'],np.ndarray):
         hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
@@ -178,15 +180,14 @@ class WriteENVI:
 
         """
 
-
         if self.interleave == "bip":
             self.data[index,:,:] = line
 
         elif self.interleave == "bil":
-            self.data[index,:,:] = line
+            self.data[index,:,:] = np.moveaxis(line,0,1)
 
         elif self.interleave == "bsq":
-            self.data[:,index,:] = line
+            self.data[:,index,:] = np.moveaxis(line,0,1)
 
     def write_column(self,column,index):
         """
@@ -204,7 +205,7 @@ class WriteENVI:
         elif self.interleave == "bil":
             self.data[:,:,index] = column
         elif self.interleave == "bsq":
-            self.data[:,:,index] = column
+            self.data[:,:,index] =  np.moveaxis(column,0,1)
 
     def write_band(self,band,index):
         """
@@ -253,10 +254,8 @@ class WriteENVI:
         """
         del self.data
 
-
-
-def envi_header_from_hdf(hy_obj, interleave = 'bil'):
-    """Create an ENVI header dictionary from HDF metadata
+def envi_header_from_neon(hy_obj, interleave = 'bsq'):
+    """Create an ENVI header dictionary from NEON metadata
 
     Args:
         hy_obj (Hytools object): Populated HyTools file object.
@@ -339,9 +338,9 @@ def envi_read_line(data,index,interleave):
     if interleave == "bip":
         line = data[index,:,:]
     elif interleave == "bil":
-        line = data[index,:,:]
+        line = np.moveaxis(data[index,:,:],0,1)
     elif interleave == "bsq":
-        line = data[:,index,:]
+        line = np.moveaxis(data[index,:,:],0,1)
     return line
 
 def envi_read_column(data,index,interleave):
@@ -361,7 +360,7 @@ def envi_read_column(data,index,interleave):
     elif interleave == "bil":
         column = data[:,:,index]
     elif interleave == "bsq":
-        column =  data[:,:,index]
+        column =  np.moveaxis(data[:,:,index],0,1)
     return column
 
 def envi_read_band(data,index,interleave):

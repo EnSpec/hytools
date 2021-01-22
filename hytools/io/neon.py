@@ -4,7 +4,7 @@
 NEON AOP HDF opener
 """
 import h5py
-
+import numpy as np
 
 
 def open_neon(hy_obj, no_data = -9999):
@@ -34,13 +34,23 @@ def open_neon(hy_obj, no_data = -9999):
     hy_obj.lines = data.shape[0]
     hy_obj.columns = data.shape[1]
     hy_obj.bands = data.shape[2]
+    hy_obj.bad_bands = np.array([False for band in range(hy_obj.bands)])
     hy_obj.no_data = no_data
-    hy_obj.observables = {'path_length': ['Ancillary_Imagery','Path_Length'],
+    hy_obj.anc_path = {'path_length': ['Ancillary_Imagery','Path_Length'],
                         'sensor_az': ['to-sensor_Azimuth_Angle'],
                         'sensor_zn': ['to-sensor_Zenith_Angle'],
                         'solar_az': ['Logs','Solar_Azimuth_Angle'],
                         'solar_zn': ['Logs','Solar_Zenith_Angle'],
                         'slope': ['Ancillary_Imagery','Slope'],
-                        'aspect':['Ancillary_Imagery','Aspect']}
+                        'aspect':['Ancillary_Imagery','Aspect'],
+                        'aod': ['Ancillary_Imagery','Aerosol_Optical_Depth'],
+                        'sky_view': ['Ancillary_Imagery','Sky_View_Factor'],
+                        'illum_factor': ['Ancillary_Imagery','Illumination_Factor'],
+                        'elevation;': ['Ancillary_Imagery','Smooth_Surface_Elevation'],
+                        'cast_shadow': ['Ancillary_Imagery','Cast_Shadow'],
+                        'dense_veg': ['Ancillary_Imagery','Dark_Dense_Vegetation_Classification'],
+                        'visibility_index': ['Ancillary_Imagery','Visibility_Index_Map'],
+                        'haze_water_cloud': ['Ancillary_Imagery','Haze_Water_Cloud_Map'],
+                        'water_vapor': ['Ancillary_Imagery','Water_Vapor_Column']}
 
     return hy_obj
