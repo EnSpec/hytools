@@ -20,7 +20,7 @@ For complete documentation see:
 - numpy
 - h5py
 - ray
-
+- scipy
 # Installation
 To install run:
 
