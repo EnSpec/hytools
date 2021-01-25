@@ -6,6 +6,7 @@ import os
 import json
 import numpy as np
 import h5py
+import warnings
 from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
 from .io.envi import open_envi,parse_envi_header,envi_header_from_neon
@@ -14,6 +15,9 @@ from .brdf import apply_brdf_correct
 from .brdf.kernels import calc_volume_kernel,calc_geom_kernel
 from .topo import calc_cosine_i,apply_topo_correct
 from .transform.resampling import *
+
+warnings.filterwarnings("ignore")
+
 
 class HyTools:
     """HyTools file object"""
@@ -62,6 +66,9 @@ class HyTools:
             open_neon(self)
         else:
             print("Unrecognized file type.")
+
+        # Create a no data mask
+        self.mask['no_data'] = self.get_band(0) != self.no_data
 
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
@@ -253,7 +260,7 @@ class HyTools:
         if resample:
             line = line[np.newaxis,:,~self.bad_bands]
             line = apply_resampler(self,line)[0,:,:]
-            
+
         return line
 
     def get_column(self,index,corrections = [],resample = False):
@@ -391,6 +398,30 @@ class HyTools:
                           self.get_anc('aspect') ,self.get_anc('slope'))
         return cos_i
 
+    def ndi(self,wave1= 850,wave2 = 660,mask = None):
+        """ Calculate normalized difference index.
+            Defaults to NDVI. Assums input wavelengths are in
+            nanometers
+
+        Args:
+            wave1 (int,float): Wavelength of first band. Defaults to 850.
+            wave2 (int,float): Wavelength of second band. Defaults to 660.
+            mask (bool): Mask data
+
+        Returns:
+            ndi numpy.ndarray:
+
+        """
+
+        wave1 = self.get_wave(wave1)
+        wave2 = self.get_wave(wave2)
+        ndi = (wave1-wave2)/(wave1+wave2)
+
+        if mask:
+            ndi = ndi[self.mask[mask]]
+        return ndi
+
+
     def set_mask(self,mask,name):
         """Generate mask using masking function which takes a HyTools object as
         an argument.
@@ -405,14 +436,14 @@ class HyTools:
 
     def do(self,function,arg_dict = {}):
         """Run a function and return the results
-                    
+
         """
         if len(arg_dict) > 0:
             return function(self, arg_dict)
         else:
             return function(self)
 
-        
+
     def get_header(self):
         """ Return header dictionary
 
@@ -486,7 +517,7 @@ class Iterator:
                 self.complete = True
             subset = self.hy_obj.get_band(self.current_band,
                                             corrections =self.corrections)
-            
+
         elif self.by == "chunk":
             if self.current_column == -1:
                 self.current_column +=1
@@ -508,7 +539,7 @@ class Iterator:
 
             if (y_end == self.hy_obj.lines) and (x_end == self.hy_obj.columns):
                 self.complete = True
-                
+
             subset = self.hy_obj.get_chunk(x_start,x_end, y_start,y_end,
                                             corrections =self.corrections,
                                             resample = self.resample)

@@ -13,7 +13,6 @@ def open_neon(hy_obj, no_data = -9999):
     Args:
         src_file (str): pathname of input HDF file.
         no_data (float, optional): No data value. Defaults to -9999.
-        load_obs (bool, optional): Map observables to memory. Defaults to False.
 
     Returns:
         HyTools file object: Populated HyTools file object.

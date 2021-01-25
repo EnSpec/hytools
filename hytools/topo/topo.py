@@ -55,41 +55,39 @@ def apply_topo_correct(hy_obj,data,dimension,index):
         data = apply_c(hy_obj,data,dimension,index)
     elif hy_obj.topo['type']  == 'scs':
         data = apply_scs(hy_obj,data,dimension,index)
-
     return data
-
 
 def load_topo_precomputed(hy_obj,topo_dict):
     with open(topo_dict['coeff_files'][hy_obj.file_name], 'r') as outfile:
         hy_obj.topo = json.load(outfile)
 
 def topo_coeffs(actors,topo_dict):
-    
+
     if topo_dict['type'] == 'precomputed':
         print("Using precomputed topographic coefficients.")
         _ = ray.get([a.do.remote(load_topo_precomputed,topo_dict) for a in actors])
 
     else:
         print("Calculating topographic coefficients.")
-        
+
         topo_masker = mask_dict[topo_dict['mask']]
         _ = ray.get([a.gen_mask.remote(topo_masker,'topo') for a in actors])
-        
+
         if topo_dict['type'] == 'scs+c':
             _ = ray.get([a.do.remote(calc_scsc_coeffs,topo_dict) for a in actors])
-    
+
         elif topo_dict['type'] == 'scs':
             _ = ray.get([a.do.remote(calc_scs_coeffs,topo_dict) for a in actors])
-    
+
         elif topo_dict['type'] == 'mod_minneart':
             _ = ray.get([a.do.remote(calc_modminn_coeffs,topo_dict) for a in actors])
-    
+
         elif topo_dict['type'] == 'cosine':
             _ = ray.get([a.do.remote(calc_cosine_coeffs,topo_dict) for a in actors])
-    
+
         elif topo_dict['type'] == 'c':
             _ = ray.get([a.do.remote(calc_c_coeffs,topo_dict) for a in actors])
-    
+
     _ = ray.get([a.do.remote(lambda x: x.corrections.append('topo')) for a in actors])
 
 

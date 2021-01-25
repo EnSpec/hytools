@@ -20,12 +20,16 @@ def global_brdf(actors,brdf_dict):
 
 
 def calc_global_single(hy_obj,brdf_dict):
+    '''
+        Calculate BRDF coefficients on a per flightline basis.
+    '''
 
     volume = brdf_dict['volume'] 
     geometric = brdf_dict['geometric']
     brdf_dict['coeffs'] = {}
 
-    geom_kernel = hy_obj.geom_kernel(geometric)[hy_obj.mask['brdf']]
+    geom_kernel = hy_obj.geom_kernel(geometric,b_r=brdf_dict["b/r"] ,
+                                     h_b =brdf_dict["h/b"])[hy_obj.mask['brdf']]
     vol_kernel = hy_obj.volume_kernel(volume)[hy_obj.mask['brdf']]
     X = np.vstack([vol_kernel,geom_kernel,np.ones(geom_kernel.shape)]).T
 
@@ -40,14 +44,18 @@ def calc_global_single(hy_obj,brdf_dict):
     hy_obj.corrections.append('brdf')
     
 def calc_global_group(actors,brdf_dict):
+    '''
+        Calculate BRDF coefficients using pooled data from all flightlines.
+    '''
     
     volume = brdf_dict['volume'] 
     geometric = brdf_dict['geometric']
     brdf_dict['coeffs'] = {}
     
     def get_kernel_samples(hy_obj):
-        geom_kernel = hy_obj.geom_kernel(geometric)[hy_obj.mask['brdf_samples']]
-        vol_kernel = hy_obj.volume_kernel(volume)[hy_obj.mask['brdf_samples']]
+        geom_kernel = hy_obj.geom_kernel(geometric,b_r=brdf_dict["b/r"] ,
+                                     h_b =brdf_dict["h/b"])[hy_obj.mask['brdf']]
+        vol_kernel = hy_obj.volume_kernel(volume)[hy_obj.mask['brdf']]
         X = np.vstack([vol_kernel,geom_kernel,
                        np.ones(vol_kernel.shape)]).T
         return X
@@ -102,7 +110,9 @@ def apply_standard(hy_obj,data,dimension,index):
         hy_obj.ancillary['k_vol'] = k_vol
 
     if 'k_geom' not in hy_obj.ancillary.keys():
-        k_geom = hy_obj.geom_kernel(hy_obj.brdf['geometric'])
+        k_geom = hy_obj.geom_kernel(hy_obj.brdf['geometric'],
+                                    b_r=hy_obj.brdf["b/r"],
+                                    h_b =hy_obj.brdf["h/b"])
         hy_obj.ancillary['k_geom'] = k_geom
 
     if 'k_vol_nadir' not in hy_obj.ancillary.keys():
@@ -112,7 +122,9 @@ def apply_standard(hy_obj,data,dimension,index):
 
     if 'k_geom_nadir' not in hy_obj.ancillary.keys():
         k_geom_nadir = calc_geom_kernel(0,hy_obj.get_anc('solar_zn'),
-                                     0,0,hy_obj.brdf['geometric'])
+                                        0,0,hy_obj.brdf['geometric'],
+                                        b_r=hy_obj.brdf["b/r"],
+                                        h_b =hy_obj.brdf["h/b"])
         hy_obj.ancillary['k_geom_nadir'] = k_geom_nadir
 
     brdf_bands = [int(x) for x in hy_obj.brdf['coeffs'].keys()]
