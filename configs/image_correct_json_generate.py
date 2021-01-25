@@ -138,12 +138,13 @@ config_dict["brdf"]['type'] =  'class'
 config_dict["brdf"]['grouped'] =  True
 config_dict["brdf"]['geometric'] = 'li_dense_r'
 config_dict["brdf"]['volume'] = 'ross_thick'
-config_dict["brdf"]["b/r"] = 10
+config_dict["brdf"]["b/r"] = 2.5
 config_dict["brdf"]["h/b"] = 2
 config_dict["brdf"]['sample_perc'] = 0.1
 config_dict["brdf"]['interp_kind'] = 'linear'
 
 # NDVI threshold for where to apply correction
+config_dict["brdf"]
 config_dict["brdf"]['ndvi_min'] = 0.00
 config_dict["brdf"]['ndvi_max'] = 1.0
 #Normalize to scene average solar zenith angle
@@ -156,18 +157,17 @@ config_dict["brdf"]['sensor_zn_min'] = np.radians(0)
 
 # Dynamic NDVI params
 #---------------------
-# config_dict["brdf"]['bin_type'] = 'dynamic'
-# config_dict["brdf"]['num_bins'] = 18
-# config_dict["brdf"]['ndvi_bin_min'] = 0.05
-# config_dict["brdf"]['ndvi_bin_max'] = 1.0
-# config_dict["brdf"]['ndvi_perc_min'] = 10
-# config_dict["brdf"]['ndvi_perc_max'] = 95
+config_dict["brdf"]['bin_type'] = 'dynamic'
+config_dict["brdf"]['num_bins'] = 18
+config_dict["brdf"]['ndvi_bin_min'] = 0.05
+config_dict["brdf"]['ndvi_bin_max'] = 1.0
+config_dict["brdf"]['ndvi_perc_min'] = 10
+config_dict["brdf"]['ndvi_perc_max'] = 95
 
 # Fixed bins specified by user
 #------------------------
-config_dict["brdf"]['bin_type'] = 'user'
-config_dict["brdf"]['bins']  = [[0,.15],[.15,1]]
-
+# config_dict["brdf"]['bin_type'] = 'user'
+# config_dict["brdf"]['bins']  = [[0,.15],[.15,1]]
 
 #Wavelength resampling options
 #################################################################
@@ -197,7 +197,6 @@ config_dict["resample"]  = False
 
 with open(config_file, 'w') as outfile:
     json.dump(config_dict,outfile,indent=3)
-
 
 
 
