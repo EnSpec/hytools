@@ -75,7 +75,7 @@ config_dict["corrections"]  = ['topo','brdf']
 #################################################################
 '''
 Types supported:
-    - 'scsc':  Sonnen et al. 2005
+    - 'scs+c':  Sonnen et al. 2005
     - 'mod_minneart':
     - 'cosine :
     - 'precomputed'
@@ -118,59 +118,66 @@ Object shapes ('h/b'.'b/r') only needed for Li kernels
 
 config_dict["brdf"]  = {}
 
-# Standard BRDF coefficients
-############################################
-# config_dict["brdf"]['type'] =  'standard'
-# config_dict["brdf"]['grouped'] =  True
-# config_dict["brdf"]['sample_perc'] = 0.1
-# config_dict["brdf"]['geometric'] = 'li_sparse_r'
-# config_dict["brdf"]['volume'] = 'ross_thick'
-# config_dict["brdf"]['mask'] = "brdf1"
-
-# Precomputed BRDF coefficients
-#-------------------------------
-# config_dict["brdf"]['type'] =  'precomputed'
-# config_dict["brdf"]['coeff_files'] =  {}
-
-#Class BRDF coefficients
-#------------------------
-config_dict["brdf"]['type'] =  'class'
+# Universal BRDF config
+#----------------------
+config_dict["brdf"]['type'] =  'universal'
 config_dict["brdf"]['grouped'] =  True
-config_dict["brdf"]['geometric'] = 'li_dense_r'
+config_dict["brdf"]['sample_perc'] = 0.1
+config_dict["brdf"]['geometric'] = 'li_sparse_r'
 config_dict["brdf"]['volume'] = 'ross_thick'
 config_dict["brdf"]["b/r"] = 2.5
 config_dict["brdf"]["h/b"] = 2
-config_dict["brdf"]['sample_perc'] = 0.1
-config_dict["brdf"]['interp_kind'] = 'linear'
+config_dict["brdf"]['calc_mask'] = ["ndvi", {'ndvi_min': 0.6,
+                                              'ndvi_max' : 1}]
+config_dict["brdf"]['apply_mask'] = ["ndvi", {'ndvi_min': 0.1,
+                                              'ndvi_max' : 1}]
+#----------------------
 
-# NDVI threshold for where to apply correction
-config_dict["brdf"]
-config_dict["brdf"]['ndvi_min'] = 0.00
-config_dict["brdf"]['ndvi_max'] = 1.0
-#Normalize to scene average solar zenith angle
-config_dict["brdf"]['solar_zn_norm'] =True
-# Buffer around edge of NEON images to remove artifact
-# Exclude for non NEON images
-config_dict["brdf"]['neon_buffer'] = True
-#Mask sensor zenith angle less than this value
-config_dict["brdf"]['sensor_zn_min'] = np.radians(0)
+## Precomputed BRDF coefficients
+##------------------------------
+# config_dict["brdf"]['type'] =  'precomputed'
+# config_dict["brdf"]['coeff_files'] =  {}
+##------------------------------
 
-# Dynamic NDVI params
-#---------------------
-config_dict["brdf"]['bin_type'] = 'dynamic'
-config_dict["brdf"]['num_bins'] = 18
-config_dict["brdf"]['ndvi_bin_min'] = 0.05
-config_dict["brdf"]['ndvi_bin_max'] = 1.0
-config_dict["brdf"]['ndvi_perc_min'] = 10
-config_dict["brdf"]['ndvi_perc_max'] = 95
+# ## Flex BRDF configs
+# ##------------------
+# config_dict["brdf"]['type'] =  'flex'
+# config_dict["brdf"]['grouped'] =  True
+# config_dict["brdf"]['geometric'] = 'li_dense_r'
+# config_dict["brdf"]['volume'] = 'ross_thick'
+# config_dict["brdf"]["b/r"] = 2.5
+# config_dict["brdf"]["h/b"] = 2
+# config_dict["brdf"]['sample_perc'] = 0.1
+# config_dict["brdf"]['interp_kind'] = 'linear'
 
-# Fixed bins specified by user
-#------------------------
+# # NDVI threshold for where to apply correction
+# config_dict["brdf"]['ndvi_min'] = 0.1
+# config_dict["brdf"]['ndvi_max'] = 1.0
+# #Normalize to scene average solar zenith angle
+# config_dict["brdf"]['solar_zn_norm'] =True
+# # Buffer around edge of NEON images to remove artifact
+# # Exclude for non NEON images
+# config_dict["brdf"]['neon_buffer'] = True
+# #Mask sensor zenith angle less than this value
+# config_dict["brdf"]['sensor_zn_min'] = np.radians(2)
+
+# ## Flex dynamic NDVI params
+# # config_dict["brdf"]['bin_type'] = 'dynamic'
+# # config_dict["brdf"]['num_bins'] = 18
+# # config_dict["brdf"]['ndvi_bin_min'] = 0.05
+# # config_dict["brdf"]['ndvi_bin_max'] = 1.0
+# # config_dict["brdf"]['ndvi_perc_min'] = 10
+# # config_dict["brdf"]['ndvi_perc_max'] = 95
+
+# ## Flex fixed bins specified by user
 # config_dict["brdf"]['bin_type'] = 'user'
-# config_dict["brdf"]['bins']  = [[0,.15],[.15,1]]
+# config_dict["brdf"]['bins']  = [[0.1,.25],[.25,.75],[.75,1]]
+# ##-----------------
+
+
 
 #Wavelength resampling options
-#################################################################
+##############################
 '''
 Types supported:
    - 'gaussian': needs output waves and output FWHM
@@ -197,6 +204,10 @@ config_dict["resample"]  = False
 
 with open(config_file, 'w') as outfile:
     json.dump(config_dict,outfile,indent=3)
+
+
+
+
 
 
 
