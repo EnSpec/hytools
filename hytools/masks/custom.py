@@ -11,10 +11,9 @@ def topo1(hy_obj):
     mask = (ndvi > 0.2) & hy_obj.mask['no_data'] & (cosine_i > .12) & (slope > .03)
     return mask
 
-# Find dependencies and delete.
-def brdf1(hy_obj):
-    return hy_obj.mask['no_data']
-
+def ndvi_threshold(hy_obj,args):
+    ndvi = hy_obj.ndi()
+    return (ndvi > args['ndvi_min']) & (ndvi < args['ndvi_max'])
 
 def neon_edge(hy_obj,radius = 30):
     '''
@@ -27,5 +26,5 @@ def neon_edge(hy_obj,radius = 30):
     return ~buffer_edge
 
 mask_dict = {'topo1' : topo1,
-              'brdf1' : brdf1,
-               'neon_edge' : neon_edge}
+             'ndvi' : ndvi_threshold,
+             'neon_edge' : neon_edge}
