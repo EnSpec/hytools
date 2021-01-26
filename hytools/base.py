@@ -327,7 +327,7 @@ class HyTools:
                 data =  apply_brdf_correct(self,data,dimension,index)
         return data
 
-    def get_anc(self,anc,radians = True):
+    def get_anc(self,anc,radians = True,mask = None):
         """Read ancillary datasets to memory.
 
         Args:
@@ -363,6 +363,10 @@ class HyTools:
 
         if radians and (anc in angular_anc):
             anc_data= np.radians(anc_data)
+
+
+        if mask:
+            anc_data = anc_data[self.mask[mask]]
 
         return anc_data
 
@@ -400,7 +404,7 @@ class HyTools:
 
     def ndi(self,wave1= 850,wave2 = 660,mask = None):
         """ Calculate normalized difference index.
-            Defaults to NDVI. Assums input wavelengths are in
+            Defaults to NDVI. Assumes input wavelengths are in
             nanometers
 
         Args:
@@ -428,17 +432,21 @@ class HyTools:
         """
         self.mask[name] = mask
 
-    def gen_mask(self,masker,name):
+    def gen_mask(self,masker,name,arg_dict = None):
         """Generate mask using masking function which takes a HyTools object as
-        an argument.
+        an argument. Arguments can be passed using a dictionary.
         """
-        self.mask[name] = masker(self)
+        if isinstance(arg_dict,dict):
+            self.mask[name] = masker(self,arg_dict)
+        else:
+            self.mask[name] = masker(self)
 
-    def do(self,function,arg_dict = {}):
-        """Run a function and return the results
+    def do(self,function,arg_dict = None):
+        """Run a function and return the results.
+        Arguments can be passed using a dictionary.
 
         """
-        if len(arg_dict) > 0:
+        if isinstance(arg_dict,dict):
             return function(self, arg_dict)
         else:
             return function(self)
