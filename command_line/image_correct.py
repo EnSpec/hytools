@@ -9,7 +9,9 @@ import hytools as ht
 from hytools.io.envi import *
 from hytools.topo.topo import topo_coeffs
 from hytools.brdf.brdf import brdf_coeffs
+
 warnings.filterwarnings("ignore")
+np.seterr(divide='ignore', invalid='ignore')
 
 def main():
 
@@ -35,17 +37,17 @@ def main():
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
 
-    _ = ray.get([a.create_bad_bands.remote(config_dict['bad_bands']) for a in actors])
-
     #Here is where the outlier detection should probably happen.
+
+    _ = ray.get([a.create_bad_bands.remote(config_dict['bad_bands']) for a in actors])
 
     for correction in config_dict["corrections"]:
         if correction =='topo':
             topo_coeffs(actors,config_dict['topo'])
-        elif correction == 'brdf':    
+        elif correction == 'brdf':
             brdf_coeffs(actors,config_dict['brdf'])
 
-    if config_dict['export']['coeffs']:
+    if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
         _ = ray.get([a.do.remote(export_coeffs,config_dict['export']) for a in actors])
 
@@ -59,10 +61,10 @@ def export_coeffs(hy_obj,export_dict):
     '''Export correction coefficients to file.
     '''
     for correction in hy_obj.corrections:
-        coeff_file = export_dict['output_dir'] 
+        coeff_file = export_dict['output_dir']
         coeff_file += os.path.splitext(os.path.basename(hy_obj.file_name))[0]
         coeff_file += "_%s_coeffs_%s.json" % (correction,export_dict["suffix"])
-        
+
         with open(coeff_file, 'w') as outfile:
             if correction == 'topo':
                 corr_dict = hy_obj.topo
@@ -79,7 +81,7 @@ def apply_corrections(hy_obj,config_dict):
     header_dict['data ignore value'] = hy_obj.no_data
     header_dict['data type'] = 4
 
-    output_name = config_dict['export']['output_dir'] 
+    output_name = config_dict['export']['output_dir']
     output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0]
     output_name +=  "_%s" % config_dict['export']["suffix"]
 
@@ -91,13 +93,13 @@ def apply_corrections(hy_obj,config_dict):
             waves= hy_obj.resampler['out_waves']
         else:
             waves = hy_obj.wavelengths
-                        
+
         header_dict['bands'] = len(waves)
         header_dict['wavelength'] = waves
-        
-        writer = WriteENVI(output_name,header_dict)   
+
+        writer = WriteENVI(output_name,header_dict)
         iterator = hy_obj.iterate(by = 'line', corrections = hy_obj.corrections,
-                                  resample = config_dict['resample']) 
+                                  resample = config_dict['resample'])
         while not iterator.complete:
             line = iterator.read_next()
             writer.write_line(line,iterator.current_line)
@@ -110,7 +112,7 @@ def apply_corrections(hy_obj,config_dict):
         waves = [round(hy_obj.wavelengths[x],2) for x in bands]
         header_dict['bands'] = len(bands)
         header_dict['wavelength'] = waves
-        
+
         writer = WriteENVI(output_name,header_dict)
         for b,band_num in enumerate(bands):
             band = hy_obj.get_band(band_num,
