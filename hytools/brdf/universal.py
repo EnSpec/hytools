@@ -149,12 +149,12 @@ def auto_kernel(actors,brdf_dict):
 
         if isinstance(vol,str) | isinstance(geom,str):
             print("Kernel combination: %s, %s" % (vol,geom))
-            print("Object shapes: %s, %s" % (round(res.x[0],2),round(res.x[1],2)))
+            print("Object shapes: %s, %s" % (round(result.x[0],2),round(result.x[1],2)))
             rmse = kernel_opt(result.x)
             print("RMSE: %s" % round(rmse,8))
             print("\n")
 
-            if (rmse < min_rmse) & ((res.x > 0).sum() == 2):
+            if (rmse < min_rmse) & ((result.x > 0).sum() == 2):
                 min_rmse= rmse
                 opt_geom = geom
                 opt_vol = vol
