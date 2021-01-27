@@ -3,6 +3,6 @@
 The :mod:`hytools.correction` module include functions image correction.
 """
 from .kernels import *
-from .standard import *
-from .dynamic import *
+from .universal import *
+from .flex import *
 from .brdf import *
