@@ -16,8 +16,6 @@ from .kernels import calc_volume_kernel,calc_geom_kernel
 from ..misc import progbar
 from ..masks import mask_dict
 
-diagnostic_waves = [450,850,1660,2200]
-
 def universal_brdf(actors,config_dict):
     brdf_dict= config_dict['brdf']
 
@@ -79,16 +77,15 @@ def auto_kernel(actors,brdf_dict):
     '''Automatically determine the optimal kernel combination and parameters for
     BRDF correction.
     '''
-    print('EXPERIMENTAL FEATURE!')
     print('Determining optimal kernel combination and parameters.')
+    print('EXPERIMENTAL FEATURE!!!')
 
     geometric = ['li_sparse_r','li_dense_r','roujean']
     volume = ['ross_thin','ross_thick','hotspot']
 
+    #Update BRDF correction params temporarily
     orig_sample = deepcopy(brdf_dict['sample_perc'])
-
-    #Update BRDF correction params
-    brdf_dict['sample_perc'] = 0.01
+    brdf_dict['sample_perc'] = brdf_dict['auto_perc']
 
     _ = ray.get([a.do.remote(set_brdf_coeffs,brdf_dict) for a in actors])
 
@@ -108,21 +105,15 @@ def auto_kernel(actors,brdf_dict):
     sensor_az = np.concatenate(sensor_az)
 
     band_samples = []
-    diagnostic_bands = [ray.get(actors[0].wave_to_band.remote(wave)) for wave in diagnostic_waves]
+    bands = [ray.get(actors[0].wave_to_band.remote(wave)) for wave in brdf_dict['auto_waves']]
 
-    for band in diagnostic_bands:
+    for band in bands:
         y = ray.get([a.get_band.remote(band,mask='calc_brdf',
                                corrections = corections) for a in actors])
         band_samples.append(np.concatenate(y))
 
-    #Use only 500,000 samples
-    if len(sensor_az) > 500000:
-        regress_mask = np.zeros(len(sensor_az)).astype(bool)
-        subset_indices = np.random.choice(np.arange(len(sensor_az)),
-                                        size=500000,replace= False)
-        regress_mask[subset_indices] = True
-    else:
-        regress_mask = np.ones(len(sensor_az)).astype(bool)
+    print("Using %s samples to optimize kernels." % len(sensor_az))
+    print("##############################")
 
     def kernel_opt(args):
         '''Kernel minimization function. Returns the average RMSE across
@@ -131,26 +122,19 @@ def auto_kernel(actors,brdf_dict):
         '''
         b_r,h_b = args
 
-        if geom:
-            geom_kernel= calc_geom_kernel(solar_az,solar_zn,sensor_az,
-                                          sensor_zn,geom,b_r=b_r,h_b =h_b)
-            X = np.vstack([geom_kernel,np.ones(geom_kernel.shape)]).T
-        if vol:
-            vol_kernel = calc_volume_kernel(solar_az,solar_zn,
-                                            sensor_az,sensor_zn,vol)
-            X = np.vstack([vol_kernel,np.ones(vol_kernel.shape)]).T
-        if vol and geom:
-            X = np.vstack([vol_kernel,geom_kernel,
-                       np.ones(vol_kernel.shape)]).T
-        elif (not isinstance(vol,str)) & (not isinstance(geom,str)):
-            return 1E11
+        geom_kernel= calc_geom_kernel(solar_az,solar_zn,sensor_az,
+                                      sensor_zn,geom,b_r=b_r,h_b =h_b)
+        vol_kernel = calc_volume_kernel(solar_az,solar_zn,
+                                        sensor_az,sensor_zn,vol)
+        X = np.vstack([vol_kernel,geom_kernel,
+                   np.ones(vol_kernel.shape)]).T
 
         band_rmse = []
         for y in band_samples:
-            coeffs = np.linalg.lstsq(X[regress_mask],
-                                     y[regress_mask])[0].flatten().tolist()
-            pred = (X[regress_mask]*coeffs).sum(axis=1)
-            obs = y[regress_mask]
+            coeffs = np.linalg.lstsq(X,
+                                     y)[0].flatten().tolist()
+            pred = (X*coeffs).sum(axis=1)
+            obs = y
             band_rmse.append(np.sqrt(np.mean((obs-pred)**2)))
         return np.mean(band_rmse)
 
@@ -158,27 +142,31 @@ def auto_kernel(actors,brdf_dict):
 
     #Cycle through all combinations of kernels
     for vol, geom in product(volume, geometric):
+        if geom == 'roujean':
+            rmse = kernel_opt([0,0])
+            result.x[0] = 0
+            result.x[1] = 0
+        else:
+            result = minimize(kernel_opt, (1,2),
+                           method='Nelder-Mead',
+                           tol=1e-6,
+                           bounds = ((0.25,20),(0.25,20)))
 
-        result = minimize(kernel_opt, (1,2),
-                       method='Nelder-Mead',
-                       tol=1e-6,
-                       bounds = ((0.25,20),(0.25,20)))
+        print("Kernel combination: %s, %s" % (vol,geom))
+        print("Object shapes: %s, %s" % (round(result.x[0],2),round(result.x[1],2)))
+        rmse = kernel_opt(result.x)
+        print("RMSE: %s" % round(rmse,8))
+        print("##############################")
 
-        if isinstance(vol,str) | isinstance(geom,str):
-            print("Kernel combination: %s, %s" % (vol,geom))
-            print("Object shapes: %s, %s" % (round(result.x[0],2),round(result.x[1],2)))
-            rmse = kernel_opt(result.x)
-            print("RMSE: %s" % round(rmse,8))
-            print("\n##############################")
-
-            if (rmse < min_rmse) & ((result.x > 0).sum() == 2):
-                min_rmse= rmse
-                opt_geom = geom
-                opt_vol = vol
-                opt_b_r = result.x[0]
-                opt_h_b = result.x[1]
+        if (rmse < min_rmse) & ((result.x > 0).sum() == 2):
+            min_rmse= rmse
+            opt_geom = geom
+            opt_vol = vol
+            opt_b_r = result.x[0]
+            opt_h_b = result.x[1]
 
     print("Optimal kernel combination: %s, %s" % (opt_vol,opt_geom))
+
     #Update BRDF correction params
     brdf_dict['sample_perc'] = orig_sample
     brdf_dict['volume']  = opt_vol
@@ -231,7 +219,7 @@ def calc_universal_group(actors,brdf_dict):
 def brdf_diagnostic_plot(hy_obj,config_dict):
     ''' Generate a diagnostic plot of BRDF correction results.
     '''
-    #Flip sign of zenith angle
+    #Flip sign of zenith angle at minimum
     sensor_zn = hy_obj.get_anc('sensor_zn',radians =False)
     sensor_zn[~hy_obj.mask['no_data']] = np.nan
     for i,line in enumerate(sensor_zn):
@@ -242,27 +230,30 @@ def brdf_diagnostic_plot(hy_obj,config_dict):
     diagno_df = pd.DataFrame()
     diagno_df['sensor_zn'] =sensor_zn
 
-    diagnostic_bands = [hy_obj.wave_to_band(wave) for wave in diagnostic_waves]
-    for band_num in diagnostic_bands:
+    bands = [hy_obj.wave_to_band(wave) for wave in config_dict['brdf']['diagnostic_waves']]
+    for band_num in bands:
         band = hy_obj.get_band(band_num,mask='calc_brdf')
         diagno_df['uncorr_%s' % band_num] =  band
-        band = hy_obj.get_band(band_num,
-                               corrections = hy_obj.corrections,
-                               mask='calc_brdf')
-        diagno_df['corr_%s' % band_num] =  band
 
+        band = hy_obj.get_band(band_num,
+                               corrections = hy_obj.corrections + ['brdf'],
+                               mask='calc_brdf')
+
+        diagno_df['corr_%s' % band_num] =  band
         fvol, fgeo, fiso  = hy_obj.brdf['coeffs'][band_num]
+
         brdf = fvol*hy_obj.ancillary['k_vol']
         brdf += fgeo*hy_obj.ancillary['k_geom']
         brdf+=fiso
         brdf = brdf[hy_obj.mask['calc_brdf']]
         diagno_df['brdf_%s' % band_num] =  brdf
 
-    #Average every 2 degrees of zenith angle
+    # Average every 2 degrees of zenith angle
     diagno_df=  diagno_df.groupby(by= 'sensor_zn').mean()
 
     fig = plt.figure(figsize= (8,6))
-    for a,band_num in enumerate(diagnostic_bands,start=1):
+    fig.suptitle(hy_obj.base_name)
+    for a,band_num in enumerate(bands,start=1):
         ax = fig.add_subplot(2,2,a)
         ax.plot(diagno_df.index,diagno_df['brdf_%s' % band_num],c='k',ls ='--')
         ax.scatter(diagno_df.index,diagno_df['uncorr_%s' % band_num],marker ='o',fc='w',ec='k')
@@ -284,7 +275,8 @@ def brdf_diagnostic_plot(hy_obj,config_dict):
     ax.legend(handles=custom_points, loc='center',frameon=False,
               bbox_to_anchor=(-.15, -.3), ncol =3,columnspacing = 1.5,labelspacing=.25)
 
-    plt.savefig("%s%s_brdf_plot.png" % (config_dict['export']['output_dir'],hy_obj.base_name))
+    plt.savefig("%s%s_brdf_plot.png" % (config_dict['export']['output_dir'],hy_obj.base_name),
+                bbox_inches = 'tight')
     plt.close()
 
 def apply_universal(hy_obj,data,dimension,index):
