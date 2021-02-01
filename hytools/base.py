@@ -30,6 +30,7 @@ class HyTools:
         self.bad_bands = []
         self.bands = None
         self.base_key = None
+        self.base_name = None
         self.brdf = {'type': None}
         self.byte_order = None
         self.columns = None
@@ -69,6 +70,7 @@ class HyTools:
 
         # Create a no data mask
         self.mask['no_data'] = self.get_band(0) != self.no_data
+        self.base_name = os.path.basename(os.path.splitext(hy_obj.file_name)[0])
 
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
