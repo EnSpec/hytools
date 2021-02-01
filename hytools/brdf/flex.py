@@ -15,12 +15,8 @@ from .kernels import calc_volume_kernel,calc_geom_kernel
 from ..masks import neon_edge
 from ..misc import progbar
 
-def flex_brdf(actors,brdf_dict):
-    if brdf_dict['solar_zn_norm']:
-        #Calculate mean solar zenith
-        solar_zn_samples = ray.get([a.do.remote(get_solar_zn) for a in actors])
-        brdf_dict['mean_solar_zenith'] = float(np.mean(solar_zn_samples))
-
+def flex_brdf(actors,config_dict):
+    brdf_dict= config_dict['brdf']
     if brdf_dict['grouped']:
         actors = calc_flex_group(actors,brdf_dict)
     else:
@@ -57,12 +53,10 @@ def ndvi_class(hy_obj):
     idxRand= idx[np.random.choice(range(len(idx)),int(len(idx)*(1-hy_obj.brdf['sample_perc'])), replace = False)].T
     class_mask[idxRand[0],idxRand[1]] = 0
     class_mask = class_mask.astype(np.int8)
-
     hy_obj.ancillary['ndvi_classes'] = class_mask
 
 def ndvi_bins(ndvi,brdf_dict):
-    '''
-    Calculate NDVI bin extents
+    '''Calculate NDVI bin extents
     '''
     perc_range = brdf_dict['ndvi_perc_max'] - brdf_dict['ndvi_perc_min'] + 1
 
@@ -86,6 +80,8 @@ def set_brdf_coeffs(hy_obj,brdf_coeffs):
     hy_obj.brdf  = brdf_coeffs
 
 def get_kernel_samples(hy_obj):
+    '''Calculate and sample BRDF kernels
+    '''
     geom_kernel = hy_obj.geom_kernel(hy_obj.brdf['geometric'],
                                      b_r=hy_obj.brdf["b/r"] ,
                                      h_b =hy_obj.brdf["h/b"])
@@ -104,10 +100,6 @@ def get_band_samples(hy_obj,args):
                            corrections = hy_obj.corrections)
     return band[hy_obj.ancillary['ndvi_classes'] !=0]
 
-def get_solar_zn(hy_obj):
-    solar_zn = hy_obj.get_anc('solar_zn')
-    return np.mean(solar_zn[hy_obj.mask['no_data']])
-
 def calc_flex_single(hy_obj,brdf_dict):
     ''' Calculate BRDF coefficents for a single image
     '''
@@ -122,10 +114,7 @@ def calc_flex_single(hy_obj,brdf_dict):
 
     hy_obj.brdf['bins'] = {k:v for (k,v) in enumerate(bins,start=1)}
 
-    # Create class map
     ndvi_class(hy_obj)
-
-    #Collect kernel samples
     kernel_samples= get_kernel_samples(hy_obj)
 
     # Calculate coefficients for each band and class
@@ -188,15 +177,15 @@ def calc_flex_group(actors,brdf_dict):
 
 
 def apply_flex(hy_obj,data,dimension,index):
-    ''' Apply SCSS correction to a slice of the data
+    ''' Apply flex BRDF correction to a slice of the data
 
     Args:
         hy_obj : Hytools class object.
         data (np.ndarray): Data slice.
-        index (int,list): Data index(ices).
+        index (int,list): Data index.
 
     Returns:
-        data (np.ndarray): BRDF correct data slice.
+        data (np.ndarray): BRDF corrected data slice.
     '''
 
     # Load kernels and NDVI to memory if not already there
