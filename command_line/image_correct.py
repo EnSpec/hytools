@@ -45,7 +45,7 @@ def main():
         if correction =='topo':
             topo_coeffs(actors,config_dict['topo'])
         elif correction == 'brdf':
-            brdf_coeffs(actors,config_dict['brdf'])
+            brdf_coeffs(actors,config_dict)
 
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
