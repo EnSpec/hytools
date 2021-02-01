@@ -70,7 +70,7 @@ class HyTools:
 
         # Create a no data mask
         self.mask['no_data'] = self.get_band(0) != self.no_data
-        self.base_name = os.path.basename(os.path.splitext(hy_obj.file_name)[0])
+        self.base_name = os.path.basename(os.path.splitext(self.file_name)[0])
 
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
