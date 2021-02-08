@@ -1,14 +1,13 @@
-import glob
-import ray
-import numpy as np
 import json
 import os
 import warnings
 import sys
+import ray
+import numpy as np
 import hytools as ht
 from hytools.io.envi import *
-from hytools.topo.topo import topo_coeffs
-from hytools.brdf.brdf import brdf_coeffs
+from hytools.topo import calc_topo_coeffs
+from hytools.brdf import calc_brdf_coeffs
 
 warnings.filterwarnings("ignore")
 np.seterr(divide='ignore', invalid='ignore')
@@ -43,9 +42,9 @@ def main():
 
     for correction in config_dict["corrections"]:
         if correction =='topo':
-            topo_coeffs(actors,config_dict['topo'])
+            calc_topo_coeffs(actors,config_dict['topo'])
         elif correction == 'brdf':
-            brdf_coeffs(actors,config_dict)
+            calc_brdf_coeffs(actors,config_dict)
 
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
@@ -103,7 +102,6 @@ def apply_corrections(hy_obj,config_dict):
         while not iterator.complete:
             line = iterator.read_next()
             writer.write_line(line,iterator.current_line)
-            progbar(iterator.current_line,hy_obj.lines)
 
     #Export subset of wavelengths
     else:
