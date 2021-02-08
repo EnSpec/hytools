@@ -21,6 +21,8 @@ For complete documentation see:
 - h5py
 - ray
 - scipy
+- pandas
+- matplotlib
 # Installation
 To install run:
 
@@ -32,7 +34,7 @@ python setup.py install
 
 import hytools as ht
 
-#Create a HyTools container object 
+#Create a HyTools container object
 envi = ht.HyTools()
 
 #Read and load file metadata
@@ -56,15 +58,15 @@ writer = ht.io.WriteENVI('output_envi.bin',hy_obj.header_dict)
 iterator = hy_obj.iterate(by = 'line')
 
 # Cycle line by line, read from original data
-while not iterator.complete:  
+while not iterator.complete:
    #Read next line
-   line = iterator.read_next() 
+   line = iterator.read_next()
 
    #Do some calculations.......
    radiance = line * gain + offset
 
    #Write line to file
    writer.write_line(radiance,iterator.current_line)
-	
-writer.close()  
+
+writer.close()
 ```
