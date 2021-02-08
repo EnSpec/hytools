@@ -9,7 +9,7 @@ config_file = "/home/chlus/dev_hytools/ic_config.json"
 config_dict = {}
 
 #Only coefficients for good bands will be calculated
-config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]conzenith an
+config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
 #config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
 
 # Input data settings for NEON
