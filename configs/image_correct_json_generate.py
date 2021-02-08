@@ -5,20 +5,19 @@ import numpy as np
 
 home = os.path.expanduser("~")
 
-config_file = "/home/adam/Dropbox/projects/hytools/configs/ic_config_neon.json"
+config_file = "/home/chlus/dev_hytools/ic_config.json"
 config_dict = {}
 
 #Only coefficients for good bands will be calculated
 config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
-config_dict['bad_bands'] =[[300,400],[700,2600]]  # Subset for testing
-
+#config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
 
 # Input data settings for NEON
 #################################################################
-# config_dict['file_type'] = 'neon'
-# images= glob.glob("/data/*.h5")
-# images.sort()
-# config_dict["input_files"] = images
+config_dict['file_type'] = 'neon'
+images= glob.glob("/home/chlus/dev_hytools/data/harv/*.h5")
+images.sort()
+config_dict["input_files"] = images
 
 # Input data settings for ENVI
 #################################################################
@@ -33,23 +32,20 @@ config_dict['bad_bands'] =[[300,400],[700,2600]]  # Subset for testing
 
 # '''
 
-config_dict['file_type'] = 'envi'
-aviris_anc_names = ['path_length','sensor_az','sensor_zn',
-                    'solar_az', 'solar_zn','phase','slope',
-                    'aspect', 'cosine_i','utc_time']
-images= glob.glob("/data/*rfl_v1a_img")
-images.sort()
-config_dict["input_files"] = images
+# config_dict['file_type'] = 'envi'
+# aviris_anc_names = ['path_length','sensor_az','sensor_zn',
+#                     'solar_az', 'solar_zn','phase','slope',
+#                     'aspect', 'cosine_i','utc_time']
+# images= glob.glob("/home/chlus/dev_hytools/data/yose/*img")
+# images.sort()
+# config_dict["input_files"] = images
 
-config_dict["anc_files"] = {}
-anc_files = glob.glob("/data/*obs_ort")
-anc_files.sort()
-for i,image in enumerate(images):
-    config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
-                                                [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
-
-config_dict['num_cpus'] = len(images)
-
+# config_dict["anc_files"] = {}
+# anc_files = glob.glob("/home/chlus/dev_hytools/data/yose/*ort")
+# anc_files.sort()
+# for i,image in enumerate(images):
+#     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
+#                                                 [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
 
 # Export settings
 #################################################################
@@ -63,33 +59,51 @@ config_dict['num_cpus'] = len(images)
 config_dict['export'] = {}
 config_dict['export']['coeffs']  = True
 config_dict['export']['image']  = True
-config_dict['export']['subset_waves']  = [660,550,440]
-config_dict['export']['output_dir'] = '/data/output/yose_2013/'
-config_dict['export']["suffix"] = 'user'
+config_dict['export']['subset_waves']  = [660,550,440,850]
+config_dict['export']['output_dir'] ="/home/chlus/dev_hytools/data/output/"
+config_dict['export']["suffix"] = 'flex_18dyn'
 
 # Specify which correction to apply and order of application
+# Options: 'topo', 'brdf'
 # For no correction provide empty list: []
-config_dict["corrections"]  = ['topo','brdf']
+config_dict["corrections"]  = ['brdf']
 
 #Topographic Correction options
 #################################################################
 '''
 Types supported:
-    - 'scs+c':  Sonnen et al. 2005
-    - 'mod_minneart':
-    - 'cosine :
+    - 'cosine'
+    - 'c'
+    - 'scs
+    - 'scs+c'
+    - 'mod_minneart'
     - 'precomputed'
-    - 'none': No correction.
 
-See documentation for options specific to each
-correction type
+Apply and calc masks are only needed for C and SCS+C corrections. They will
+be ignored in all other cases and correction will be applied to all
+non no-data pixels.
+
+For precomputed topographic coefficients 'coeff_files' is a
+dictionary where each key is the full the image path and value
+is the full path to coefficients file, one per image.
 '''
 config_dict["topo"] =  {}
-config_dict["topo"]['type'] =  'scs+c'
-config_dict["topo"]['mask'] = "topo1"
 
-# Precomputed topographic coefficients
-# config_dict["topo"]  = {}
+config_dict["topo"]['type'] =  'scs+c'
+config_dict["topo"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
+                                             'min': 0.1,'max': 1.0}],
+                                    ['ancillary',{'name':'slope',
+                                                  'min': np.radians(5),'max':'+inf' }],
+                                    ['ancillary',{'name':'cosine_i',
+                                                  'min': 0.12,'max':'+inf' }]]
+
+config_dict["topo"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
+                                             'min': 0.1,'max': 1.0}],
+                                    ['ancillary',{'name':'slope',
+                                                  'min': np.radians(5),'max':'+inf' }],
+                                    ['ancillary',{'name':'cosine_i',
+                                                  'min': 0.12,'max':'+inf' }]]
+
 # config_dict["topo"]['type'] =  'precomputed'
 # config_dict["brdf"]['coeff_files'] =  {}
 
@@ -98,83 +112,86 @@ config_dict["topo"]['mask'] = "topo1"
 #################################################################3
 '''
 Types supported:
-    - 'standard/global': Simple kernel multiplicative correction.
-    - 'class': Correction by class.
-    - 'precomputed'
-    - 'none': No correction.
+    - 'universal': Simple kernel multiplicative correction.
+    - 'local': Correction by class. (Future.....)
+    - 'flex' : Correction by NDVI class
+    - 'precomputed' : Use precomputed coefficients
 
-For precomputed coefficients, input a dictionary with the
-file name as the key and pathname to the coeffcients file
-as the value.
-
-See documentation for options specific to each
-correction type.
-
-If 'by_type' == 'user'
+If 'bin_type' == 'user'
 'bins' should be a list of lists, each list the NDVI bounds [low,high]
 
 Object shapes ('h/b'.'b/r') only needed for Li kernels
+
+For precomputed topographic coefficients 'coeff_files' is a
+dictionary where each key is the full the image path and value
+is the full path to coefficients file, one per image.
 '''
 
 config_dict["brdf"]  = {}
 
+# Options are 'line','scene', or a float for a custom solar zn
+# Custom solar zenith angle should be in radians
+config_dict["brdf"]['solar_zn_type'] ='scene'
+
 # Universal BRDF config
 #----------------------
-config_dict["brdf"]['type'] =  'universal'
-config_dict["brdf"]['grouped'] =  True
-config_dict["brdf"]['sample_perc'] = 0.1
-config_dict["brdf"]['geometric'] = 'li_sparse_r'
-config_dict["brdf"]['volume'] = 'ross_thick'
-config_dict["brdf"]["b/r"] = 2.5
-config_dict["brdf"]["h/b"] = 2
-config_dict["brdf"]['calc_mask'] = ["ndvi", {'ndvi_min': 0.6,
-                                              'ndvi_max' : 1}]
-config_dict["brdf"]['apply_mask'] = ["ndvi", {'ndvi_min': 0.1,
-                                              'ndvi_max' : 1}]
-#----------------------
-
-## Precomputed BRDF coefficients
-##------------------------------
-# config_dict["brdf"]['type'] =  'precomputed'
-# config_dict["brdf"]['coeff_files'] =  {}
-##------------------------------
-
-# ## Flex BRDF configs
-# ##------------------
-# config_dict["brdf"]['type'] =  'flex'
+# config_dict["brdf"]['type'] =  'universal'
 # config_dict["brdf"]['grouped'] =  True
-# config_dict["brdf"]['geometric'] = 'li_dense_r'
+# config_dict["brdf"]['sample_perc'] = 0.1
+# config_dict["brdf"]['geometric'] = 'li_sparse_r'
 # config_dict["brdf"]['volume'] = 'ross_thick'
 # config_dict["brdf"]["b/r"] = 2.5
 # config_dict["brdf"]["h/b"] = 2
-# config_dict["brdf"]['sample_perc'] = 0.1
-# config_dict["brdf"]['interp_kind'] = 'linear'
+# config_dict["brdf"]['calc_mask'] = [["ndi", {'band1': 850,'band2': 660,
+#                                             'min': 0.1,'max': 1.0}]]
+# config_dict["brdf"]['apply_mask'] = [["ndi", {'band1': 850,'band2': 660,
+#                                             'min': 0.1,'max': 1.0}]]
 
-# # NDVI threshold for where to apply correction
-# config_dict["brdf"]['ndvi_min'] = 0.1
-# config_dict["brdf"]['ndvi_max'] = 1.0
-# #Normalize to scene average solar zenith angle
-# config_dict["brdf"]['solar_zn_norm'] =True
-# # Buffer around edge of NEON images to remove artifact
-# # Exclude for non NEON images
-# config_dict["brdf"]['neon_buffer'] = True
-# #Mask sensor zenith angle less than this value
-# config_dict["brdf"]['sensor_zn_min'] = np.radians(2)
+# Automatically determine optimal kernel by minimizing
+# RMSE across 'auto_waves'
+# config_dict["brdf"]['auto_kernel'] = False
+# config_dict["brdf"]['auto_waves'] = [450,550,660,850]
+# config_dict["brdf"]['auto_perc'] = 0.01
+
+#----------------------
+# ## Flex BRDF configs
+# ##------------------
+config_dict["brdf"]['type'] =  'flex'
+config_dict["brdf"]['grouped'] =  True
+config_dict["brdf"]['geometric'] = 'li_dense_r'
+config_dict["brdf"]['volume'] = 'ross_thick'
+config_dict["brdf"]["b/r"] = 2.5
+config_dict["brdf"]["h/b"] = 2
+config_dict["brdf"]['sample_perc'] = 0.1
+config_dict["brdf"]['interp_kind'] = 'linear'
+config_dict["brdf"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
+                                             'min': 0.1,'max': 1.0}],
+                                    ['kernel_finite',{}],
+                                    ['ancillary',{'name':'sensor_zn',
+                                                  'min':np.radians(2),'max':'inf' }],
+                                    ['neon_edge',{'radius': 30}]]
+config_dict["brdf"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
+                                              'min': 0.05,'max': 1.0}]]
+
 
 # ## Flex dynamic NDVI params
-# # config_dict["brdf"]['bin_type'] = 'dynamic'
-# # config_dict["brdf"]['num_bins'] = 18
-# # config_dict["brdf"]['ndvi_bin_min'] = 0.05
-# # config_dict["brdf"]['ndvi_bin_max'] = 1.0
-# # config_dict["brdf"]['ndvi_perc_min'] = 10
-# # config_dict["brdf"]['ndvi_perc_max'] = 95
+config_dict["brdf"]['bin_type'] = 'dynamic'
+config_dict["brdf"]['num_bins'] = 18
+config_dict["brdf"]['ndvi_bin_min'] = 0.05
+config_dict["brdf"]['ndvi_bin_max'] = 1.0
+config_dict["brdf"]['ndvi_perc_min'] = 10
+config_dict["brdf"]['ndvi_perc_max'] = 95
 
 # ## Flex fixed bins specified by user
 # config_dict["brdf"]['bin_type'] = 'user'
 # config_dict["brdf"]['bins']  = [[0.1,.25],[.25,.75],[.75,1]]
 # ##-----------------
 
-
+## Precomputed BRDF coefficients
+##------------------------------
+# config_dict["brdf"]['type'] =  'precomputed'
+# config_dict["brdf"]['coeff_files'] =  {}
+##------------------------------
 
 #Wavelength resampling options
 ##############################
@@ -202,23 +219,7 @@ config_dict["resample"]  = False
 #         config_dict["resampler"]['out_waves'].append(wavelength)
 
 
+config_dict['num_cpus'] = len(images)
+
 with open(config_file, 'w') as outfile:
     json.dump(config_dict,outfile,indent=3)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
