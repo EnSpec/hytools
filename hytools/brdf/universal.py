@@ -3,57 +3,40 @@
 This module contains functions to calculate and apply a single ('universal')
 set of multiplicative BRDF correction coefficents. Coefficients can be calculated
 per flightline or across multiple flightlines.
+
 """
 from itertools import product
 from copy import deepcopy
 import numpy as np
 import ray
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from scipy.optimize import minimize
 from .kernels import calc_volume_kernel,calc_geom_kernel
 from ..misc import progbar
-from ..masks import mask_dict
+from ..misc import update_brdf
+from ..masks import mask_create
+from ..plotting import universal_diagno_plot
 
 def universal_brdf(actors,config_dict):
-    brdf_dict= config_dict['brdf']
-
-    #Generate binary masks for coefficient calulation
-    brdf_masker = mask_dict[brdf_dict['calc_mask'][0]]
-    _ = ray.get([a.gen_mask.remote(brdf_masker,
-                                   'calc_brdf',
-                                   brdf_dict['calc_mask'][1]) for a in actors])
-
-    #Set BRDF correction params
-    _ = ray.get([a.do.remote(set_brdf_coeffs,brdf_dict) for a in actors])
-
+    brdf_dict = config_dict['brdf']
     #Automatically determine optimal kernel
-    if brdf_dict['auto_kernel'] == True:
+    if brdf_dict['auto_kernel']:
         auto_kernel(actors,brdf_dict)
-        #Rerun mask
-        _ = ray.get([a.gen_mask.remote(brdf_masker,
-                                       'calc_brdf',
-                                       brdf_dict['calc_mask'][1]) for a in actors])
+        #Rebuild mask
+        _ = ray.get([a.gen_mask.remote(mask_create,'calc_brdf',
+                                       brdf_dict['calc_mask']) for a in actors])
 
     if brdf_dict['grouped']:
-        actors = calc_universal_group(actors,brdf_dict)
+        actors = calc_universal_group(actors)
     else:
-        _ = ray.get([a.do.remote(calc_universal_single,brdf_dict) for a in actors])
+        _ = ray.get([a.do.remote(calc_universal_single) for a in actors])
 
-    if brdf_dict['diagnostic_plots'] == True:
+    if brdf_dict['diagnostic_plots']:
         print('Exporting diagnostic plots.')
-        _ = ray.get([a.do.remote(brdf_diagnostic_plot,config_dict) for a in actors])
-
-
-def set_brdf_coeffs(hy_obj,brdf_dict):
-    hy_obj.brdf = brdf_dict
+        _ = ray.get([a.do.remote(universal_diagno_plot,config_dict) for a in actors])
 
 def sample_kernels(hy_obj):
     '''Calculate and sample BRDF kernels
     '''
-    hy_obj.brdf['coeffs'] = {}
-
     #Sample kernel images
     geom_kernel = hy_obj.geom_kernel(hy_obj.brdf['geometric'],
                                      b_r=hy_obj.brdf["b/r"],
@@ -85,9 +68,8 @@ def auto_kernel(actors,brdf_dict):
 
     #Update BRDF correction params temporarily
     orig_sample = deepcopy(brdf_dict['sample_perc'])
-    brdf_dict['sample_perc'] = brdf_dict['auto_perc']
-
-    _ = ray.get([a.do.remote(set_brdf_coeffs,brdf_dict) for a in actors])
+    _ =  ray.get([a.do.remote(update_brdf,{'key':'sample_perc',
+                                       'value': brdf_dict['auto_perc']}) for a in actors])
 
     #Create subsampling mask
     _ = ray.get([a.do.remote(subsample_mask) for a in actors])
@@ -168,12 +150,11 @@ def auto_kernel(actors,brdf_dict):
     print("Optimal kernel combination: %s, %s" % (opt_vol,opt_geom))
 
     #Update BRDF correction params
-    brdf_dict['sample_perc'] = orig_sample
-    brdf_dict['volume']  = opt_vol
-    brdf_dict['geometric'] = opt_geom
-    brdf_dict['b/r'] =opt_b_r
-    brdf_dict['h/b'] = opt_h_b
-    _ = ray.get([a.do.remote(set_brdf_coeffs,brdf_dict) for a in actors])
+    for key,value in zip(['sample_perc','volume','geometric','b/r','h/b'],
+                         [orig_sample,opt_vol,opt_geom,opt_b_r,opt_h_b]):
+
+        _ =  ray.get([a.do.remote(update_brdf,{'key':key,
+                                           'value': value}) for a in actors])
 
 def calc_universal_single(hy_obj):
     '''Calculate BRDF coefficients on a per flightline basis.
@@ -181,6 +162,7 @@ def calc_universal_single(hy_obj):
     subsample_mask(hy_obj)
     X = sample_kernels(hy_obj)
 
+    hy_obj.brdf['coeffs'] = {}
     for band_num,band in enumerate(hy_obj.bad_bands):
         if ~band:
             band = hy_obj.get_band(band_num,
@@ -188,7 +170,7 @@ def calc_universal_single(hy_obj):
             brdf_coeff = np.linalg.lstsq(X, band,rcond=None)[0].flatten().tolist()
             hy_obj.brdf['coeffs'][band_num] = brdf_coeff
 
-def calc_universal_group(actors,brdf_dict):
+def calc_universal_group(actors):
     '''Calculate BRDF coefficients using pooled data from all flightlines.
     '''
     _ = ray.get([a.do.remote(subsample_mask) for a in actors])
@@ -198,7 +180,7 @@ def calc_universal_group(actors,brdf_dict):
     bad_bands = ray.get(actors[0].do.remote(lambda x: x.bad_bands))
     corections = ray.get(actors[0].do.remote(lambda x: x.corrections))
 
-    brdf_dict['coeffs'] = {}
+    coeffs = {}
 
     for band_num,band in enumerate(bad_bands):
         if ~band:
@@ -206,81 +188,19 @@ def calc_universal_group(actors,brdf_dict):
                                            corrections = corections) for a in actors])
             y = np.concatenate(y)
             coeffs = np.linalg.lstsq(X, y)[0].flatten().tolist()
-            brdf_dict['coeffs'][band_num] = coeffs
+            coeffs[band_num] = coeffs
             progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
     print('\n')
 
-    #Set BRDF coefficients
-    _ = ray.get([a.do.remote(set_brdf_coeffs,brdf_dict) for a in actors])
+    #Update BRDF coeffs
+    _ = ray.get([a.do.remote(update_brdf,{'key':'coeffs',
+                                          'value': coeffs}) for a in actors])
 
     return actors
 
 
-def brdf_diagnostic_plot(hy_obj,config_dict):
-    ''' Generate a diagnostic plot of BRDF correction results.
-    '''
-    #Flip sign of zenith angle at minimum
-    sensor_zn = hy_obj.get_anc('sensor_zn',radians =False)
-    sensor_zn[~hy_obj.mask['no_data']] = np.nan
-    for i,line in enumerate(sensor_zn):
-        line[:np.nanargmin(line)] *= -1
-        sensor_zn[i] = line
-    sensor_zn = (sensor_zn[hy_obj.mask['calc_brdf']]//2)*2
-
-    diagno_df = pd.DataFrame()
-    diagno_df['sensor_zn'] =sensor_zn
-
-    bands = [hy_obj.wave_to_band(wave) for wave in config_dict['brdf']['diagnostic_waves']]
-    for band_num in bands:
-        band = hy_obj.get_band(band_num,mask='calc_brdf')
-        diagno_df['uncorr_%s' % band_num] =  band
-
-        band = hy_obj.get_band(band_num,
-                               corrections = hy_obj.corrections + ['brdf'],
-                               mask='calc_brdf')
-
-        diagno_df['corr_%s' % band_num] =  band
-        fvol, fgeo, fiso  = hy_obj.brdf['coeffs'][band_num]
-
-        brdf = fvol*hy_obj.ancillary['k_vol']
-        brdf += fgeo*hy_obj.ancillary['k_geom']
-        brdf+=fiso
-        brdf = brdf[hy_obj.mask['calc_brdf']]
-        diagno_df['brdf_%s' % band_num] =  brdf
-
-    # Average every 2 degrees of zenith angle
-    diagno_df=  diagno_df.groupby(by= 'sensor_zn').mean()
-
-    fig = plt.figure(figsize= (8,6))
-    fig.suptitle(hy_obj.base_name)
-    for a,band_num in enumerate(bands,start=1):
-        ax = fig.add_subplot(2,2,a)
-        ax.plot(diagno_df.index,diagno_df['brdf_%s' % band_num],c='k',ls ='--')
-        ax.scatter(diagno_df.index,diagno_df['uncorr_%s' % band_num],marker ='o',fc='w',ec='k')
-        ax.scatter(diagno_df.index,diagno_df['corr_%s' % band_num],marker ='o',fc='k',ec='k')
-        ax.text(.85,.9, "%s nm" % int(hy_obj.wavelengths[band_num]), transform=ax.transAxes,
-                ha = 'center', fontsize = 12)
-        if a > 2:
-            ax.set_xlabel('View zenith angle')
-        if a in [1,3]:
-            ax.set_ylabel('Reflectance')
-
-    #Create legend
-    custom_points = []
-    custom_points.append(Line2D([0],[0], marker = 'o',label='Uncorrected',
-                          markerfacecolor='w', markersize=10,lw=0,markeredgecolor='k'))
-    custom_points.append(Line2D([0],[0], marker = 'o',label='Corrected',
-                          markerfacecolor='k', markersize=10,lw=0,markeredgecolor='k'))
-    custom_points.append(Line2D([0],[1],label='Modeled BRDF',c='k', ls ='--'))
-    ax.legend(handles=custom_points, loc='center',frameon=False,
-              bbox_to_anchor=(-.15, -.3), ncol =3,columnspacing = 1.5,labelspacing=.25)
-
-    plt.savefig("%s%s_brdf_plot.png" % (config_dict['export']['output_dir'],hy_obj.base_name),
-                bbox_inches = 'tight')
-    plt.close()
-
 def apply_universal(hy_obj,data,dimension,index):
-    ''' Apply SCSS correction to a slice of the data
+    ''' Apply universal BRDF correction to a slice of the data
 
     Args:
         hy_obj : Hytools class object.
@@ -291,35 +211,22 @@ def apply_universal(hy_obj,data,dimension,index):
         data (np.ndarray): BRDF correct data slice.
     '''
 
-    # Load kernels and mask to memory if not already there
-    if 'k_vol' not in hy_obj.ancillary.keys():
+    if 'k_vol' not in hy_obj.ancillary:
         hy_obj.ancillary['k_vol'] = hy_obj.volume_kernel(hy_obj.brdf['volume'])
-
-    if 'k_geom' not in hy_obj.ancillary.keys():
+    if 'k_geom' not in hy_obj.ancillary:
         hy_obj.ancillary['k_geom'] = hy_obj.geom_kernel(hy_obj.brdf['geometric'],
-                                    b_r=hy_obj.brdf["b/r"],
-                                    h_b =hy_obj.brdf["h/b"])
-
-    if hy_obj.brdf['solar_zn_norm']:
-        solar_zn = hy_obj.brdf['mean_solar_zenith']  * np.ones((hy_obj.lines,hy_obj.columns))
-    else:
-        solar_zn = hy_obj.get_anc('solar_zn')
-
-    if 'k_vol_nadir' not in hy_obj.ancillary.keys():
-        hy_obj.ancillary['k_vol_nadir'] = calc_volume_kernel(0,solar_zn,
-                                     0,0,hy_obj.brdf['volume'])
-
-    if 'k_geom_nadir' not in hy_obj.ancillary.keys():
-        hy_obj.ancillary['k_geom_nadir'] = calc_geom_kernel(0,solar_zn,
-                                        0,0,hy_obj.brdf['geometric'],
-                                        b_r=hy_obj.brdf["b/r"],
-                                        h_b =hy_obj.brdf["h/b"])
-
+                                     b_r=hy_obj.brdf["b/r"],
+                                     h_b =hy_obj.brdf["h/b"])
+    if ('k_vol_nadir' not in hy_obj.ancillary) or ('k_geom_nadir' not in hy_obj.ancillary):
+        solar_zn = hy_obj.brdf['solar_zn_norm_radians']  * np.ones((hy_obj.lines,hy_obj.columns))
+        hy_obj.ancillary['k_vol_nadir']  = calc_volume_kernel(0,solar_zn,
+                                                               0,0,hy_obj.brdf['volume'])
+        hy_obj.ancillary['k_geom_nadir']  = calc_geom_kernel(0,solar_zn,
+                                                             0,0,hy_obj.brdf['geometric'],
+                                                             b_r=hy_obj.brdf["b/r"],
+                                                             h_b =hy_obj.brdf["h/b"])
     if 'apply_brdf' not in hy_obj.mask:
-        brdf_masker = mask_dict[hy_obj.brdf['apply_mask'][0]]
-        hy_obj.gen_mask(brdf_masker,
-                        'apply_brdf',
-                        hy_obj.brdf['apply_mask'][1])
+        hy_obj.gen_mask(mask_create,'apply_brdf',hy_obj.brdf['apply_mask'])
 
     brdf_bands = [int(x) for x in hy_obj.brdf['coeffs'].keys()]
     fvol, fgeo, fiso  = np.array([hy_obj.brdf['coeffs'][band] for band in hy_obj.brdf['coeffs'].keys()]).T

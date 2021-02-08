@@ -32,7 +32,7 @@ def calc_scs_coeffs(hy_obj,topo_dict):
     cos_slope = np.cos(hy_obj.get_anc('solar_zn'))
 
     c_factor =  (cos_slope +cos_solar_zn)/cos_i
-    c_factor[~hy_obj.mask['topo']] = 1.
+    c_factor[~hy_obj.mask['no_data']] = 1.
     hy_obj.ancillary['scs_factor'] =c_factor
 
 def apply_scs(hy_obj,data,dimension,index):

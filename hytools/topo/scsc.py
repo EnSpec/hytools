@@ -18,7 +18,6 @@ TODO: Rationale/ examples for using different fitting algorithms
 
 """
 import numpy as np
-from scipy.optimize import nnls
 from .c import calc_c
 from ..masks import mask_dict
 
@@ -55,8 +54,8 @@ def calc_scsc_coeffs(hy_obj,topo_dict):
 
     for band_num,band in enumerate(hy_obj.bad_bands):
         if ~band:
-            band = hy_obj.get_band(band_num,mask='topo')
-            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['topo']])
+            band = hy_obj.get_band(band_num,mask='calc_topo')
+            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['calc_topo']])
     hy_obj.topo = topo_dict
 
 def apply_scsc_band(hy_obj,band,index):
@@ -77,7 +76,7 @@ def apply_scsc_band(hy_obj,band,index):
 
     C = hy_obj.topo['coeffs'][index]
     correction_factor = (c1 + C)/(cosine_i + C)
-    band[hy_obj.mask['topo']] = band[hy_obj.mask['topo']] * correction_factor[hy_obj.mask['topo']]
+    band[hy_obj.mask['calc_topo']] = band[hy_obj.mask['calc_topo']] * correction_factor[hy_obj.mask['calc_topo']]
     band[~hy_obj.mask['no_data']] = hy_obj.no_data
 
     return band
@@ -101,9 +100,6 @@ def apply_scsc(hy_obj,data,dimension,index):
     if 'cosine_i' not in hy_obj.ancillary.keys():
         cosine_i = hy_obj.cosine_i()
         hy_obj.ancillary['cosine_i'] = cosine_i
-    if 'topo' not in hy_obj.mask:
-        topo_masker = mask_dict[hy_obj.topo['mask']]
-        hy_obj.mask['topo'] = topo_masker(hy_obj)
 
     C_bands = list([int(x) for x in hy_obj.topo['coeffs'].keys()])
     C = np.array(list(hy_obj.topo['coeffs'].values()))
@@ -112,45 +108,49 @@ def apply_scsc(hy_obj,data,dimension,index):
     data = data.astype(np.float32)
     hy_obj.topo['coeffs'] =  {int(k): hy_obj.topo['coeffs'][k] for k in hy_obj.topo['coeffs']}
 
-    if dimension != 'band':
+    if (dimension != 'band') & (dimension != 'chunk'):
         if dimension == 'line':
             #index= 3000
             #data = hy_obj.get_line(3000)
-            mask = hy_obj.mask['topo'][index,:]
+            mask = hy_obj.mask['apply_topo'][index,:]
             cosine_i = hy_obj.ancillary['cosine_i'][[index],:].T
             c1 = hy_obj.ancillary['c1'][[index],:].T
 
         elif dimension == 'column':
             #index= 300
             #data = hy_obj.get_column(index)
-            mask = hy_obj.mask['topo'][:,index]
+            mask = hy_obj.mask['apply_topo'][:,index]
             cosine_i = hy_obj.ancillary['cosine_i'][:,[index]]
             c1 = hy_obj.ancillary['c1'][:,[index]]
-    
-        elif dimension == 'chunk':
-            #index = 200,501,3000,3501
-            x1,x2,y1,y2 = index
-            #data = hy_obj.get_chunk(x1,x2,y1,y2)
-            mask = hy_obj.mask['topo'][y1:y2,x1:x2]
-            cosine_i = hy_obj.ancillary['cosine_i'][y1:y2,x1:x2][:,:,np.newaxis]
-            c1 = hy_obj.ancillary['c1'][y1:y2,x1:x2][:,:,np.newaxis]
-    
+
         elif dimension == 'pixels':
             #index = [[2000,2001],[200,501]]
             y,x = index
             #data = hy_obj.get_pixels(y,x)
-            mask = hy_obj.mask['topo'][y,x]
+            mask = hy_obj.mask['apply_topo'][y,x]
             cosine_i = hy_obj.ancillary['cosine_i'][[y],[x]].T
             c1 = hy_obj.ancillary['c1'][[y],[x]].T
-            
+
+        correction_factor = np.ones(data.shape)
+        correction_factor[:,C_bands] = (c1 + C)/(cosine_i + C)
+        data[mask,:] = data[mask,:]*correction_factor[mask,:]
+
+    elif dimension  == 'chunk':
+        #index = 200,501,3000,3501
+        x1,x2,y1,y2 = index
+        #data = hy_obj.get_chunk(x1,x2,y1,y2)
+        mask = hy_obj.mask['apply_topo'][y1:y2,x1:x2]
+        cosine_i = hy_obj.ancillary['cosine_i'][y1:y2,x1:x2][:,:,np.newaxis]
+        c1 = hy_obj.ancillary['c1'][y1:y2,x1:x2][:,:,np.newaxis]
+
         correction_factor = np.ones(data.shape)
         correction_factor[:,:,C_bands] = (c1 + C)/(cosine_i + C)
         data[mask,:] = data[mask,:]*correction_factor[mask,:]
 
-    elif (dimension  == 'band')  and (index in hy_obj.topo['coeffs']):
+    elif (dimension  == 'band') and (index in hy_obj.topo['coeffs']):
         #index= 8
         #data = hy_obj.get_band(index)
         C = hy_obj.topo['coeffs'][index]
         correction_factor = (hy_obj.ancillary['c1'] + C)/(hy_obj.ancillary['cosine_i'] + C)
-        data[hy_obj.mask['topo']] = data[hy_obj.mask['topo']] * correction_factor[hy_obj.mask['topo']]
+        data[hy_obj.mask['apply_topo']] = data[hy_obj.mask['apply_topo']] * correction_factor[hy_obj.mask['apply_topo']]
     return data

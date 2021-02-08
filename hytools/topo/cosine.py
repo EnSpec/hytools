@@ -14,7 +14,7 @@ Topographic correction consists of the following steps:
 """
 import numpy as np
 
-def calc_cosine_coeffs(hy_obj):
+def calc_cosine_coeffs(hy_obj,topo_dict):
     '''
 
     Args:
@@ -24,18 +24,18 @@ def calc_cosine_coeffs(hy_obj):
         None.
 
     '''
-    hy_obj.topo = {'type': 'cosine'}
+    hy_obj.topo = topo_dict
     hy_obj.anc_data = {}
 
     cos_i = hy_obj.cosine_i()
     cos_solar_zn = np.cos(hy_obj.get_anc('solar_zn'))
 
     c_factor =  cos_solar_zn/cos_i
-    c_factor[hy_obj.mask['topo']] = 1.
+    c_factor[~hy_obj.mask['no_data']] = 1.
     hy_obj.ancillary['cosine_factor'] =c_factor
 
 def apply_cosine(hy_obj,data,dimension,index):
-    ''' Apply SCSS correction to a slice of the data
+    ''' Apply cosine correction to a slice of the data
 
     Args:
         hy_obj (TYPE): DESCRIPTION.

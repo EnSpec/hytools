@@ -373,7 +373,7 @@ class HyTools:
         return anc_data
 
     def load_anc(self,anc,radians = True):
-        self.ancillary[anc] = self.get_anc(self,anc,radians = radians)
+        self.ancillary[anc] = self.get_anc(self,anc,radians)
 
     def volume_kernel(self,kernel):
         """Calculate volume scattering kernel.
@@ -434,22 +434,21 @@ class HyTools:
         """
         self.mask[name] = mask
 
-    def gen_mask(self,masker,name,arg_dict = None):
+    def gen_mask(self,masker,name,args = None):
         """Generate mask using masking function which takes a HyTools object as
-        an argument. Arguments can be passed using a dictionary.
+        an argument.
         """
-        if isinstance(arg_dict,dict):
-            self.mask[name] = masker(self,arg_dict)
+        if args:
+            self.mask[name] = masker(self,args)
         else:
             self.mask[name] = masker(self)
 
-    def do(self,function,arg_dict = None):
+    def do(self,function,args = None):
         """Run a function and return the results.
-        Arguments can be passed using a dictionary.
 
         """
-        if isinstance(arg_dict,dict):
-            return function(self, arg_dict)
+        if args:
+            return function(self, args)
         else:
             return function(self)
 

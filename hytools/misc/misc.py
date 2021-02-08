@@ -1,7 +1,7 @@
 """Miscellaneous functions
 
 """
-
+from itertools import tee
 
 def progbar(curr, total, full_progbar = 100):
     '''Display progress bar.
@@ -22,3 +22,15 @@ def progbar(curr, total, full_progbar = 100):
     frac = curr/total
     filled_progbar = round(frac*full_progbar)
     print('\r', '#'*filled_progbar + '-'*(full_progbar-filled_progbar), '[{:>7.2%}]'.format(frac), end='')
+
+
+def pairwise(iterable):
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+def set_brdf(hy_obj,brdf_dict):
+    hy_obj.brdf = brdf_dict
+
+def update_brdf(hy_obj,args):
+    hy_obj.brdf[args['key']] = args['value']

@@ -3,6 +3,7 @@
 Topographic correction
 
 """
+import json
 import numpy as np
 import ray
 from .modminn import apply_modminn,calc_modminn_coeffs
@@ -10,7 +11,7 @@ from .scsc import apply_scsc,calc_scsc_coeffs
 from .cosine import apply_cosine,calc_cosine_coeffs
 from .c import apply_c,calc_c_coeffs
 from .scs import apply_scs,calc_scs_coeffs
-from ..masks import mask_dict
+from ..masks import mask_create
 
 def calc_cosine_i(solar_zn, solar_az, aspect ,slope):
     """Generate cosine i image. The cosine of the incidence angle (i) is
@@ -45,6 +46,10 @@ def apply_topo_correct(hy_obj,data,dimension,index):
         band (TYPE): DESCRIPTION.
 
     '''
+
+    if ('apply_topo' not in hy_obj.mask) & ('apply_mask' in hy_obj.topo):
+        hy_obj.gen_mask(mask_create,'apply_topo',hy_obj.topo['apply_mask'])
+
     if hy_obj.topo['type'] == 'mod_minneart':
         data = apply_modminn(hy_obj,data,dimension,index)
     elif hy_obj.topo['type']  == 'scs+c':
@@ -61,7 +66,7 @@ def load_topo_precomputed(hy_obj,topo_dict):
     with open(topo_dict['coeff_files'][hy_obj.file_name], 'r') as outfile:
         hy_obj.topo = json.load(outfile)
 
-def topo_coeffs(actors,topo_dict):
+def calc_topo_coeffs(actors,topo_dict):
 
     if topo_dict['type'] == 'precomputed':
         print("Using precomputed topographic coefficients.")
@@ -70,8 +75,8 @@ def topo_coeffs(actors,topo_dict):
     else:
         print("Calculating topographic coefficients.")
 
-        topo_masker = mask_dict[topo_dict['mask']]
-        _ = ray.get([a.gen_mask.remote(topo_masker,'topo') for a in actors])
+        _ = ray.get([a.gen_mask.remote(mask_create,'calc_topo',
+                                       topo_dict['calc_mask']) for a in actors])
 
         if topo_dict['type'] == 'scs+c':
             _ = ray.get([a.do.remote(calc_scsc_coeffs,topo_dict) for a in actors])

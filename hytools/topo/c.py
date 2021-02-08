@@ -19,8 +19,8 @@ TODO: Rationale/ examples for using different fitting algorithms
 """
 
 import numpy as np
+from scipy.optimize import nnls
 from ..io.envi import WriteENVI
-
 
 def calc_c(data,cosine_i,fit_type = 'OLS'):
     """Calculate the topographic correction coefficient (c) for the input data.
@@ -70,8 +70,8 @@ def calc_c_coeffs(hy_obj,topo_dict):
 
     for band_num,band in enumerate(hy_obj.bad_bands):
         if ~band:
-            band = hy_obj.get_band(band_num,mask='topo')
-            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['topo']])
+            band = hy_obj.get_band(band_num,mask='calc_topo')
+            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['calc_topo']])
     hy_obj.topo = topo_dict
 
 def apply_c(hy_obj,data,dimension,index):
@@ -104,7 +104,7 @@ def apply_c(hy_obj,data,dimension,index):
         #index= 3000
         #data = hy_obj.get_line(3000)
         data = data[:,C_bands]
-        mask = hy_obj.mask['topo'][index,:]
+        mask = hy_obj.mask['apply_topo'][index,:]
         cosine_i = hy_obj.ancillary['cosine_i'][[index],:].T
         cos_sz = hy_obj.ancillary['cos_sz'][[index],:].T
         correction_factor = (cos_sz + C)/(cosine_i + C)
@@ -114,7 +114,7 @@ def apply_c(hy_obj,data,dimension,index):
         # index= 300
         # data = hy_obj.get_column(index)
         data = data[:,C_bands]
-        mask = hy_obj.mask['topo'][:,index]
+        mask = hy_obj.mask['apply_topo'][:,index]
         cosine_i = hy_obj.ancillary['cosine_i'][:,[index]]
         cos_sz = hy_obj.ancillary['cos_sz'][:,[index]]
         correction_factor = (cos_sz + C)/(cosine_i + C)
@@ -125,14 +125,14 @@ def apply_c(hy_obj,data,dimension,index):
         #data = hy_obj.get_band(index)
         C = hy_obj.topo['coeffs'][index]
         correction_factor = (hy_obj.ancillary['cos_sz'] + C)/(hy_obj.ancillary['cosine_i'] + C)
-        data[hy_obj.mask['topo']] = data[hy_obj.mask['topo']] * correction_factor[hy_obj.mask['topo']]
+        data[hy_obj.mask['apply_topo']] = data[hy_obj.mask['apply_topo']] * correction_factor[hy_obj.mask['apply_topo']]
 
     elif dimension == 'chunk':
         # index = 200,501,3000,3501
         x1,x2,y1,y2 = index
         # data = hy_obj.get_chunk(x1,x2,y1,y2)
         data = data[:,:,C_bands]
-        mask = hy_obj.mask['topo'][y1:y2,x1:x2]
+        mask = hy_obj.mask['apply_topo'][y1:y2,x1:x2]
         cosine_i = hy_obj.ancillary['cosine_i'][y1:y2,x1:x2][:,:,np.newaxis]
         cos_sz = hy_obj.ancillary['cos_sz'][y1:y2,x1:x2][:,:,np.newaxis]
         correction_factor = (cos_sz + C)/(cosine_i + C)
@@ -143,7 +143,7 @@ def apply_c(hy_obj,data,dimension,index):
         y,x = index
         # data = hy_obj.get_pixels(y,x)
         data = data[:,C_bands]
-        mask = hy_obj.mask['topo'][y,x]
+        mask = hy_obj.mask['apply_topo'][y,x]
         cosine_i = hy_obj.ancillary['cosine_i'][[y],[x]].T
         cos_sz = hy_obj.ancillary['cos_sz'][[y],[x]].T
         correction_factor = (cos_sz + C)/(cosine_i + C)
