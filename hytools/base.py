@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Base
 """
@@ -419,8 +418,8 @@ class HyTools:
 
         """
 
-        wave1 = self.get_wave(wave1)
-        wave2 = self.get_wave(wave2)
+        wave1 = self.get_wave(wave1,corrections= self.corrections)
+        wave2 = self.get_wave(wave2,corrections= self.corrections)
         ndi = (wave1-wave2)/(wave1+wave2)
 
         if mask:
