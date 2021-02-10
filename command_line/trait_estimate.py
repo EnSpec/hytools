@@ -13,6 +13,7 @@ from hytools.topo.cosine import *
 from hytools.topo.c import *
 from hytools.topo.scs import *
 from hytools.brdf.standard import *
+from hytools.masks import mask_dict
 
 warnings.filterwarnings("ignore")
 
@@ -67,68 +68,91 @@ def apply_trait_models(hy_obj,config_dict):
     if 'brdf' in hy_obj.corrections:
         hy_obj.load_coeffs(config_dict['brdf'][hy_obj.file_name],'brdf')
 
-    trait_models = {}
+    hy_obj.resampler['type'] = config_dict["resampling"]['type']
 
     for trait in config_dict['trait_models']:
-        trait_name =os.path.splitext(os.path.basename(trait))[0]
         with open(trait, 'r') as json_file:
             trait_model = json.load(json_file)
-            trait_model['coefficients'] = np.array(trait_model['coefficients'])
-            trait_model['intercept'] = np.array(trait_model['intercept'])
-            trait_models[trait_name]  =trait_model
+            coeffs = np.array(trait_model['model']['coefficients'])
+            intercept = np.array(trait_model['model']['intercepts'])
+            model_waves = np.array(trait_model['wavelengths'])
 
-    hy_obj.resampler['type'] = config_dict["resampling"]['type']
-    hy_obj.resampler['out_waves'] = trait_models[trait_name]['model_wavelengths']
+        #Check if wavelengths match
+        resample = not all(x in hy_obj.wavelengths for x in model_waves)
 
-    iterator = hy_obj.iterate(by = 'chunk',
-                  chunk_size = (100,100),
-                  corrections =  hy_obj.corrections,
-                  resample=True)
+        if resample:
+            hy_obj.resampler['out_waves'] = model_waves
+        else:
+            wave_mask = [np.argwhere(x==hy_obj.wavelengths)[0][0] for x in model_waves]
 
-    header_dict = hy_obj.get_header()
-    header_dict['bands'] = len(config_dict['trait_models'])
-    header_dict['wavelength'] = []
-    header_dict['data ignore value'] = 0
-    header_dict['data type'] = 4
-    header_dict['band names'] = [trait_models[t_mod]['trait_name'] for t_mod in trait_models]
+        header_dict = hy_obj.get_header()
+        header_dict['wavelength'] = []
+        header_dict['data ignore value'] = 0
+        header_dict['data type'] = 4
+        header_dict['band names'] = ["%s_mean" % trait_model["trait_name"],
+                                     "%s_std" % trait_model["trait_name"],
+                                     'range_mask'] + [mask[0] for mask in config_dict['masks']]
+        header_dict['bands'] = len(header_dict['band names'] )
 
-    output_name = config_dict['output_dir']
-    output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0] + "_traits"
+        #Generate masks
+        for mask,args in config_dict['masks']:
+            mask_function = mask_dict[mask]
+            hy_obj.gen_mask(mask_function,mask,args)
 
-    writer = WriteENVI(output_name,header_dict)
+        output_name = config_dict['output_dir']
+        output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0] + "_%s" % trait_model["trait_name"]
 
-    while not iterator.complete:
-        chunk = iterator.read_next()
+        writer = WriteENVI(output_name,header_dict)
 
-        trait_mean = np.zeros((chunk.shape[0],
-                                chunk.shape[1],
-                                len(config_dict['trait_models'])))
+        iterator = hy_obj.iterate(by = 'chunk',
+                      chunk_size = (100,100),
+                      corrections =  hy_obj.corrections,
+                      resample=resample)
 
-        mask = hy_obj.mask['no_data'][iterator.current_line:iterator.current_line+chunk.shape[0],
-                                      iterator.current_column:iterator.current_column+chunk.shape[1]]
+        while not iterator.complete:
+            chunk = iterator.read_next()
+            if not resample:
+                chunk = chunk[:,:,wave_mask]
 
-        if  trait_models[trait_name] == "vnorm":
-            norm = np.linalg.norm(chunk,axis=2)
-            chunk = chunk/norm[:,:,np.newaxis]
+            trait_est = np.zeros((chunk.shape[0],
+                                    chunk.shape[1],
+                                    header_dict['bands']))
 
-        if trait_models[trait_name] == "log(1/R)":
-            chunk = np.log(1/chunk)
+            # Apply spectrum transforms
+            for transform in  trait_model['model']["transform"]:
+                if  transform== "vnorm":
+                    norm = np.linalg.norm(chunk,axis=2)
+                    chunk = chunk/norm[:,:,np.newaxis]
+                if transform == "absorb":
+                    chunk = np.log(1/chunk)
+                if transform == "mean":
+                    mean = chunk.mean(axis=2)
+                    chunk = chunk/mean[:,:,np.newaxis]
 
-        if trait_models[trait_name] == "mean":
-            mean = chunk.mean(axis=2)
-            chunk = chunk/mean[:,:,np.newaxis]
+            trait_pred = np.einsum('jkl,ml->jkm',chunk,coeffs, optimize='optimal')
+            trait_pred = trait_pred + intercept
+            trait_est[:,:,0] = trait_pred.mean(axis=2)
+            trait_est[:,:,1] = trait_pred.std(ddof=1,axis=2)
 
-        for t,trait in enumerate(trait_models):
-            trait_model = trait_models[trait]
-            trait_pred = np.einsum('jkl,ml->jkm',chunk,trait_model['coefficients'], optimize='optimal')
-            trait_pred = trait_pred + trait_model['intercept']
-            trait_mean[:,:,t] = trait_pred.mean(axis=2)
+            range_mask = (trait_est[:,:,0] > trait_model["model_diagnostics"]['trait_min']) & \
+                         (trait_est[:,:,0] < trait_model["model_diagnostics"]['trait_max'])
+            trait_est[:,:,3] = range_mask.astype(int)
 
-        trait_mean[mask] = 0
-        writer.write_chunk(trait_mean,
-                           iterator.current_line,
-                           iterator.current_column)
-    writer.close()
+            # Subset and assign custom masks
+            for i,(mask,args) in enumerate(config_dict['masks']):
+                mask = hy_obj.mask[mask][iterator.current_line:iterator.current_line+chunk.shape[0],
+                                              iterator.current_column:iterator.current_column+chunk.shape[1]]
+
+                trait_est[:,:,3+i] = mask.astype(int)
+
+
+            nd_mask = hy_obj.mask['no_data'][iterator.current_line:iterator.current_line+chunk.shape[0],
+                                             iterator.current_column:iterator.current_column+chunk.shape[1]]
+            trait_est[~nd_mask] = 0
+            writer.write_chunk(trait_est,
+                               iterator.current_line,
+                               iterator.current_column)
+        writer.close()
 
 
 
