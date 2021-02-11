@@ -14,10 +14,10 @@ config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
 
 # Input data settings for NEON
 #################################################################
-config_dict['file_type'] = 'neon'
-images= glob.glob("/home/chlus/dev_hytools/data/harv/*.h5")
-images.sort()
-config_dict["input_files"] = images
+# config_dict['file_type'] = 'neon'
+# images= glob.glob("/home/chlus/dev_hytools/data/harv/*.h5")
+# images.sort()
+# config_dict["input_files"] = images
 
 # Input data settings for ENVI
 #################################################################
@@ -32,20 +32,20 @@ config_dict["input_files"] = images
 
 # '''
 
-# config_dict['file_type'] = 'envi'
-# aviris_anc_names = ['path_length','sensor_az','sensor_zn',
-#                     'solar_az', 'solar_zn','phase','slope',
-#                     'aspect', 'cosine_i','utc_time']
-# images= glob.glob("/home/chlus/dev_hytools/data/yose/*img")
-# images.sort()
-# config_dict["input_files"] = images
+config_dict['file_type'] = 'envi'
+aviris_anc_names = ['path_length','sensor_az','sensor_zn',
+                    'solar_az', 'solar_zn','phase','slope',
+                    'aspect', 'cosine_i','utc_time']
+images= glob.glob("/home/chlus/dev_hytools/data/yose/*img")
+images.sort()
+config_dict["input_files"] = images
 
-# config_dict["anc_files"] = {}
-# anc_files = glob.glob("/home/chlus/dev_hytools/data/yose/*ort")
-# anc_files.sort()
-# for i,image in enumerate(images):
-#     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
-#                                                 [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
+config_dict["anc_files"] = {}
+anc_files = glob.glob("/home/chlus/dev_hytools/data/yose/*ort")
+anc_files.sort()
+for i,image in enumerate(images):
+    config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
+                                                [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
 
 # Export settings
 #################################################################

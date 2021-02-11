@@ -80,24 +80,10 @@ config_dict["masks"] = [["ndi", {'band_1': 850,'band_2': 660,
 
 # Define trait coefficients
 ##########################################################
-config_dict["trait_models"]  = glob.glob('/home/chlus/dev_hytools/data/traits/*.json')
+models = glob.glob('/home/chlus/dev_hytools/data/traits/*.json')
+models.sort()
+config_dict["trait_models"]  = models
 
 with open(config_file, 'w') as outfile:
     json.dump(config_dict,outfile)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
