@@ -57,8 +57,7 @@ def calc_brdf_coeffs(actors,config_dict):
                 scene_mean = float(np.mean(solar_zn_samples))
                 _ =  ray.get([a.do.remote(update_brdf,{'key':'solar_zn_norm_radians',
                                                       'value': scene_mean }) for a in actors])
-
-                print("Scene average solar zenith angle : %s degrees" % round(np.degrees(scene_mean,3)))
+                print("Scene average solar zenith angle : %s degrees" % round(np.degrees(scene_mean),3))
 
         elif isinstance(brdf_dict['solar_zn_type'],float):
             _ =  ray.get([a.do.remote(update_brdf,{'key':'solar_zn_norm_radians',
