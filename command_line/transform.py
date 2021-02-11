@@ -1,8 +1,6 @@
-'''neon2envi.py
+'''transform.py
 
-TODO: Add phase and UTC time to ancillary output
-TODO: Implement progress bar like from this example:
-      https://docs.ray.io/en/master/auto_examples/progress_bar.html
+This is an experimental script which exports PCA tranforms images.
 
 '''
 import argparse
