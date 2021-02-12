@@ -10,12 +10,12 @@ config_dict = {}
 
 #Only coefficients for good bands will be calculated
 config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
-#config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
+config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
 
 # Input data settings for NEON
 #################################################################
 # config_dict['file_type'] = 'neon'
-# images= glob.glob("/home/chlus/dev_hytools/data/harv/*.h5")
+# images= glob.glob("/home/chlus/dev_hytools/data/srer/*.h5")
 # images.sort()
 # config_dict["input_files"] = images
 
@@ -61,11 +61,23 @@ config_dict['export']['coeffs']  = True
 config_dict['export']['image']  = True
 config_dict['export']['subset_waves']  = [660,550,440,850]
 config_dict['export']['output_dir'] ="/home/chlus/dev_hytools/data/output/"
-config_dict['export']["suffix"] = 'flex_18dyn'
+config_dict['export']["suffix"] = 'brdf'
 
-# Specify which correction to apply and order of application
-# Options: 'topo', 'brdf'
-# For no correction provide empty list: []
+#Corrections
+#################################################################
+''' Specify correction(s) to be applied, corrections will be applied
+in the order they are specified.
+
+Options include:
+
+    ['topo']
+    ['brdf']
+    ['topo','brdf']
+    ['brdf','topo']
+    [] <---Export uncorrected images
+
+'''
+
 config_dict["corrections"]  = ['brdf']
 
 #Topographic Correction options
@@ -88,7 +100,6 @@ dictionary where each key is the full the image path and value
 is the full path to coefficients file, one per image.
 '''
 config_dict["topo"] =  {}
-
 config_dict["topo"]['type'] =  'scs+c'
 config_dict["topo"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                              'min': 0.1,'max': 1.0}],
@@ -107,7 +118,6 @@ config_dict["topo"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
 # config_dict["topo"]['type'] =  'precomputed'
 # config_dict["brdf"]['coeff_files'] =  {}
 
-
 #BRDF Correction options
 #################################################################3
 '''
@@ -120,7 +130,7 @@ Types supported:
 If 'bin_type' == 'user'
 'bins' should be a list of lists, each list the NDVI bounds [low,high]
 
-Object shapes ('h/b'.'b/r') only needed for Li kernels
+Object shapes ('h/b','b/r') only needed for Li kernels.
 
 For precomputed topographic coefficients 'coeff_files' is a
 dictionary where each key is the full the image path and value
@@ -172,7 +182,6 @@ config_dict["brdf"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                     ['neon_edge',{'radius': 30}]]
 config_dict["brdf"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                               'min': 0.05,'max': 1.0}]]
-
 
 # ## Flex dynamic NDVI params
 config_dict["brdf"]['bin_type'] = 'dynamic'
