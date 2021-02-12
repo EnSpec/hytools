@@ -1,18 +1,11 @@
-import glob
-import ray
-import numpy as np
 import json
 import os
 import warnings
 import sys
+import ray
+import numpy as np
 import hytools as ht
 from hytools.io.envi import *
-from hytools.topo.scsc import *
-from hytools.topo.modminn import *
-from hytools.topo.cosine import *
-from hytools.topo.c import *
-from hytools.topo.scs import *
-from hytools.brdf.standard import *
 from hytools.masks import mask_dict
 
 warnings.filterwarnings("ignore")
@@ -152,26 +145,5 @@ def apply_trait_models(hy_obj,config_dict):
         writer.close()
 
 
-
 if __name__== "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
