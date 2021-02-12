@@ -53,20 +53,26 @@ config_dict['num_cpus'] = len(images)
 
 # Assign correction coefficients
 ##########################################################
-config_dict['corrections'] = []
+''' Specify correction(s) to apply and paths to coefficients.
+'''
 
-# topo_files = glob.glob("*topo.json")
-# topo_files.sort()
-# config_dict["topo"] =  dict(zip(images,topo_files))
+config_dict['corrections'] = ['topo','brdf']
 
-# brdf_files = glob.glob("*brdf.json")
-# brdf_files.sort()
-# config_dict["brdf"] =  dict(zip(images,brdf_files))
+topo_files = glob.glob("*topo.json")
+topo_files.sort()
+config_dict["topo"] =  dict(zip(images,topo_files))
+
+brdf_files = glob.glob("*brdf.json")
+brdf_files.sort()
+config_dict["brdf"] =  dict(zip(images,brdf_files))
 
 # Select wavelength resampling type
 ##########################################################
 '''Wavelength resampler will only be used if image wavelengths
 and model wavelengths do not match exactly
+
+See image_correct_json_generate.py for options.
+
 '''
 config_dict["resampling"]  = {}
 config_dict["resampling"]['type'] =  'cubic'
@@ -75,7 +81,7 @@ config_dict["resampling"]['type'] =  'cubic'
 ##########################################################
 '''Specify list of masking layers to be appended to the
 trait map. Each will be placed in a seperate layer.
-,../tr
+
 For no masks provide an empty list: []
 '''
 config_dict["masks"] = [["ndi", {'band_1': 850,'band_2': 660,
