@@ -25,11 +25,20 @@ For complete documentation see:
 - scipy
 
 # Installation
-To install run:
 
-```python
+To install with pip run:
+```bash
+pip install hy-tools
+```
+or clone
+```bash
+git clone https://github.com/EnSpec/hytools.git
+```
+and install with setuptools
+```bash
 python setup.py install
 ```
+
 ## Basic usage
 ```python
 
