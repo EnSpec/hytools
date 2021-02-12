@@ -1,5 +1,8 @@
 """
 Base
+
+TODO: Add corrections to ndi()
+
 """
 import os
 import json
@@ -418,8 +421,8 @@ class HyTools:
 
         """
 
-        wave1 = self.get_wave(wave1,corrections= self.corrections)
-        wave2 = self.get_wave(wave2,corrections= self.corrections)
+        wave1 = self.get_wave(wave1)
+        wave2 = self.get_wave(wave2)
         ndi = (wave1-wave2)/(wave1+wave2)
 
         if mask:
