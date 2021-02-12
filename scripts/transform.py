@@ -1,11 +1,14 @@
 '''transform.py
 
-This is an experimental script which exports PCA tranforms images.
+TODO: Add MNF option
+    parser.add_argument("-t", help="Transform type", type = str)
+
 
 '''
 import argparse
 import pickle
 import os
+from shutil import which
 import ray
 import numpy as np
 from sklearn.decomposition import PCA
@@ -14,15 +17,18 @@ from hytools.io.envi import WriteENVI
 
 def main():
     '''
-
+    This script exports PCA tranformed images. A single image or a group
+    of images can be provided as input. In the case of a group of images the PCA decomposition will be performed
+    using sampled data pooled from all images. All images must be of the same format, either all ENVI or all NEON.
+    Images can be optionally mosaicked to a GEOTIFF. Mosaicking is done using gdal_merge.py and therefore
+    requires gdal to be installed. Mosiacking won't work properly on images with a rotation.
     '''
     parser = argparse.ArgumentParser(description = "Perform a PCA")
     parser.add_argument('images',help="Input image pathnames", nargs='*')
     parser.add_argument('output_dir',help="Output directory", type = str)
-    #parser.add_argument("-t", help="Transform type", type = str)
-    parser.add_argument("-comps", help="Number of components to export", type = int,required=False,default=5)
-    parser.add_argument("-sample", help="Percent of data to sample", type = float,required=False,default=0.1)
-    parser.add_argument("-merge", help="Use gdal to mosaic", type = bool,required=False,default=False)
+    parser.add_argument("-comps", help="Number of components to export", type = int,required=False,default=10)
+    parser.add_argument("-sample", help="Percent of data to subsample", type = float,required=False,default=0.1)
+    parser.add_argument("-merge", help="Use gdal_merge.py to mosaic PCA images", required=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -62,11 +68,14 @@ def main():
     _  = ray.get([a.do.remote(apply_transform,args) for a in actors])
 
     if args.merge and len(args.images) > 1:
-        print('Mosaicking flightlines')
-        output_files = ["%s%s_pca" %(args.output_dir,image) for image in \
-                        ray.get([a.do.remote(lambda x : x.base_name) for a in actors])]
-        string = ['gdal_merge.py','-o', '%stranform_mosaic.tif' % output_dir] + output_files
-        os.system(' '.join(string))
+        if which('gdal_merge.py') is not None:
+            print('Mosaicking flightlines')
+            output_files = ["%s%s_pca" %(args.output_dir,image) for image in \
+                            ray.get([a.do.remote(lambda x : x.base_name) for a in actors])]
+            string = ['gdal_merge.py','-o', '%stranform_mosaic.tif' % args.output_dir] + output_files
+            os.system(' '.join(string))
+        else:
+            print('gdal_merge.py not found, exiting.')
 
 def subsample(hy_obj,args):
 
