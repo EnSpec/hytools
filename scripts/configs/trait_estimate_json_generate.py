@@ -1,20 +1,24 @@
+'''Template script for generating trait_estimate configuration JSON files.
+'''
+
 import os
 import json
 import glob
 
 home = os.path.expanduser("~")
 
-config_file = "/home/chlus/dev_hytools/trait_config_krusty.json"
+#Output path for configuration file
+config_file = "/.json"
 
 config_dict = {}
 config_dict['file_type'] = 'envi'
-config_dict["output_dir"] = '/home/chlus/dev_hytools/data/output/traits/'
+config_dict["output_dir"] = './'
 config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
 
 # Input data settings for NEON
 #################################################################
 # config_dict['file_type'] = 'neon'
-# images= glob.glob("/data/*.h5")
+# images= glob.glob("*.h5")
 # images.sort()
 # config_dict["input_files"] = images
 
@@ -34,12 +38,12 @@ config_dict['file_type'] = 'envi'
 aviris_anc_names = ['path_length','sensor_az','sensor_zn',
                     'solar_az', 'solar_zn','phase','slope',
                     'aspect', 'cosine_i','utc_time']
-images= glob.glob("/home/chlus/dev_hytools/data/yose/*img")
+images= glob.glob("*img")
 images.sort()
 config_dict["input_files"] = images
 
 config_dict["anc_files"] = {}
-anc_files = glob.glob("/home/chlus/dev_hytools/data/yose/*ort")
+anc_files = glob.glob("*ort")
 anc_files.sort()
 for i,image in enumerate(images):
     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
@@ -51,11 +55,11 @@ config_dict['num_cpus'] = len(images)
 ##########################################################
 config_dict['corrections'] = []
 
-# topo_files = glob.glob("/home/chlus/dev_hytools/data/output/traits/*topo*full.json")
+# topo_files = glob.glob("*topo.json")
 # topo_files.sort()
 # config_dict["topo"] =  dict(zip(images,topo_files))
 
-# brdf_files = glob.glob("/home/chlus/dev_hytools/data/output/traits/*brdf*full.json")
+# brdf_files = glob.glob("*brdf.json")
 # brdf_files.sort()
 # config_dict["brdf"] =  dict(zip(images,brdf_files))
 
@@ -80,7 +84,7 @@ config_dict["masks"] = [["ndi", {'band_1': 850,'band_2': 660,
 
 # Define trait coefficients
 ##########################################################
-models = glob.glob('/home/chlus/dev_hytools/data/traits/*.json')
+models = glob.glob('*.json')
 models.sort()
 config_dict["trait_models"]  = models
 
