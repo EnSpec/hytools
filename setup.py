@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='hytls',
-    description= 'HyTools',
+    name='hy-tools',
+    description= 'HyTools: Hyperspectral image processing library',
     version='1.0',
     license='MIT',
     url='https://github.com/EnSpec/hytools',
