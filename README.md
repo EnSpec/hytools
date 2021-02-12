@@ -17,12 +17,13 @@ For complete documentation see:
 
 
 ## Dependencies
-- numpy
 - h5py
-- ray
-- scipy
-- pandas
 - matplotlib
+- numpy
+- pandas
+- scikit-learn
+- scipy
+
 # Installation
 To install run:
 

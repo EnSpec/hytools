@@ -1,5 +1,7 @@
 # hytools dependencies
-numpy
 h5py
-ray
+matplotlib
+numpy
+pandas
+scikit-learn
 scipy
