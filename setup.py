@@ -1,10 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='HyTools',
+    name='hytls',
+    description= 'HyTools',
     version='1.0',
+    license='MIT',
     url='https://github.com/EnSpec/hytools',
-    author = 'Adam Chlus, Zhiwei Ye, Ting Zheng, Natalie Queally and Philip Townsend'
+    download_url = 'https://github.com/EnSpec/hytools/archive/1.0.0.tar.gz',
+    author = 'Adam Chlus, Zhiwei Ye, Ting Zheng, Natalie Queally and Philip Townsend',
     packages=find_packages(),
     install_requires=['h5py>=3.1.0',
                       'matplotlib>=3.3.3',
