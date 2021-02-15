@@ -13,6 +13,7 @@ setup(
                       'matplotlib>=3.3.3',
                       'numpy>=1.19.4',
                       'pandas>=1.1.0',
+                      'ray',
                       'scikit-learn>=0.23.0',
                       'scipy>=1.5.3']
     )
