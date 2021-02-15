@@ -6,7 +6,6 @@ setup(
     version='1.0',
     license='MIT',
     url='https://github.com/EnSpec/hytools',
-    download_url = 'https://github.com/EnSpec/hytools/archive/1.0.0.tar.gz',
     author = 'Adam Chlus, Zhiwei Ye, Ting Zheng, Natalie Queally and Philip Townsend',
     packages=find_packages(),
     install_requires=['h5py',
