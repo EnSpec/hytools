@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='hy-tools',
     description= 'HyTools: Hyperspectral image processing library',
-    version='1.0',
+    version='1.0.1',
     license='MIT',
     url='https://github.com/EnSpec/hytools',
     author = 'Adam Chlus, Zhiwei Ye, Ting Zheng, Natalie Queally and Philip Townsend',
