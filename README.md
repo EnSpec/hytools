@@ -21,6 +21,7 @@ For complete documentation see:
 - matplotlib
 - numpy
 - pandas
+- ray
 - scikit-learn
 - scipy
 
