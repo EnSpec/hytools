@@ -22,7 +22,7 @@ import numpy as np
 from scipy.optimize import nnls
 from ..io.envi import WriteENVI
 
-def calc_c(data,cosine_i,fit_type = 'OLS'):
+def calc_c(data,cosine_i,fit_type = 'olc'):
     """Calculate the topographic correction coefficient (c) for the input data.
     Used for both the cosine and SCS+S topographic corrections.
 
@@ -41,9 +41,9 @@ def calc_c(data,cosine_i,fit_type = 'OLS'):
     X = np.concatenate([cosine_i,np.ones(cosine_i.shape)],axis=1)
 
     # Eq 7. Soenen et al. 2005
-    if fit_type == 'OLS':
+    if fit_type == 'ols':
         slope, intercept = np.linalg.lstsq(X, data,rcond=-1)[0].flatten()
-    elif fit_type == 'NN':
+    elif fit_type == 'nnls':
         slope, intercept = nnls(X, data)[0].flatten()
 
     # Eq 8. Soenen et al. 2005
@@ -71,7 +71,8 @@ def calc_c_coeffs(hy_obj,topo_dict):
     for band_num,band in enumerate(hy_obj.bad_bands):
         if ~band:
             band = hy_obj.get_band(band_num,mask='calc_topo')
-            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['calc_topo']])
+            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['calc_topo']],
+                                                   fit_type=topo_dict['c_fit_type'])
     hy_obj.topo = topo_dict
 
 def apply_c(hy_obj,data,dimension,index):

@@ -19,7 +19,6 @@ TODO: Rationale/ examples for using different fitting algorithms
 """
 import numpy as np
 from .c import calc_c
-from ..masks import mask_dict
 
 def calc_scsc_c1(solar_zn,slope):
     """ Calculate c1
@@ -55,7 +54,8 @@ def calc_scsc_coeffs(hy_obj,topo_dict):
     for band_num,band in enumerate(hy_obj.bad_bands):
         if ~band:
             band = hy_obj.get_band(band_num,mask='calc_topo')
-            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['calc_topo']])
+            topo_dict['coeffs'][band_num] = calc_c(band,cosine_i[hy_obj.mask['calc_topo']],
+                                                   fit_type=topo_dict['c_fit_type'])
     hy_obj.topo = topo_dict
 
 def apply_scsc_band(hy_obj,band,index):
