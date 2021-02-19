@@ -22,7 +22,7 @@ import numpy as np
 from scipy.optimize import nnls
 from ..io.envi import WriteENVI
 
-def calc_c(data,cosine_i,fit_type = 'olc'):
+def calc_c(data,cosine_i,fit_type = 'ols'):
     """Calculate the topographic correction coefficient (c) for the input data.
     Used for both the cosine and SCS+S topographic corrections.
 
