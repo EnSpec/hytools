@@ -29,9 +29,9 @@ def calc_scs_coeffs(hy_obj,topo_dict):
 
     cos_i = hy_obj.cosine_i()
     cos_solar_zn = np.cos(hy_obj.get_anc('solar_zn'))
-    cos_slope = np.cos(hy_obj.get_anc('solar_zn'))
+    cos_slope = np.cos(hy_obj.get_anc('slope'))
 
-    c_factor =  (cos_slope +cos_solar_zn)/cos_i
+    c_factor =  (cos_slope *cos_solar_zn)/cos_i
     c_factor[~hy_obj.mask['no_data']] = 1.
     hy_obj.ancillary['scs_factor'] =c_factor
 
