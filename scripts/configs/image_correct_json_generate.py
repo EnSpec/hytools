@@ -100,6 +100,9 @@ Apply and calc masks are only needed for C and SCS+C corrections. They will
 be ignored in all other cases and correction will be applied to all
 non no-data pixels.
 
+'c_fit_type' is only applicable for the C or SCS+C correction type. Options
+include 'ols' or 'nnls'. Choosing 'nnls' can limit overcorrection.
+
 For precomputed topographic coefficients 'coeff_files' is a
 dictionary where each key is the full the image path and value
 is the full path to coefficients file, one per image.
@@ -119,6 +122,8 @@ config_dict["topo"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                                   'min': np.radians(5),'max':'+inf' }],
                                     ['ancillary',{'name':'cosine_i',
                                                   'min': 0.12,'max':'+inf' }]]
+config_dict["topo"]['c_fit_type'] = 'nnls'
+
 
 # config_dict["topo"]['type'] =  'precomputed'
 # config_dict["brdf"]['coeff_files'] =  {}
