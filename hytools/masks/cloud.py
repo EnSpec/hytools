@@ -7,12 +7,20 @@ import numpy as np
 
 def zhai_cloud(hy_obj,cloud,shadow,T1=0.01,t2=.1,t3=.25,t4=.5,T7= 9,T8= 9):
     '''This function replicates the method of Zhai et al. (2018) for detecting clouds and shadows in
-    multispectral and hyperspectral imagery but does not apply shadow refinement. See Zhai et al. (2018)
-    for intepretations and recommended values for coefficients and parameters.
+    multispectral and hyperspectral imagery but does not apply shadow spatial refinement.
+
+    Suggested values for coefficients and params:
+        T1 : 0.01, 0.1, 1, 10, 100
+        t2 : 1/10, 1/9, 1/8, 1/7, 1/6, 1/5, 1/4, 1/3, 1/2
+        t3 : 1/4, 1/3, 1/2, 2/3, 3/4
+        t4 : 1/2, 2/3, 3/4, 4/5, 5/6
+        T7 : 3, 5, 7, 9, 11
+        T8 : 3, 5, 7, 9, 11
 
     Zhai, H., Zhang, H., Zhang, L., & Li, P. (2018).
     Cloud/shadow detection based on spectral indices for multi/hyperspectral optical remote sensing imagery.
     ISPRS journal of photogrammetry and remote sensing, 144, 235-253.
+    https://doi.org/10.1016/j.isprsjprs.2018.07.006
 
     Args:
         hy_obj : HyTools data container object:
@@ -62,7 +70,7 @@ def zhai_cloud(hy_obj,cloud,shadow,T1=0.01,t2=.1,t3=.25,t4=.5,T7= 9,T8= 9):
     mask = np.zeros((hy_obj.lines,hy_obj.columns)).astype(bool)
 
     if cloud:
-        clouds = (np.abs(CI_1) < T1) | (np.abs(CI_2) >  T2)
+        clouds = (np.abs(CI_1) < T1) | (CI_2 >  T2)
         clouds = median_filter(clouds, T7)
         mask[clouds] = True
 
