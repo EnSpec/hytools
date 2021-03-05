@@ -118,7 +118,7 @@ def apply_corrections(hy_obj,config_dict):
         writer.close()
 
     #Export masks
-    if config_dict['export']['masks']:
+    if (config_dict['export']['masks']) and (len(config_dict["corrections"]) > 0):
         masks = []
         mask_names = []
 
