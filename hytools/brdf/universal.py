@@ -18,12 +18,6 @@ from ..plotting import universal_diagno_plot
 
 def universal_brdf(actors,config_dict):
     brdf_dict = config_dict['brdf']
-    #Automatically determine optimal kernel
-    if brdf_dict['auto_kernel']:
-        auto_kernel(actors,brdf_dict)
-        #Rebuild mask
-        _ = ray.get([a.gen_mask.remote(mask_create,'calc_brdf',
-                                       brdf_dict['calc_mask']) for a in actors])
 
     if brdf_dict['grouped']:
         actors = calc_universal_group(actors)
@@ -56,106 +50,6 @@ def subsample_mask(hy_obj):
                                       replace = False)].T
         hy_obj.mask['calc_brdf'][idx_rand[0],idx_rand[1]] = False
 
-def auto_kernel(actors,brdf_dict):
-    '''Automatically determine the optimal kernel combination and parameters for
-    BRDF correction.
-    '''
-    print('Determining optimal kernel combination and parameters.')
-    print('EXPERIMENTAL FEATURE!!!')
-
-    geometric = ['li_sparse_r','li_dense_r','roujean']
-    volume = ['ross_thin','ross_thick','hotspot']
-
-    #Update BRDF correction params temporarily
-    orig_sample = deepcopy(brdf_dict['sample_perc'])
-    _ =  ray.get([a.do.remote(update_brdf,{'key':'sample_perc',
-                                       'value': brdf_dict['auto_perc']}) for a in actors])
-
-    #Create subsampling mask
-    _ = ray.get([a.do.remote(subsample_mask) for a in actors])
-
-    corections = ray.get(actors[0].do.remote(lambda x: x.corrections))
-
-    # Load viewing geometry to memory
-    solar_zn = ray.get([a.get_anc.remote('solar_zn',mask='calc_brdf') for a in actors])
-    solar_zn = np.concatenate(solar_zn)
-    solar_az = ray.get([a.get_anc.remote('solar_az',mask='calc_brdf') for a in actors])
-    solar_az = np.concatenate(solar_az)
-    sensor_zn = ray.get([a.get_anc.remote('sensor_zn',mask='calc_brdf') for a in actors])
-    sensor_zn = np.concatenate(sensor_zn)
-    sensor_az = ray.get([a.get_anc.remote('sensor_az',mask='calc_brdf') for a in actors])
-    sensor_az = np.concatenate(sensor_az)
-
-    band_samples = []
-    bands = [ray.get(actors[0].wave_to_band.remote(wave)) for wave in brdf_dict['auto_waves']]
-
-    for band in bands:
-        y = ray.get([a.get_band.remote(band,mask='calc_brdf',
-                               corrections = corections) for a in actors])
-        band_samples.append(np.concatenate(y))
-
-    print("Using %s samples to optimize kernels." % len(sensor_az))
-    print("##############################")
-
-    def kernel_opt(args):
-        '''Kernel minimization function. Returns the average RMSE across
-        five diagnostic bands.
-
-        '''
-        b_r,h_b = args
-
-        geom_kernel= calc_geom_kernel(solar_az,solar_zn,sensor_az,
-                                      sensor_zn,geom,b_r=b_r,h_b =h_b)
-        vol_kernel = calc_volume_kernel(solar_az,solar_zn,
-                                        sensor_az,sensor_zn,vol)
-        X = np.vstack([vol_kernel,geom_kernel,
-                   np.ones(vol_kernel.shape)]).T
-
-        band_rmse = []
-        for y in band_samples:
-            coeffs = np.linalg.lstsq(X,
-                                     y)[0].flatten().tolist()
-            pred = (X*coeffs).sum(axis=1)
-            obs = y
-            band_rmse.append(np.sqrt(np.mean((obs-pred)**2)))
-        return np.mean(band_rmse)
-
-    min_rmse = 1E10
-
-    #Cycle through all combinations of kernels
-    for vol, geom in product(volume, geometric):
-        if geom == 'roujean':
-            rmse = kernel_opt([0,0])
-            result.x[0] = 0
-            result.x[1] = 0
-        else:
-            result = minimize(kernel_opt, (1,2),
-                           method='Nelder-Mead',
-                           tol=1e-6,
-                           bounds = ((0.25,20),(0.25,20)))
-
-        print("Kernel combination: %s, %s" % (vol,geom))
-        print("Object shapes: %s, %s" % (round(result.x[0],2),round(result.x[1],2)))
-        rmse = kernel_opt(result.x)
-        print("RMSE: %s" % round(rmse,8))
-        print("##############################")
-
-        if (rmse < min_rmse) & ((result.x > 0).sum() == 2):
-            min_rmse= rmse
-            opt_geom = geom
-            opt_vol = vol
-            opt_b_r = result.x[0]
-            opt_h_b = result.x[1]
-
-    print("Optimal kernel combination: %s, %s" % (opt_vol,opt_geom))
-
-    #Update BRDF correction params
-    for key,value in zip(['sample_perc','volume','geometric','b/r','h/b'],
-                         [orig_sample,opt_vol,opt_geom,opt_b_r,opt_h_b]):
-
-        _ =  ray.get([a.do.remote(update_brdf,{'key':key,
-                                           'value': value}) for a in actors])
-
 def calc_universal_single(hy_obj):
     '''Calculate BRDF coefficients on a per flightline basis.
     '''
@@ -187,8 +81,7 @@ def calc_universal_group(actors):
             y = ray.get([a.get_band.remote(band_num,mask='calc_brdf',
                                            corrections = corections) for a in actors])
             y = np.concatenate(y)
-            coeffs = np.linalg.lstsq(X, y)[0].flatten().tolist()
-            coeffs[band_num] = coeffs
+            coeffs[band_num] = np.linalg.lstsq(X, y)[0].flatten().tolist()
             progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
     print('\n')
 
