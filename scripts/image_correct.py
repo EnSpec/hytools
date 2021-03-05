@@ -135,6 +135,8 @@ def apply_corrections(hy_obj,config_dict):
         header_dict['wavelength'] = []
         header_dict['fwhm'] = []
         header_dict['wavelength units'] = ''
+        header_dict['data ignore value'] = 255
+
 
         output_name = config_dict['export']['output_dir']
         output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0]
@@ -143,7 +145,9 @@ def apply_corrections(hy_obj,config_dict):
         writer = WriteENVI(output_name,header_dict)
 
         for band_num,mask in enumerate(masks):
-            writer.write_band(mask.astype(int),band_num)
+            mask =mask.astype(int)
+            mask[~hy_obj.no_data] = 255
+            writer.write_band(mask,band_num)
 
         del masks
 
