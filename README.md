@@ -15,16 +15,6 @@ workflow for processing images.
 For complete documentation see:
 [hytools.readthedocs.io](https://hytools.readthedocs.io/en/latest/contents.html)
 
-
-## Dependencies
-- h5py
-- matplotlib
-- numpy
-- pandas
-- ray
-- scikit-learn
-- scipy
-
 # Installation
 
 To install with pip run:
