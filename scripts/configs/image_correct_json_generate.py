@@ -10,7 +10,7 @@ import glob
 import numpy as np
 
 #Output path for configuration file
-config_file = ".json"
+config_file = "/data1/temp/ht_test/ic_test.json"
 config_dict = {}
 
 #Only coefficients for good bands will be calculated
@@ -19,13 +19,14 @@ config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
 
 # Input data settings for NEON
 #################################################################
-# config_dict['file_type'] = 'neon'
-# images= glob.glob("*.h5")
-# images.sort()
-# config_dict["input_files"] = images
+config_dict['file_type'] = 'neon'
+images= glob.glob("/data1/temp/ht_test/*.h5")
+images.sort()
+config_dict["input_files"] = images
 
 # Input data settings for ENVI
 #################################################################
+
 ''' Only difference between ENVI and NEON settings is the specification
 of the ancillary datasets (ex. viewing and solar geometry). All hytools
 functions assume that the ancillary data and the image date are the same
@@ -37,20 +38,20 @@ value is list consisting of the file path and the band number.
 
 '''
 
-config_dict['file_type'] = 'envi'
-aviris_anc_names = ['path_length','sensor_az','sensor_zn',
-                    'solar_az', 'solar_zn','phase','slope',
-                    'aspect', 'cosine_i','utc_time']
-images= glob.glob("*img")
-images.sort()
-config_dict["input_files"] = images
+# config_dict['file_type'] = 'envi'
+# aviris_anc_names = ['path_length','sensor_az','sensor_zn',
+#                     'solar_az', 'solar_zn','phase','slope',
+#                     'aspect', 'cosine_i','utc_time']
+# images= glob.glob("/data1/temp/ht_test/*img")
+# images.sort()
+# config_dict["input_files"] = images
 
-config_dict["anc_files"] = {}
-anc_files = glob.glob("*ort")
-anc_files.sort()
-for i,image in enumerate(images):
-    config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
-                                                [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
+# config_dict["anc_files"] = {}
+# anc_files = glob.glob("/data1/temp/ht_test/*ort")
+# anc_files.sort()
+# for i,image in enumerate(images):
+#     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
+#                                                 [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
 
 # Export settings
 #################################################################
@@ -64,8 +65,9 @@ for i,image in enumerate(images):
 config_dict['export'] = {}
 config_dict['export']['coeffs']  = True
 config_dict['export']['image']  = True
+config_dict['export']['masks']  = True
 config_dict['export']['subset_waves']  = [660,550,440,850]
-config_dict['export']['output_dir'] ="/home/chlus/dev_hytools/data/output/"
+config_dict['export']['output_dir'] = "/data1/temp/ht_test/"
 config_dict['export']["suffix"] = 'brdf'
 
 #Corrections
@@ -114,7 +116,11 @@ config_dict["topo"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                     ['ancillary',{'name':'slope',
                                                   'min': np.radians(5),'max':'+inf' }],
                                     ['ancillary',{'name':'cosine_i',
-                                                  'min': 0.12,'max':'+inf' }]]
+                                                  'min': 0.12,'max':'+inf' }],
+                                    ['cloud',{'method':'zhai_2018',
+                                              'cloud':True,'shadow':True,
+                                              'T1': 0.01,'t2': 1/10,'t3': 1/4,
+                                              't4': 1/2,'T7': 9,'T8': 9}]]
 
 config_dict["topo"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                              'min': 0.1,'max': 1.0}],
@@ -123,7 +129,6 @@ config_dict["topo"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                     ['ancillary',{'name':'cosine_i',
                                                   'min': 0.12,'max':'+inf' }]]
 config_dict["topo"]['c_fit_type'] = 'nnls'
-
 
 # config_dict["topo"]['type'] =  'precomputed'
 # config_dict["brdf"]['coeff_files'] =  {}
@@ -155,51 +160,52 @@ config_dict["brdf"]['solar_zn_type'] ='scene'
 
 # Universal BRDF config
 #----------------------
-# config_dict["brdf"]['type'] =  'universal'
-# config_dict["brdf"]['grouped'] =  True
-# config_dict["brdf"]['sample_perc'] = 0.1
-# config_dict["brdf"]['geometric'] = 'li_sparse_r'
-# config_dict["brdf"]['volume'] = 'ross_thick'
-# config_dict["brdf"]["b/r"] = 2.5
-# config_dict["brdf"]["h/b"] = 2
-# config_dict["brdf"]['calc_mask'] = [["ndi", {'band1': 850,'band2': 660,
-#                                             'min': 0.1,'max': 1.0}]]
-# config_dict["brdf"]['apply_mask'] = [["ndi", {'band1': 850,'band2': 660,
-#                                             'min': 0.1,'max': 1.0}]]
-
-# Automatically determine optimal kernel by minimizing
-# RMSE across 'auto_waves'
-# config_dict["brdf"]['auto_kernel'] = False
-# config_dict["brdf"]['auto_waves'] = [450,550,660,850]
-# config_dict["brdf"]['auto_perc'] = 0.01
-
-#----------------------
-# ## Flex BRDF configs
-# ##------------------
-config_dict["brdf"]['type'] =  'flex'
+config_dict["brdf"]['type'] =  'universal'
 config_dict["brdf"]['grouped'] =  True
+config_dict["brdf"]['sample_perc'] = 0.1
 config_dict["brdf"]['geometric'] = 'li_dense_r'
 config_dict["brdf"]['volume'] = 'ross_thick'
 config_dict["brdf"]["b/r"] = 2.5
 config_dict["brdf"]["h/b"] = 2
-config_dict["brdf"]['sample_perc'] = 0.1
-config_dict["brdf"]['interp_kind'] = 'linear'
 config_dict["brdf"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
-                                             'min': 0.1,'max': 1.0}],
-                                    ['kernel_finite',{}],
-                                    ['ancillary',{'name':'sensor_zn',
-                                                  'min':np.radians(2),'max':'inf' }],
-                                    ['neon_edge',{'radius': 30}]]
+                                            'min': 0.1,'max': 1.0}]]
 config_dict["brdf"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
-                                              'min': 0.05,'max': 1.0}]]
+                                            'min': 0.1,'max': 1.0}]]
+config_dict["brdf"]['diagnostic_plots'] = True
+config_dict["brdf"]['diagnostic_waves'] = [440,550,660,850]
 
-# ## Flex dynamic NDVI params
-config_dict["brdf"]['bin_type'] = 'dynamic'
-config_dict["brdf"]['num_bins'] = 18
-config_dict["brdf"]['ndvi_bin_min'] = 0.05
-config_dict["brdf"]['ndvi_bin_max'] = 1.0
-config_dict["brdf"]['ndvi_perc_min'] = 10
-config_dict["brdf"]['ndvi_perc_max'] = 95
+#----------------------
+# ## Flex BRDF configs
+# ##------------------
+# config_dict["brdf"]['type'] =  'flex'
+# config_dict["brdf"]['grouped'] =  False
+# config_dict["brdf"]['geometric'] = 'li_dense_r'
+# config_dict["brdf"]['volume'] = 'ross_thick'
+# config_dict["brdf"]["b/r"] = 2.5
+# config_dict["brdf"]["h/b"] = 2
+# config_dict["brdf"]['sample_perc'] = 0.1
+# config_dict["brdf"]['interp_kind'] = 'linear'
+# config_dict["brdf"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
+#                                              'min': 0.1,'max': 1.0}],
+#                                     ['kernel_finite',{}],
+#                                     ['ancillary',{'name':'sensor_zn',
+#                                                   'min':np.radians(2),'max':'inf' }],
+#                                     ['neon_edge',{'radius': 30}],
+#                                     ['cloud',{'method':'zhai_2018',
+#                                               'cloud':True,'shadow':True,
+#                                               'T1': 0.01,'t2': 1/10,'t3': 1/4,
+#                                               't4': 1/2,'T7': 9,'T8': 9}]]
+
+# config_dict["brdf"]['apply_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
+#                                               'min': 0.05,'max': 1.0}]]
+
+# # ## Flex dynamic NDVI params
+# config_dict["brdf"]['bin_type'] = 'dynamic'
+# config_dict["brdf"]['num_bins'] = 18
+# config_dict["brdf"]['ndvi_bin_min'] = 0.05
+# config_dict["brdf"]['ndvi_bin_max'] = 1.0
+# config_dict["brdf"]['ndvi_perc_min'] = 10
+# config_dict["brdf"]['ndvi_perc_max'] = 95
 
 # ## Flex fixed bins specified by user
 # config_dict["brdf"]['bin_type'] = 'user'
