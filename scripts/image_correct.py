@@ -8,6 +8,7 @@ import hytools as ht
 from hytools.io.envi import *
 from hytools.topo import calc_topo_coeffs
 from hytools.brdf import calc_brdf_coeffs
+from hytools.masks import mask_create
 
 warnings.filterwarnings("ignore")
 np.seterr(divide='ignore', invalid='ignore')
@@ -35,8 +36,6 @@ def main():
                                         anc_files[image]) for a,image in zip(actors,images)])
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
-
-    #Here is where the outlier detection should probably happen.
 
     _ = ray.get([a.create_bad_bands.remote(config_dict['bad_bands']) for a in actors])
 
@@ -118,5 +117,50 @@ def apply_corrections(hy_obj,config_dict):
             writer.write_band(band, b)
         writer.close()
 
+    #Export masks
+    if config_dict['export']['masks']:
+        masks = []
+        mask_names = []
+
+        for correction in config_dict["corrections"]:
+            for mask_type in config_dict[correction]['calc_mask']:
+                mask_names.append(correction + '_' + mask_type[0])
+                masks.append(mask_create(hy_obj, [mask_type]))
+
+        header_dict['data type'] = 1
+        header_dict['bands'] = len(masks)
+        header_dict['band names'] = mask_names
+        header_dict['samples'] = hy_obj.columns
+        header_dict['lines'] = hy_obj.lines
+        header_dict['wavelength'] = []
+        header_dict['fwhm'] = []
+        header_dict['wavelength units'] = ''
+
+        output_name = config_dict['export']['output_dir']
+        output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0]
+        output_name +=  "_%s_mask" % config_dict['export']["suffix"]
+
+        writer = WriteENVI(output_name,header_dict)
+
+        for band_num,mask in enumerate(masks):
+            writer.write_band(mask.astype(int),band_num)
+
+        del masks
+
 if __name__== "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
