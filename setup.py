@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='hy-tools',
     description= 'HyTools: Hyperspectral image processing library',
-    version='1.0.2',
+    version='1.1.0',
     license='MIT',
     url='https://github.com/EnSpec/hytools',
     author = 'Adam Chlus, Zhiwei Ye, Ting Zheng, Natalie Queally and Philip Townsend',
@@ -14,7 +14,8 @@ setup(
                       'pandas',
                       'ray',
                       'scikit-learn',
-                      'scipy']
+                      'scipy'],
+    python_requires='>=3.6, !=3.9.*'
     )
 
 
