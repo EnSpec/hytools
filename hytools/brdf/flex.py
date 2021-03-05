@@ -86,7 +86,7 @@ def calc_flex_single(hy_obj,brdf_dict):
 
     # Determine bin dimensions and create class mask
     if hy_obj.brdf['bin_type'] == 'dynamic':
-        bins = ndvi_bins(hy_obj.ndi()[~hy_obj.mask['no_data']],brdf_dict)
+        bins = ndvi_bins(hy_obj.ndi()[hy_obj.mask['no_data']],brdf_dict)
     else:
         bins = brdf_dict['bins']
 
