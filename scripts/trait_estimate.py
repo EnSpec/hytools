@@ -110,7 +110,7 @@ def apply_trait_models(hy_obj,config_dict):
 
             # Apply spectrum transforms
             for transform in  trait_model['model']["transform"]:
-                if  transform== "vnorm":
+                if  transform== "vector":
                     norm = np.linalg.norm(chunk,axis=2)
                     chunk = chunk/norm[:,:,np.newaxis]
                 if transform == "absorb":
@@ -126,7 +126,7 @@ def apply_trait_models(hy_obj,config_dict):
 
             range_mask = (trait_est[:,:,0] > trait_model["model_diagnostics"]['min']) & \
                          (trait_est[:,:,0] < trait_model["model_diagnostics"]['max'])
-            trait_est[:,:,3] = range_mask.astype(int)
+            trait_est[:,:,2] = range_mask.astype(int)
 
             # Subset and assign custom masks
             for i,(mask,args) in enumerate(config_dict['masks']):
