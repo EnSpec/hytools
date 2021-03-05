@@ -146,7 +146,7 @@ def apply_corrections(hy_obj,config_dict):
 
         for band_num,mask in enumerate(masks):
             mask =mask.astype(int)
-            mask[~hy_obj.no_data] = 255
+            mask[~hy_obj.mask['no_data']] = 255
             writer.write_band(mask,band_num)
 
         del masks
