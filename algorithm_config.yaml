@@ -20,5 +20,7 @@ inputs:
     download: true
   - name: l2_granule
     download: true
-  - name: config_file
+  - name: image_correct_config
+    context: true
+  - name: trait_estimate_config
     context: true
