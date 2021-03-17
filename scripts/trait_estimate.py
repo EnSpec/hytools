@@ -63,8 +63,8 @@ def apply_trait_models(hy_obj,config_dict):
     for trait in config_dict['trait_models']:
         with open(trait, 'r') as json_file:
             trait_model = json.load(json_file)
-            coeffs = np.array(trait_model['model']['coefficients'])
-            intercept = np.array(trait_model['model']['intercepts'])
+            coeffs = np.array(trait_model['coefficients'])
+            intercept = np.array(trait_model['intercepts'])
             model_waves = np.array(trait_model['wavelengths'])
 
         #Check if wavelengths match
@@ -109,7 +109,7 @@ def apply_trait_models(hy_obj,config_dict):
                                     header_dict['bands']))
 
             # Apply spectrum transforms
-            for transform in  trait_model['model']["transform"]:
+            for transform in  trait_model["transform"]:
                 if  transform== "vector":
                     norm = np.linalg.norm(chunk,axis=2)
                     chunk = chunk/norm[:,:,np.newaxis]
