@@ -9,8 +9,8 @@ import tarfile
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    products = ["rdn", "obs_ort", "loc", "glt", "rfl", "topo", "brdf", "topo_brdf"]
-    formats = ["envi", "hdf"]
+    products = ["rdn", "obs_ort", "loc", "glt", "rfl", "topo_coeffs", "brdf_coeffs", "topo_brdf"]
+    formats = ["envi"]
     parser.add_argument("-p", "--product",
                         help=("Choose one of the following product types: " + ", ".join(products)))
     parser.add_argument("-f", "--format",
@@ -41,6 +41,7 @@ def main():
         os.remove(g)
 
     # Get paths based on product type file matching
+    # TODO: Add support for multiple formats
     if args.product == "rdn":
         paths = glob.glob(os.path.join(input_dir, "*rdn*", "*rdn*img"))
     elif args.product == "obs_ort":
@@ -50,10 +51,14 @@ def main():
     elif args.product == "glt":
         paths = glob.glob(os.path.join(input_dir, "*rdn*", "*glt"))
     elif args.product == "rfl":
-        paths = glob.glob(os.path.join(input_dir, "*rfl*", "*rfl*img"))
-        paths += glob.glob(os.path.join(input_dir, "*refl*", "*rfl*img"))
-        paths += glob.glob(os.path.join(input_dir, "*rfl*", "*corr*img"))
-        paths += glob.glob(os.path.join(input_dir, "*refl*", "*corr*img"))
+        paths = glob.glob(os.path.join(input_dir, "*", "*rfl*img"))
+        paths += glob.glob(os.path.join(input_dir, "*", "*corr*img"))
+    elif args.product == "topo_coeffs":
+        paths = glob.glob(os.path.join(input_dir, "*topo_coeffs*", "*topo_coeffs*json"))
+    elif args.product == "brdf_coeffs":
+        paths = glob.glob(os.path.join(input_dir, "*brdf_coeffs*", "*brdf_coeffs*json"))
+    elif args.product == "topo_brdf":
+        paths = glob.glob(os.path.join(input_dir, "*", "*topo_brdf"))
     print(",".join(paths))
 
 

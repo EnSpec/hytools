@@ -44,10 +44,23 @@ def main():
     config_dict["num_cpus"] = len(images)
 
     if config_type == "trait_estimate":
+        topo_coeffs_paths = sys.argv[5]
+        brdf_coeffs_paths = sys.argv[6]
+
+        topo_coeffs = [topo for topo in topo_coeffs_paths.split(",")]
+        topo_coeffs.sort()
+
+        brdf_coeffs = [brdf for brdf in brdf_coeffs_paths.split(",")]
+        brdf_coeffs.sort()
+
         for corr in config_dict["corrections"]:
             config_dict[corr] = {}
-            for i in images:
-                config_dict[corr][i] = os.path.join(output_dir, os.path.basename(i) + "_" + corr + "_coeffs_topo_brdf.json")
+            if corr == "topo":
+                for i in range(len(topo_coeffs)):
+                    config_dict[corr][images[i]] = topo_coeffs[i]
+            if corr == "brdf":
+                for i in range(len(brdf_coeffs)):
+                    config_dict[corr][images[i]] = brdf_coeffs[i]
 
         imgspec_dir = os.path.dirname(os.path.abspath(__file__))
         models = glob.glob(os.path.join(imgspec_dir, "trait_models", "*json"))
