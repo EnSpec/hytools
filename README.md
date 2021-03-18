@@ -39,18 +39,24 @@ import hytools as ht
 envi = ht.HyTools()
 
 #Read and load file metadata
-envi.read_data('./envi_file.bin',file_type= 'envi')
+envi.read_file('./envi_file.bin',file_type= 'envi')
 
 #Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)
 red = hy_obj.get_wave(660)
 ndvi = (ir-red)/(ir+red)
 
+#or
+
+# Calculate normalized difference index, NDVI by default
+ndvi = hy_obj.ndi()
+
 #Other options for retrieving data
 band = hy_obj.get_band(10)
 column = hy_obj.get_column(1)
 line = hy_obj.get_line(234)
-chunk = hy_obj.get_chunk(x1,x2,y1,y2)
+chunk = hy_obj.get_chunk(0,100,0,100)
+pixels = hy_obj.get_pixels([102,434],[324,345])
 
 # Create a writer object to write to new file
 writer = ht.io.WriteENVI('output_envi.bin',hy_obj.header_dict)
