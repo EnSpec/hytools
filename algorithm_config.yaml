@@ -21,9 +21,9 @@ inputs:
   - name: l2_reflectance
     type: file
   - name: topo_coefficients
-    type: file
+    type: positional
   - name: brdf_coefficients
-    type: file
+    type: positional
   - name: image_correct_config
     type: config
   - name: trait_estimate_config
