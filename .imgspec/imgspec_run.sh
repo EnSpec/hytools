@@ -37,6 +37,19 @@ else
     echo "### image_correct_config.json is empty. Not running image correction step"
 fi
 
+# Download topo coeffs if user provided url
+if [[ $1 == *.tar.gz ]]; then
+    echo "Downloading topo coeffs from $1"
+    wget -P ${input} $1
+fi
+
+# Download brdf coeffs if user provided url
+if [[ $2 == *.tar.gz ]]; then
+     echo "Downloading brdf coeffs from $2"
+    wget -P ${input} $2
+fi
+
+
 # Get input paths for trait estimate
 topo_coeffs_files=$(python ${imgspec_dir}/get_paths_from_granules.py -p topo_coeffs)
 echo "Found input topo coefficients file(s): $topo_coeffs_files"
