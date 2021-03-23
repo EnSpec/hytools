@@ -14,7 +14,7 @@ obs_ort_files=$(python ${imgspec_dir}/get_paths_from_granules.py -p obs_ort)
 echo "Found input observation file(s): $obs_ort_files"
 
 # Create image_correct_config
-python get_from_context.py image_correct_config > image_correct_config.json
+python ${imgspec_dir}/get_from_context.py image_correct_config > image_correct_config.json
 echo "Created image_correct_config.json file from \"image_correct_config\" parameter"
 
 if grep -q "file_type" image_correct_config.json; then
@@ -57,7 +57,7 @@ brdf_coeffs_files=$(python ${imgspec_dir}/get_paths_from_granules.py -p brdf_coe
 echo "Found input brdf coefficients file(s): $brdf_coeffs_files"
 
 # Create trait_estimate_config
-python get_from_context.py trait_estimate_config > trait_estimate_config.json
+python ${imgspec_dir}/get_from_context.py trait_estimate_config > trait_estimate_config.json
 echo "Created trait_estimate_config.json file from \"trait_estimate_config\" parameter"
 
 if grep -q "file_type" trait_estimate_config.json; then
