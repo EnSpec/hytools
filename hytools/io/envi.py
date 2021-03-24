@@ -340,7 +340,7 @@ def envi_read_line(data,index,interleave):
     elif interleave == "bil":
         line = np.moveaxis(data[index,:,:],0,1)
     elif interleave == "bsq":
-        line = np.moveaxis(data[index,:,:],0,1)
+        line = np.moveaxis(data[:,index,:],0,1)
     return line
 
 def envi_read_column(data,index,interleave):
