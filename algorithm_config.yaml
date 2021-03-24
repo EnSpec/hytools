@@ -16,13 +16,13 @@ disk_space: 50GB
 inputs:
 # remove below this line if no inputs
 # rename and set algorithm input names accordingly
-  - name: l1_radiance
+  - name: reflectance_files
     type: file
-  - name: l2_reflectance
+  - name: obs_files
     type: file
-  - name: topo_coefficients
+  - name: topo_coeffs_files
     type: positional
-  - name: brdf_coefficients
+  - name: brdf_coeffs_files
     type: positional
   - name: image_correct_config
     type: config
