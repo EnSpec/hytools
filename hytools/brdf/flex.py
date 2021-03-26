@@ -42,6 +42,27 @@ def ndvi_stratify(hy_obj):
     class_mask = class_mask.astype(np.int8)
     hy_obj.ancillary['ndvi_classes'] = class_mask
 
+
+def ndvi_2nd_split(ndvi_bins_dynamic, all_ndvi_array, ndvi_bin_range_thres=0.15):
+    ''' Perform a second NDVI split
+    '''
+
+    ndvi_bin_range_thres = -0.015625 * (len(ndvi_bins_dynamic)-1) + 0.43125
+    ndvi_bin_range = np.array(ndvi_bins_dynamic[1:]) - np.array(ndvi_bins_dynamic[:-1])
+
+    bin_for_split = np.argwhere(ndvi_bin_range>=ndvi_bin_range_thres).ravel()
+
+    new_break = []
+    if bin_for_split.shape[0]>0:
+        for bin_id in bin_for_split:
+            # Use median of the bin as the new break point
+            new_break += [np.median(all_ndvi_array[(all_ndvi_array >  ndvi_bins_dynamic[bin_id]) & (all_ndvi_array < ndvi_bins_dynamic[bin_id+1])]).astype(np.float64)]
+
+    # New list of bin break points
+    ndvi_bins_dynamic = sorted(ndvi_bins_dynamic + new_break)
+
+    return ndvi_bins_dynamic
+
 def ndvi_bins(ndvi,brdf_dict):
     '''Calculate NDVI bin extents
     '''
@@ -55,6 +76,10 @@ def ndvi_bins(ndvi,brdf_dict):
     ndvi_thres += ndvi_break_dyn_bin.tolist()
     ndvi_thres += [brdf_dict['ndvi_bin_max']]
     ndvi_thres = sorted(list(set(ndvi_thres)))
+
+    # Do a second split of the NDVI dins
+    ndvi_thres = ndvi_2nd_split(ndvi_thres, ndvi)
+
     bins = [[x,y] for x,y in pairwise(ndvi_thres)]
     return bins
 
