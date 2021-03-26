@@ -129,6 +129,8 @@ def calc_flex_single(hy_obj,brdf_dict):
     # Determine bin dimensions and create class mask
     if hy_obj.brdf['bin_type'] == 'dynamic':
         bins = ndvi_bins(hy_obj.ndi()[hy_obj.mask['no_data']],brdf_dict)
+        #Update number of bins
+        hy_obj.brdf['num_bins'] = len(bins)
     else:
         bins = brdf_dict['bins']
 
@@ -160,8 +162,12 @@ def calc_flex_group(actors,brdf_dict):
     # Determine bin dimensions
     if  brdf_dict['bin_type'] == 'dynamic':
         bins = ndvi_bins(ndvi,brdf_dict)
+        #Update number of bins
+        _ = ray.get([a.do.remote(update_brdf,{'key':'num_bins',
+                                              'value': len(bins)}) for a in actors])
     else:
         bins = brdf_dict['bins']
+
     bins  = {k:v for (k,v) in enumerate(bins,start=1)}
 
     #Update BRDF coeffs
