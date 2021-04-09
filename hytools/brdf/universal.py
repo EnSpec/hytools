@@ -156,8 +156,7 @@ def apply_universal(hy_obj,data,dimension,index):
 
         correction_factor = brdf_nadir/brdf
         correction_factor[:,~hy_obj.mask['apply_brdf'][index,:]] = 1
-
-        data[brdf_bands,:] = data[brdf_bands,:]*correction_factor
+        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor.T
 
     elif dimension == 'column':
 
@@ -172,7 +171,7 @@ def apply_universal(hy_obj,data,dimension,index):
         correction_factor = brdf_nadir/brdf
         correction_factor[~hy_obj.mask['apply_brdf'][:,index],:] = 1
 
-        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor
+        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor.T
 
     elif dimension == 'band':
         fvol, fgeo, fiso  = hy_obj.brdf['coeffs'][index]

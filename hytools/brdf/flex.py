@@ -267,9 +267,8 @@ def apply_flex(hy_obj,data,dimension,index):
 
         correction_factor = brdf_nadir/brdf
         correction_factor[:,~hy_obj.mask['apply_brdf'][index]] = 1
-        correction_factor = np.moveaxis(correction_factor,0,1)
 
-        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor
+        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor.T
 
     elif dimension == 'column':
         #index= 300
@@ -290,8 +289,7 @@ def apply_flex(hy_obj,data,dimension,index):
         correction_factor = brdf_nadir/brdf
         correction_factor = np.moveaxis(correction_factor,0,1)
         correction_factor[:,~hy_obj.mask['apply_brdf'][index]] = 1
-
-        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor
+        data[:,brdf_bands] = data[:,brdf_bands]*correction_factor.T
 
     elif (dimension == 'band') & (index in brdf_bands):
         # index= 8

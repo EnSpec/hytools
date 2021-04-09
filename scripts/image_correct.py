@@ -101,6 +101,7 @@ def apply_corrections(hy_obj,config_dict):
         while not iterator.complete:
             line = iterator.read_next()
             writer.write_line(line,iterator.current_line)
+        writer.close()
 
     #Export subset of wavelengths
     else:
