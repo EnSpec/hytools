@@ -15,8 +15,8 @@ workflow for processing images.
 For complete documentation see:
 [hytools.readthedocs.io](https://hytools.readthedocs.io/en/latest/contents.html)
 
-For in-depth examples of HyTools use see the ipython notebook in the examples directory, rendered here:
-[HyTools basics notebook](https://nbviewer.jupyter.org/github/EnSpec/hytools/blob/master/examples/hytools_basics_notebook.ipynb)
+For in-depth examples of HyTools use see the example ipython notebook here:
+[HyTools basics notebook](https://github.com/EnSpec/hytools/blob/master/examples/hytools_basics_notebook.ipynb)
 
 
 # Installation
