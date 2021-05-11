@@ -44,27 +44,22 @@ def main():
     config_dict["num_cpus"] = len(images)
 
     if config_type == "trait_estimate":
-        topo_coeffs_paths = sys.argv[5]
-        brdf_coeffs_paths = sys.argv[6]
+        trait_model_dir = sys.argv[5]
 
-        topo_coeffs = [topo for topo in topo_coeffs_paths.split(",")]
-        topo_coeffs.sort()
+        # Set corrections to empty list
+        config_dict["corrections"] = []
 
-        brdf_coeffs = [brdf for brdf in brdf_coeffs_paths.split(",")]
-        brdf_coeffs.sort()
+        # Remove "topo" and "brdf" fields?
+        if "topo" in config_dict:
+            del config_dict["topo"]
+        if "brdf" in config_dict:
+            del config_dict["brdf"]
 
-        for corr in config_dict["corrections"]:
-            config_dict[corr] = {}
-            if corr == "topo":
-                for i in range(len(topo_coeffs)):
-                    config_dict[corr][images[i]] = topo_coeffs[i]
-            if corr == "brdf":
-                for i in range(len(brdf_coeffs)):
-                    config_dict[corr][images[i]] = brdf_coeffs[i]
-
-        imgspec_dir = os.path.dirname(os.path.abspath(__file__))
-        models = glob.glob(os.path.join(imgspec_dir, "trait_models", "*json"))
+        models = glob.glob(os.path.join(trait_model_dir, "*json"))
         config_dict["trait_models"] = models
+
+        # Update num_cpus based on number of trait models
+        config_dict["num_cpus"] = len(models)
 
     with open(config_path, "w") as f:
         f.write(json.dumps(config_dict))

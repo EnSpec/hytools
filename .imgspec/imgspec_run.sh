@@ -13,57 +13,50 @@ echo "Found input reflectance file(s): $rfl_files"
 obs_ort_files=$(python ${imgspec_dir}/get_paths_from_granules.py -p obs_ort)
 echo "Found input observation file(s): $obs_ort_files"
 
+# Set ulimit according to ray recommendation
+ulimit -n 8192
+
 # Create image_correct_config
 python ${imgspec_dir}/get_from_context.py image_correct_config > image_correct_config.json
 echo "Created image_correct_config.json file from \"image_correct_config\" parameter"
 
 if grep -q "file_type" image_correct_config.json; then
     python $imgspec_dir/update_config.py image_correct_config.json image_correct $rfl_files $obs_ort_files
-    echo "Updated image_correct_config.json with input paths"
+    echo "Updated image_correct_config.json with input paths and num_cpus based on number of images"
 
     # Execute hytools image correction
     image_correct_cmd="python $hytools_dir/scripts/image_correct.py image_correct_config.json"
     echo "Executing cmd: $image_correct_cmd"
     ${image_correct_cmd}
 
-    # Copy coeffs files to input directory for trait estimate step
-    echo "Copying coefficients files to input directory..."
-    for file in output/*{topo,brdf}_coeffs*json; do
-        coeffs_dir_name=$(basename ${file} .json)
-        mkdir -p ${input}/${coeffs_dir_name}
-        cp -v ${file} ${input}/${coeffs_dir_name}/
-     done
+    # Update rfl_files to refer to corrected output paths
+    # Assume corrected output file names end with either "_topo" or "_brdf"
+    rfl_files_arr=()
+    for file in output/*{topo,brdf}; do
+        if [[ $file != *\** ]]; then
+            rfl_files_arr+=("$file")
+        fi
+    done
+    rfl_files=$(printf "%s," "${rfl_files_arr[@]}" | cut -d "," -f 1-${#rfl_files_arr[@]})
+    echo "Updated rfl_files based on output of image_correct step.  Found files:"
+    echo $rfl_files
+
 else
     echo "### image_correct_config.json is empty. Not running image correction step"
 fi
-
-# Download topo coeffs if user provided url
-if [[ $1 == *.tar.gz ]]; then
-    echo "Downloading topo coeffs from $1"
-    wget -P ${input} $1
-fi
-
-# Download brdf coeffs if user provided url
-if [[ $2 == *.tar.gz ]]; then
-     echo "Downloading brdf coeffs from $2"
-    wget -P ${input} $2
-fi
-
-
-# Get input paths for trait estimate
-topo_coeffs_files=$(python ${imgspec_dir}/get_paths_from_granules.py -p topo_coeffs)
-echo "Found input topo coefficients file(s): $topo_coeffs_files"
-brdf_coeffs_files=$(python ${imgspec_dir}/get_paths_from_granules.py -p brdf_coeffs)
-echo "Found input brdf coefficients file(s): $brdf_coeffs_files"
 
 # Create trait_estimate_config
 python ${imgspec_dir}/get_from_context.py trait_estimate_config > trait_estimate_config.json
 echo "Created trait_estimate_config.json file from \"trait_estimate_config\" parameter"
 
 if grep -q "file_type" trait_estimate_config.json; then
+    # Clone trait model repository
+    trait_model_dir="trait_models"
+    git clone -b $2 $1 $trait_model_dir
+
     python $imgspec_dir/update_config.py trait_estimate_config.json trait_estimate $rfl_files $obs_ort_files \
-    $topo_coeffs_files $brdf_coeffs_files
-    echo "Updated trait_estimate_config.json with input paths, coeffs paths, and trait model paths"
+    $trait_model_dir
+    echo "Updated trait_estimate_config.json with input paths, trait model paths, and num_cpus"
 
     # Execute hytools image correction
     trait_estimate_cmd="python $hytools_dir/scripts/trait_estimate.py trait_estimate_config.json"
