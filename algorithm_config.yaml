@@ -22,9 +22,7 @@ inputs:
     type: file
   - name: image_correct_config
     type: config
-  - name: trait_estimate_config
-    type: config
   - name: trait_models_repo_url
     type: positional
-  - name: trait_models_repo_version
-    type: positional
+  - name: trait_estimate_config
+    type: config

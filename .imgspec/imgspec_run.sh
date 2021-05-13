@@ -50,9 +50,20 @@ python ${imgspec_dir}/get_from_context.py trait_estimate_config > trait_estimate
 echo "Created trait_estimate_config.json file from \"trait_estimate_config\" parameter"
 
 if grep -q "file_type" trait_estimate_config.json; then
-    # Clone trait model repository
+    # Download trait model repository
     trait_model_dir="trait_models"
-    git clone -b $2 $1 $trait_model_dir
+    mkdir -p $trait_model_dir
+    wget $1
+    zip_file=$(basename $1)
+    if [[ $1 == *zip ]]; then
+        unzip $zip_file -d $trait_model_dir
+    fi
+    if [[ $1 == *tar.gz ]]; then
+        tar xvf $zip_file -C $trait_model_dir
+    fi
+    # Update trait_model_dir to included unzipped top-level directory name which is not known without introspection
+    trait_model_dir=$(ls -d $trait_model_dir/*)
+    echo "Downloaded and unzipped trait models from $1 to $trait_model_dir"
 
     python $imgspec_dir/update_config.py trait_estimate_config.json trait_estimate $rfl_files $obs_ort_files \
     $trait_model_dir
