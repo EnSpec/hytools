@@ -43,6 +43,7 @@ def main():
     # Update num_cpus based on number of images
     config_dict["num_cpus"] = len(images)
 
+    # Additional modifications for trait_estimate config
     if config_type == "trait_estimate":
         trait_model_dir = sys.argv[5]
 
@@ -57,9 +58,6 @@ def main():
 
         models = glob.glob(os.path.join(trait_model_dir, "*json"))
         config_dict["trait_models"] = models
-
-        # Update num_cpus based on number of trait models
-        config_dict["num_cpus"] = len(models)
 
     with open(config_path, "w") as f:
         f.write(json.dumps(config_dict))
