@@ -24,6 +24,7 @@ Todo:
 
 """
 import os
+import sys
 from collections import Counter
 import numpy as np
 
@@ -150,6 +151,13 @@ def open_envi(hy_obj,anc_path = {}):
         up_r = hy_obj.data[0,-1,0]
         low_l = hy_obj.data[-1,0,0]
         low_r = hy_obj.data[-1,-1,0]
+
+        if hy_obj.endianness != sys.byteorder:
+            up_l = up_l.byteswap()
+            up_r = up_r.byteswap()
+            low_l = low_l.byteswap()
+            low_r = low_r.byteswap()
+
         counts = {v: k for k, v in Counter([up_l,up_r,low_l,low_r]).items()}
         hy_obj.no_data = counts[max(counts.keys())]
         hy_obj.close_data()
