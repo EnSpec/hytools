@@ -125,6 +125,12 @@ def open_envi(hy_obj,anc_path = {}):
     hy_obj.byte_order = header_dict['byte order']
     hy_obj.anc_path = anc_path
 
+    if hy_obj.byte_order == 1:
+        hy_obj.endianness = 'big'
+    else:
+        hy_obj.endianness = 'little'
+
+
     if isinstance(header_dict['bbl'],np.ndarray):
         hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
     if header_dict["interleave"] == 'bip':
