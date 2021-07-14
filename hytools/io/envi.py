@@ -281,6 +281,26 @@ class WriteENVI:
         elif self.interleave == "bsq":
             self.data[:,y_start:y_end,x_start:x_end] = np.moveaxis(chunk,-1,0)
 
+    def write_pixel(self,pixel,line_index,column_index):
+        """
+        Args:
+            pixel (TYPE): pixel array (bands).
+            line_index (int): Zero-based upper line index.
+            column_index (int): Zero-based left column index.
+
+        Returns:
+            None.
+
+        """
+
+        if self.interleave == "bip":
+            self.data[line_index,column_index,:] = pixel
+        elif self.interleave == "bil":
+            self.data[line_index,:,column_index] = pixel
+        elif self.interleave == "bsq":
+            self.data[:,line_index,column_index] = pixel
+
+
     def close(self):
         """Delete numpy memmap.
         """
