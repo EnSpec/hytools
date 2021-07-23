@@ -27,6 +27,7 @@ import json
 import numpy as np
 import h5py
 import warnings
+import sys
 from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
 from .io.envi import open_envi,parse_envi_header,envi_header_from_neon
@@ -37,7 +38,6 @@ from .topo import calc_cosine_i,apply_topo_correct
 from .transform.resampling import *
 
 warnings.filterwarnings("ignore")
-
 
 class HyTools:
     """HyTools file object"""
@@ -58,6 +58,7 @@ class HyTools:
         self.crs = None
         self.data = None
         self.dtype = None
+        self.endianness = None
         self.file_name = None
         self.file_type = None
         self.fwhm = []
@@ -198,6 +199,8 @@ class HyTools:
             band =  self.data[:,:,index]
         elif self.file_type == "envi":
             band = envi_read_band(self.data,index,self.interleave)
+            if self.endianness != sys.byteorder:
+                band = band.byteswap()
         self.close_data()
 
         band = self.correct(band,'band',index,corrections)
@@ -249,6 +252,8 @@ class HyTools:
             pixels = np.array(pixels)
         elif self.file_type == "envi":
             pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
+            if self.endianness != sys.byteorder:
+                pixels = pixels.byteswap()
         self.close_data()
 
         pixels = self.correct(pixels,'pixels',
@@ -275,6 +280,8 @@ class HyTools:
             line = self.data[index,:,:]
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
+            if self.endianness != sys.byteorder:
+                line = line.byteswap()
         self.close_data()
 
         line = self.correct(line,'line',index,corrections)
@@ -300,6 +307,8 @@ class HyTools:
             column = self.data[:,index,:]
         elif self.file_type == "envi":
             column = envi_read_column(self.data,index,self.interleave)
+            if self.endianness != sys.byteorder:
+                column = column.byteswap()
         self.close_data()
 
         column = self.correct(column,'column',index,corrections)
@@ -332,6 +341,8 @@ class HyTools:
         elif self.file_type == "envi":
             chunk =  envi_read_chunk(self.data,col_start,col_end,
                                      line_start,line_end,self.interleave)
+            if self.endianness != sys.byteorder:
+                chunk = chunk.byteswap()
         self.close_data()
 
         chunk = self.correct(chunk,'chunk',
@@ -368,6 +379,8 @@ class HyTools:
             ancillary.read_file(self.anc_path[anc][0],'envi')
             ancillary.load_data()
             anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
+            if self.endianness != sys.byteorder:
+                anc_data = anc_data.byteswap()
             ancillary.close_data()
 
         else:

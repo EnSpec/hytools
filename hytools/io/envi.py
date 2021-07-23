@@ -24,6 +24,7 @@ Todo:
 
 """
 import os
+import sys
 from collections import Counter
 import numpy as np
 
@@ -125,6 +126,12 @@ def open_envi(hy_obj,anc_path = {}):
     hy_obj.byte_order = header_dict['byte order']
     hy_obj.anc_path = anc_path
 
+    if hy_obj.byte_order == 1:
+        hy_obj.endianness = 'big'
+    else:
+        hy_obj.endianness = 'little'
+
+
     if isinstance(header_dict['bbl'],np.ndarray):
         hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
     if header_dict["interleave"] == 'bip':
@@ -144,6 +151,13 @@ def open_envi(hy_obj,anc_path = {}):
         up_r = hy_obj.data[0,-1,0]
         low_l = hy_obj.data[-1,0,0]
         low_r = hy_obj.data[-1,-1,0]
+
+        if hy_obj.endianness != sys.byteorder:
+            up_l = up_l.byteswap()
+            up_r = up_r.byteswap()
+            low_l = low_l.byteswap()
+            low_r = low_r.byteswap()
+
         counts = {v: k for k, v in Counter([up_l,up_r,low_l,low_r]).items()}
         hy_obj.no_data = counts[max(counts.keys())]
         hy_obj.close_data()
@@ -266,6 +280,26 @@ class WriteENVI:
             self.data[y_start:y_end,:,x_start:x_end] = np.moveaxis(chunk,-1,-2)
         elif self.interleave == "bsq":
             self.data[:,y_start:y_end,x_start:x_end] = np.moveaxis(chunk,-1,0)
+
+    def write_pixel(self,pixel,line_index,column_index):
+        """
+        Args:
+            pixel (TYPE): pixel array (bands).
+            line_index (int): Zero-based upper line index.
+            column_index (int): Zero-based left column index.
+
+        Returns:
+            None.
+
+        """
+
+        if self.interleave == "bip":
+            self.data[line_index,column_index,:] = pixel
+        elif self.interleave == "bil":
+            self.data[line_index,:,column_index] = pixel
+        elif self.interleave == "bsq":
+            self.data[:,line_index,column_index] = pixel
+
 
     def close(self):
         """Delete numpy memmap.

@@ -29,6 +29,7 @@ def main():
     parser.add_argument("-comps", help="Number of components to export", type = int,required=False,default=10)
     parser.add_argument("-sample", help="Percent of data to subsample", type = float,required=False,default=0.1)
     parser.add_argument("-merge", help="Use gdal_merge.py to mosaic PCA images", required=False, action='store_true')
+    parser.add_argument("-inv", help="Apply inverse tranform", required=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -54,8 +55,10 @@ def main():
 
     # Center, scale and fit PCA transform
     X = np.concatenate(samples).astype(np.float32)
-    X /=X.mean(axis=1)[:,np.newaxis]
-    X /=X.std(axis=1,ddof=1)[:,np.newaxis]
+    x_mean = X.mean(axis=0)[np.newaxis,:]
+    X -=x_mean
+    x_std = X.std(axis=0,ddof=1)[np.newaxis,:]
+    X /=x_std
     X = X[~np.isnan(X.sum(axis=1)) & ~np.isinf(X.sum(axis=1)),:]
 
     print('Performing PCA decomposition')
@@ -64,6 +67,9 @@ def main():
     pca_pkl = pickle.dumps(pca)
 
     args.pca_pkl = pca_pkl
+    args.x_mean = x_mean
+    args.x_std = x_std
+
     #Apply tranform and export
     _  = ray.get([a.do.remote(apply_transform,args) for a in actors])
 
@@ -91,7 +97,7 @@ def subsample(hy_obj,args):
 
     X = []
 
-    hy_obj.create_bad_bands([[300,400],[1337,1430],[1800,1960],[2450,2600]])
+    hy_obj.create_bad_bands([[300,400],[1300,1450],[1780,2000],[2450,2600]])
     for band_num,band in enumerate(hy_obj.bad_bands):
         if ~band:
             X.append(hy_obj.get_band(band_num,mask='samples'))
@@ -101,13 +107,19 @@ def apply_transform(hy_obj,args):
 
     print("Exporting %s PCA" % hy_obj.base_name)
     pca = pickle.loads(args.pca_pkl)
-    output_name = '%s/%s_pca' % (args.output_dir,hy_obj.base_name)
+    output_name = '%s/%s_pca%03d_inv' % (args.output_dir,hy_obj.base_name,pca.n_components)
     header_dict = hy_obj.get_header()
-    header_dict['bands'] = pca.n_components
-    header_dict['wavelength'] = []
-    header_dict['fwhm'] = []
+    header_dict['bands'] = (~hy_obj.bad_bands).sum()
+    header_dict['wavelength'] = hy_obj.wavelengths[~hy_obj.bad_bands]
+    header_dict['fwhm'] = hy_obj.fwhm[~hy_obj.bad_bands]
     header_dict['data type'] = 4
     header_dict['data ignore value'] = 0
+    if not args.inv:
+        header_dict['bands'] = pca.n_components
+        output_name = '%s/%s_pca%03d' % (args.output_dir,hy_obj.base_name,pca.n_components)
+        header_dict['wavelength'] = []
+        header_dict['fwhm'] = []
+
     writer = WriteENVI(output_name,header_dict)
     iterator = hy_obj.iterate(by = 'chunk',chunk_size = (500,500))
 
@@ -116,22 +128,20 @@ def apply_transform(hy_obj,args):
 
         X_chunk = chunk[:,:,~hy_obj.bad_bands].astype(np.float32)
         X_chunk = X_chunk.reshape((X_chunk.shape[0]*X_chunk.shape[1],X_chunk.shape[2]))
-        X_chunk /=X_chunk.mean(axis=1)[:,np.newaxis]
-        X_chunk /= X_chunk.std(axis=1,ddof=1)[:,np.newaxis]
+        X_chunk -=args.x_mean
+        X_chunk /=args.x_std
         X_chunk[np.isnan(X_chunk) | np.isinf(X_chunk)] = 0
-
         pca_chunk=  pca.transform(X_chunk)
-        pca_chunk = pca_chunk.reshape((chunk.shape[0],chunk.shape[1],pca.n_components))
+        if args.inv:
+            pca_chunk = pca.inverse_transform(pca_chunk)
+            pca_chunk *=args.x_std
+            pca_chunk +=args.x_mean
+        pca_chunk = pca_chunk.reshape((chunk.shape[0],chunk.shape[1],header_dict['bands']))
         pca_chunk[chunk[:,:,0] == hy_obj.no_data] =0
 
         writer.write_chunk(pca_chunk,
                            iterator.current_line,
                            iterator.current_column)
-
-
-
-
-
 
 if __name__== "__main__":
     main()
