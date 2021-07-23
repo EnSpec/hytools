@@ -9,7 +9,7 @@ import tarfile
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    products = ["rdn", "obs_ort", "loc", "glt", "rfl", "topo_coeffs", "brdf_coeffs", "topo_brdf"]
+    products = ["obs_ort", "rfl", "topo_coeffs", "brdf_coeffs", "topo_brdf"]
     formats = ["envi"]
     parser.add_argument("-p", "--product",
                         help=("Choose one of the following product types: " + ", ".join(products)))
@@ -42,14 +42,8 @@ def main():
 
     # Get paths based on product type file matching
     # TODO: Add support for multiple formats
-    if args.product == "rdn":
-        paths = glob.glob(os.path.join(input_dir, "*rdn*", "*rdn*img"))
-    elif args.product == "obs_ort":
+    if args.product == "obs_ort":
         paths = glob.glob(os.path.join(input_dir, "*rdn*", "*obs_ort"))
-    elif args.product == "loc":
-        paths = glob.glob(os.path.join(input_dir, "*rdn*", "*loc"))
-    elif args.product == "glt":
-        paths = glob.glob(os.path.join(input_dir, "*rdn*", "*glt"))
     elif args.product == "rfl":
         paths = glob.glob(os.path.join(input_dir, "*", "*rfl*img"))
         paths += glob.glob(os.path.join(input_dir, "*", "*corr*img"))
