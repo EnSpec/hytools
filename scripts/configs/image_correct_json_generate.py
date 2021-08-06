@@ -218,6 +218,35 @@ config_dict["brdf"]['ndvi_perc_max'] = 95
 # config_dict["brdf"]['coeff_files'] =  {}
 ##------------------------------
 
+#----------------------
+# ## Glint correction configs
+# ##------------------
+config_dict["glint"]  = {}
+# Included types are: Hedley, Simple, and Sky_Sun
+config_dict['glint']['type'] = 'Sky_Sun'
+
+# Reference band to guide corrections
+config_dict['glint']['correction_wave'] = 2190 
+
+# Water mask threshold
+config_dict["glint"]["apply_mask"] = [
+    ["water", {'band_1': 860,'band_2': 1240, 'threshold': 0.3}], 
+]
+# If glint correction is Hedley method, you need column, row chnks for homogenous deep water.
+# in form of [ImagePath]: [y1, y2, x1, x1]
+if config_dict['glint']['type'] == 'Hedley':
+    config_dict["glint"]["deep_water_sample"] = {
+         "/path_to_image1": [
+            137, 574, 8034, 8470
+         ],
+         "/path_to_image2": [
+            48, 393, 5780, 5925
+         ],
+    }
+# If glint type is "Sky_Sun" it requires path to the look-up table
+if config_dict['glint']['type'] == 'Sky_Sun':
+    config_dict['glint']['lut'] = '/path_to/glint.mat'
+
 #Wavelength resampling options
 ##############################
 '''
