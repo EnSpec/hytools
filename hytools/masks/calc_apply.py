@@ -80,9 +80,6 @@ def water(hy_obj,args):
     mask = hy_obj.ndi(args['band_1'],args['band_2'])
     mask = mask >= float(args['threshold'])
 
-    # 1 iteration Binary filter removes pixels located at land-water interface
-    mask = binary_erosion(mask)
-
     return mask
 
 
