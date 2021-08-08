@@ -314,6 +314,11 @@ def gao_2021_correction(hy_obj,data,dimension,index):
 
     # Get reflectence at reference wavelength
     B_Ref  = hy_obj.get_wave(corr_wave)
+    B_Ref_min = np.percentile(
+        B_Ref[(hy_obj.mask['water']) & (B_Ref > 0)], 
+        .0001
+    )
+    B_Ref = B_Ref - B_Ref_min 
 
     # Get ratio between simulated fresnel and reference value
     RTO = B_Ref / B_Simu[0,:][corr_num]
