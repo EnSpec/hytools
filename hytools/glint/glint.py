@@ -77,7 +77,7 @@ def hochberg_2003_correction(hy_obj,data,dimension,index):
     corr = np.copy(hy_obj.get_wave(corr_wave))
     corr[~hy_obj.mask['water']] = 0 
 
-    corr_min = np.percentile(corr[corr > 0], 1)
+    corr_min = np.percentile(corr[corr > 0], .0001)
 
     if dimension == 'line':
         # Get SWIR difference
