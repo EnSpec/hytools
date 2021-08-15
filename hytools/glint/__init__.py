@@ -20,5 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 The :mod:`hytools.correction` module include functions image correction.
 """
 from .glint import *
-from .lut import *
-from .ref_n import *
+from .gao_2021 import *
+from .hedley_2005 import *
+from .hochberg_2003 import *
+from .sky_glint import *

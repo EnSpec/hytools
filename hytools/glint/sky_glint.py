@@ -1,3 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+HyTools:  Hyperspectral image processing library
+Copyright (C) 2021 University of Wisconsin
+
+Authors: Evan Greenberg.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
 import argparse
 from ctypes import c_int,c_double
 import json
@@ -98,17 +117,13 @@ class VectorInterpolator:
             grid[angle_loc] = grid_subset_cosin[grid_subset_cosin_order]
             grid.insert(angle_loc+1, grid_subset_sin[grid_subset_sin_order])
 
-            # now copy the data to be interpolated through the extra dimension,
-            # at the specific angle_loc axes.  We'll use broadcast_to to do
-            # this, but we need to do it on the last dimension.  So start by
-            # temporarily moving the target axes there, then broadcasting
+            # Copy data through the extra dimension, at the specific angle_loc axes
             data = np.swapaxes(data, -1, angle_loc)
             data_dim = list(np.shape(data))
             data_dim.append(data_dim[-1])
             data = data[..., np.newaxis] * np.ones(data_dim)
 
-            # Now we need to actually copy the data between the first two axes,
-            # as broadcast_to doesn't do this
+            # Copy the data between the first two axes
             for ind in range(data.shape[-1]):
                 data[..., ind] = data[..., :, ind]
 
@@ -139,8 +154,7 @@ class VectorInterpolator:
 
     def __call__(self, points):
 
-        # If we only have one point, we can't do any interpolation, so just
-        # return the original data.
+        # Can't do any interpolation with 1 point, just return original data.
         if self.single_point_data is not None:
             return self.single_point_data
 
@@ -177,7 +191,6 @@ class LUT:
     D = loadmat(matfile)
 
     # Data includes correction based on 1) Wind 2) Solar Zen 3) Clouds
-    # for each wavelength
     data = D['data']
 
     # Parameter grid for 1) Wind 2) Solar Zen and 3) Clouds
@@ -214,9 +227,7 @@ class LUT:
         data_resamp.append(x_resamp)
     self.data = np.array(data_resamp).reshape(new_shape)
 
-    # We use the 'vector interpolator' object from the ISOFIT
-    # codebase to permit multilinear interpolation
-    # can I replace this with something built into scipy?
+    # We use the 'vector interpolator' object from ISOFIT
     self.data = VectorInterpolator(
         self.lut_grid, 
         self.data, 
@@ -230,12 +241,111 @@ class LUT:
     self.use = np.logical_and(self.wl > wl_LUT[0], self.wl < wl_LUT[-1])
 
 
-def set_LUT(hy_obj):
+def optimize_windspeed_correction(hy_obj):
     """
-    Sets the lookup table as part of the hy_obj
+    Glint correction algorithm following:
+
+    Extended Hochberg correction to include sky glint correction
+    This is the optimization step to find the effective wind speed
     """
-    hy_obj.glint['lut'] = LUT(
+    corr_wave = hy_obj.get_wave(hy_obj.glint['correction_wave'])
+    
+    # Get solar zenith array
+    solar_zn = hy_obj.get_anc('solar_zn', radians=False)
+
+    # Get LUT
+    lut = LUT(
         hy_obj.wavelengths, 
         hy_obj.glint['correction_wave'],
         hy_obj.glint['lut']
     )
+
+    # Initial gueses for wind optimization
+    x0 = [10]
+    bounds = hy_obj.glint['bounds']
+
+    # Initialize correction
+    correction = np.zeros([*corr_wave.shape, len(hy_obj.wavelengths)])
+    windspeeds = np.zeros([*corr_wave.shape, len(hy_obj.wavelengths)])
+    # Initialize iterator
+    it = np.nditer(corr_wave, flags=['multi_index'])
+    for pixel in it:
+        y, x = it.multi_index
+
+        if not hy_obj.mask['water'][y, x]:
+            continue
+
+        # Get solar zenith
+        sol_zen = solar_zn[y, x]
+
+        # Optimize wind speed
+        res = minimize(
+             err,
+             x0,
+             args=(float(pixel), lut, sol_zen),
+             method='tnc',
+             tol=1e-9,
+             bounds=bounds
+        )
+        glint = glint_spectrum(lut, float(res.x), sol_zen)
+        correction[y, x, :] = glint
+        windspeeds[y, x, :] = res.x 
+
+     return correction 
+
+
+def apply_sky_sun_glint_correction(hy_obj,data,dimension,index):
+    """
+    Glint correction algorithm following a Hochberg + Sky Glint correction
+
+    This applies the correction to the sample of data
+    """
+
+    if 'sky_glint_correction' not in hy_obj.ancillary:
+        hy_obj.ancillary['sky_glint_correction'] = (
+            optimize_windspeed_correction(hy_obj)
+        )
+
+    if 'water' not in hy_obj.mask:
+        hy_obj.gen_mask(mask_create,'water',hy_obj.glint['calc_mask'])
+
+    if dimension == 'line':
+        correction = hy_obj.ancillary['sky_glint_correciton'][index, :]
+
+    elif dimension == 'column':
+        correction = hy_obj.ancillary['sky_glint_correciton'][:, index]
+
+    elif dimension == 'band':
+        correction = hy_obj.ancillary['sky_glint_correciton'][:, :, index]
+
+    elif dimension == 'chunk':
+        correction = hy_obj.ancillary['sky_glint_correciton'][y1:y2, x1:x2, :]
+
+    elif dimension == 'pixels':
+        y, x = index
+        correction = hy_obj.ancillary['sky_glint_correciton'][y, x, :]
+
+    data = data - correction
+
+    return data
+
+
+def glint_spectrum(lut, windspeed, solzen):
+    """
+    Given the windspeed and solar zenith angle, produce a glint 
+    spectrum in reflectance units
+    """
+    cloudfrac = 0 
+    vector = np.array([windspeed,solzen,cloudfrac])
+
+    return lut.data(vector) 
+
+
+def err(x, corr_val, lut, sol_zen):
+    """
+    windspeed fit error, assuming the channel "ref_band" is pure glint.
+    """
+    mdl = glint_spectrum(lut, x, sol_zen)
+    er = pow(mdl[lut.ref_band] - corr_val, 2)
+
+    return er
