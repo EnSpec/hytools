@@ -33,20 +33,11 @@ def main():
 
     if config_dict['file_type'] == 'envi':
         anc_files = config_dict["anc_files"]
-        _ = ray.get([
-            a.read_file.remote(
-                image,
-                config_dict['file_type'], 
-                anc_files[image]
-            ) for a,image in zip(actors,images)
-        ])
+        _ = ray.get([a.read_file.remote(image,config_dict['file_type'], 
+                                        anc_files[image]) for a,image in zip(actors,images)])
+
     elif config_dict['file_type'] == 'neon':
-        _ = ray.get([
-            a.read_file.remote(
-                image,
-                config_dict['file_type']
-            ) for a,image in zip(actors,images)
-        ])
+        _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
 
     _ = ray.get([a.create_bad_bands.remote(config_dict['bad_bands']) for a in actors])
 
@@ -111,11 +102,8 @@ def apply_corrections(hy_obj,config_dict):
         header_dict['wavelength'] = waves
 
         writer = WriteENVI(output_name,header_dict)
-        iterator = hy_obj.iterate(
-            by='line', 
-            corrections=hy_obj.corrections, 
-            resample=config_dict['resample']
-        )
+        iterator = hy_obj.iterate(by='line', corrections=hy_obj.corrections, 
+                                  resample=config_dict['resample'])
         while not iterator.complete:
             line = iterator.read_next()
             writer.write_line(line,iterator.current_line)
@@ -131,10 +119,8 @@ def apply_corrections(hy_obj,config_dict):
 
         writer = WriteENVI(output_name,header_dict)
         for b,band_num in enumerate(bands):
-            band = hy_obj.get_band(
-                band_num,
-                corrections=hy_obj.corrections
-            )
+            band = hy_obj.get_band(band_num,
+                                   corrections=hy_obj.corrections)
             writer.write_band(band, b)
         writer.close()
 
@@ -163,7 +149,7 @@ def apply_corrections(hy_obj,config_dict):
         output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0]
         output_name +=  "_%s_mask" % config_dict['export']["suffix"]
 
-        writer = WriteENVI(output_name, header_dict)
+        writer = WriteENVI(output_name,header_dict)
 
         for band_num,mask in enumerate(masks):
             mask = mask.astype(int)
