@@ -197,7 +197,7 @@ def calc_flex_group(actors,brdf_dict):
                 y = band_samples[bin_mask]
                 band_coeffs.append(np.linalg.lstsq(X, y,rcond=-1)[0].flatten().tolist())
             coeffs[band_num]  = band_coeffs
-#            progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
+            progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
 
     print('\n')
 

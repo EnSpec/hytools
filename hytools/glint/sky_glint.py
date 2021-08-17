@@ -3,7 +3,7 @@
 HyTools:  Hyperspectral image processing library
 Copyright (C) 2021 University of Wisconsin
 
-Authors: Evan Greenberg.
+Authors: Evan Greenberg, David Thompson.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
