@@ -33,6 +33,7 @@ from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
 from .io.envi import open_envi,parse_envi_header,envi_header_from_neon
 from .io.neon import open_neon
 from .brdf import apply_brdf_correct
+from .glint import apply_glint_correct
 from .brdf.kernels import calc_volume_kernel,calc_geom_kernel
 from .topo import calc_cosine_i,apply_topo_correct
 from .transform.resampling import *
@@ -52,6 +53,7 @@ class HyTools:
         self.base_key = None
         self.base_name = None
         self.brdf = {'type': None}
+        self.glint= {'type': None}
         self.byte_order = None
         self.columns = None
         self.corrections = []
@@ -355,9 +357,11 @@ class HyTools:
     def correct(self,data,dimension,index,corrections):
         for correction in corrections:
             if correction == 'topo':
-                data =  apply_topo_correct(self,data,dimension,index)
+                data = apply_topo_correct(self,data,dimension,index)
             elif correction == 'brdf':
-                data =  apply_brdf_correct(self,data,dimension,index)
+                data = apply_brdf_correct(self,data,dimension,index)
+            elif correction == 'glint':
+                data = apply_glint_correct(self,data,dimension,index)
         return data
 
     def get_anc(self,anc,radians = True,mask = None):

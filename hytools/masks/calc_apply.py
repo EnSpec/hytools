@@ -22,6 +22,8 @@ models.
 """
 
 from scipy.ndimage.morphology import binary_erosion
+from scipy.ndimage import median_filter
+from scipy.ndimage import minimum_filter
 import numpy as np
 from .cloud import zhai_cloud
 
@@ -63,7 +65,6 @@ def kernel_finite(hy_obj,args):
     mask = np.isfinite(k_vol) & np.isfinite(k_geom)
     return mask
 
-
 def cloud(hy_obj,args):
     if args['method'] == 'zhai_2018':
         mask = ~zhai_cloud(hy_obj,args['cloud'],args['shadow'],
@@ -72,7 +73,15 @@ def cloud(hy_obj,args):
 
     return mask
 
+def water(hy_obj,args):
+    '''
+    Create water mask using NDWI threshold
+    '''
+    mask = hy_obj.ndi(args['band_1'],args['band_2'])
+    mask = mask >= float(args['threshold'])
 
+    mask = binary_erosion(mask)
 
+    return mask
 
 
