@@ -22,8 +22,6 @@ models.
 """
 
 from scipy.ndimage.morphology import binary_erosion
-from scipy.ndimage import median_filter
-from scipy.ndimage import minimum_filter
 import numpy as np
 from .cloud import zhai_cloud
 
@@ -32,6 +30,7 @@ def ndi(hy_obj,args):
     mask = hy_obj.ndi(args['band_1'],args['band_2'])
     mask = (mask >= float(args['min'])) & (mask <= float(args['max']))
     return mask
+
 
 def ancillary(hy_obj,args):
     ''' Mask ancillary datasets based off min and max threshold
@@ -44,6 +43,7 @@ def ancillary(hy_obj,args):
     mask = (mask >= float(args['min'])) & (mask <= float(args['max']))
     return mask
 
+
 def neon_edge(hy_obj,args):
     '''
     Mask artifacts in NEON images around edges.
@@ -53,6 +53,7 @@ def neon_edge(hy_obj,args):
     window =  (x_grid**2 + y_grid**2 <= radius**2).astype(np.float)
     buffer_edge = binary_erosion(hy_obj.mask['no_data'], window).astype(bool)
     return buffer_edge
+
 
 def kernel_finite(hy_obj,args):
     '''
@@ -65,6 +66,7 @@ def kernel_finite(hy_obj,args):
     mask = np.isfinite(k_vol) & np.isfinite(k_geom)
     return mask
 
+
 def cloud(hy_obj,args):
     if args['method'] == 'zhai_2018':
         mask = ~zhai_cloud(hy_obj,args['cloud'],args['shadow'],
@@ -72,6 +74,7 @@ def cloud(hy_obj,args):
                 args['t4'], args['T7'], args['T8'])
 
     return mask
+
 
 def water(hy_obj,args):
     '''
@@ -83,5 +86,3 @@ def water(hy_obj,args):
     mask = binary_erosion(mask)
 
     return mask
-
-
