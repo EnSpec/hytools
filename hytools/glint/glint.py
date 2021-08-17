@@ -17,21 +17,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import numpy as np
 import ray
 from ..misc import set_glint
 from .sky_glint import apply_sky_sun_glint_correction
-from .hochberg_2003 import apply_hochberg_2003_correction 
+from .hochberg_2003 import apply_hochberg_2003_correction
 from .gao_2021 import apply_gao_2021_correction
+from .hedley_2005 import apply_hedley_2005_correction
 
 
-def set_glint_parameters(actors,config_dict):
+def set_glint_parameters(actors, config_dict):
     # Assign glint dict
     glint_dict = config_dict['glint']
 
     # Set Glint dict
     _ = ray.get([
-        a.do.remote(set_glint,glint_dict) for a in actors
+        a.do.remote(set_glint, glint_dict) for a in actors
     ])
 
     # Add glint correction
@@ -40,9 +40,9 @@ def set_glint_parameters(actors,config_dict):
     ])
 
 
-def apply_glint_correct(hy_obj,data,dimension,index):
+def apply_glint_correct(hy_obj, data, dimension, index):
     ''' Corrects glint based on the specified algorithm in the config.
-        Options include: 
+        Options include:
             Hochberg et al., 2003: hochberg
             Gao et al., 2021: gao
             Hochberg + Sky glint: sky_glint
@@ -52,16 +52,16 @@ def apply_glint_correct(hy_obj,data,dimension,index):
 
     # Perform one of the corrections
     if hy_obj.glint['type'] == 'hochberg':
-        data = apply_hochberg_2003_correction(hy_obj,data,dimension,index)
+        data = apply_hochberg_2003_correction(hy_obj, data, dimension, index)
 
     elif hy_obj.glint['type'] == 'sky_glint':
-        data = apply_sky_sun_glint_correction(hy_obj,data,dimension,index)
+        data = apply_sky_sun_glint_correction(hy_obj, data, dimension, index)
 
     elif hy_obj.glint['type'] == 'gao':
-        data = apply_gao_2021_correction(hy_obj,data,dimension,index)
+        data = apply_gao_2021_correction(hy_obj, data, dimension, index)
 
     elif hy_obj.glint['type'] == 'hedley':
-        data = apply_hedley_2005_correction(hy_obj,data,dimension,index)
+        data = apply_hedley_2005_correction(hy_obj, data, dimension, index)
     # Can add more corrections here
 
     return data

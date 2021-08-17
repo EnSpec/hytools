@@ -17,61 +17,41 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import argparse
-from ctypes import c_int,c_double
-import json
-from multiprocessing import Pool
 import os
-import sys
 from typing import List
 
-import hytools as ht
-from hytools.brdf.kernels import calc_volume_kernel,calc_geom_kernel
-from hytools.masks import mask_create, water
-from hytools.misc import progbar, pairwise, set_glint
-
-# from matplotlib import pyplot as plt
-from matplotlib.widgets import Button
-from matplotlib.patches import Rectangle
-import pylab as plt
+from ..masks import mask_create
 
 import numpy as np
-import numpy.ctypeslib as npct
-
-import ray
-import ray.services
-
-from scipy.linalg import inv, svd
 from scipy.interpolate import interp1d, RegularGridInterpolator
-
-from scipy.optimize import leastsq 
 from scipy.optimize import minimize
 from scipy.io import loadmat
+
 
 os.environ["MKL_NUM_THREADS"] = "1"
 
 
 class VectorInterpolator:
-    """ Linear look up table interpolator.  
+    """ Linear look up table interpolator.
         Support linear interpolation through radial space by expanding the look
         up tables with sin and cos dimensions.
 
         Args:
-            grid_input: list of lists of floats, indicating the gridpoint 
+            grid_input: list of lists of floats, indicating the gridpoint
                         elements in each grid dimension
-            data_input: n dimensional array of radiative transfer engine 
+            data_input: n dimensional array of radiative transfer engine
                         outputs (each dimension size corresponds to the
-                        given grid_input list length, with the last 
+                        given grid_input list length, with the last
                         dimensions equal to the number of sensor channels)
-            lut_interp_types: a list indicating if each dimension is in 
+            lut_interp_types: a list indicating if each dimension is in
                               radiance (r), degrees (r), or normal (n) units.
 
         Notes:
-            Pulled from: 
+            Pulled from:
         https://github.com/isofit/isofit/blob/master/isofit/core/common.py
         """
 
-    def __init__(self, grid_input: List[List[float]], 
+    def __init__(self, grid_input: List[List[float]],
                  data_input: np.array, lut_interp_types: List[str]):
         self.lut_interp_types = lut_interp_types
         self.single_point_data = None
@@ -80,7 +60,7 @@ class VectorInterpolator:
         grid = grid_input.copy()
         data = data_input.copy()
 
-        # Check if we are using a single grid point. If so, store the grid input.
+        # Check if we are using a single grid point. Store the grid input.
         if np.prod(list(map(len, grid))) == 1:
             self.single_point_data = data
 
@@ -117,7 +97,7 @@ class VectorInterpolator:
             grid[angle_loc] = grid_subset_cosin[grid_subset_cosin_order]
             grid.insert(angle_loc+1, grid_subset_sin[grid_subset_sin_order])
 
-            # Copy data through the extra dimension, at the specific angle_loc axes
+            # Copy data through the extra dimension, at specific angle_loc axes
             data = np.swapaxes(data, -1, angle_loc)
             data_dim = list(np.shape(data))
             data_dim.append(data_dim[-1])
@@ -146,9 +126,9 @@ class VectorInterpolator:
         self.n = data.shape[-1]
         grid_aug = grid + [np.arange(data.shape[-1])]
         self.itp = RegularGridInterpolator(
-            grid_aug, 
+            grid_aug,
             data,
-            bounds_error=False, 
+            bounds_error=False,
             fill_value=None
         )
 
@@ -184,61 +164,61 @@ class VectorInterpolator:
 
 class LUT:
 
-  def __init__(self, wl, ref_wave, matfile=None):
+    def __init__(self, wl, ref_wave, matfile=None):
 
-    # Load the .mat file
-    self.wl = wl
-    D = loadmat(matfile)
+        # Load the .mat file
+        self.wl = wl
+        D = loadmat(matfile)
 
-    # Data includes correction based on 1) Wind 2) Solar Zen 3) Clouds
-    data = D['data']
+        # Data includes correction based on 1) Wind 2) Solar Zen 3) Clouds
+        data = D['data']
 
-    # Parameter grid for 1) Wind 2) Solar Zen and 3) Clouds
-    self.lut_grid = [grid[0] for grid in D['grids'][0]]
+        # Parameter grid for 1) Wind 2) Solar Zen and 3) Clouds
+        self.lut_grid = [grid[0] for grid in D['grids'][0]]
 
-    # Interpolation type
-    self.interp_types = np.array(['n' for n in self.lut_grid])
+        # Interpolation type
+        self.interp_types = np.array(['n' for n in self.lut_grid])
 
-    # Wavelengths included in the lookup table. Could extend to longer wl
-    wl_LUT = D['wl'][0]
+        # Wavelengths included in the lookup table. Could extend to longer wl
+        wl_LUT = D['wl'][0]
 
-    # Parameter grid for 1) Wind 2) Solar Zen and 3) Clouds
-    self.grids = D['grids']
+        # Parameter grid for 1) Wind 2) Solar Zen and 3) Clouds
+        self.grids = D['grids']
 
-    # Not exactly sure what this variable is for
-    self.band_names = [str(g).strip() for g in self.lut_grid[1:]]
-    
-    # resample all LUT spectra to your image bands
-    old_shape = data.shape
-    new_shape = list(old_shape[:])
-    new_shape[-1] = len(self.wl)
-    nb = int(data.shape[-1])
-    data = data.reshape((int(data.size / nb), nb))
-    data_resamp = []
-    for x in data:
-        use = x > 0
-        x_resamp = interp1d(
-            wl_LUT[use], 
-            x[use], 
-            bounds_error=False, 
-            fill_value='extrapolate'
-        )(wl)
-        x_resamp[x_resamp<0] = 0
-        data_resamp.append(x_resamp)
-    self.data = np.array(data_resamp).reshape(new_shape)
+        # Not exactly sure what this variable is for
+        self.band_names = [str(g).strip() for g in self.lut_grid[1:]]
 
-    # We use the 'vector interpolator' object from ISOFIT
-    self.data = VectorInterpolator(
-        self.lut_grid, 
-        self.data, 
-        self.interp_types
-    ) 
+        # resample all LUT spectra to your image bands
+        old_shape = data.shape
+        new_shape = list(old_shape[:])
+        new_shape[-1] = len(self.wl)
+        nb = int(data.shape[-1])
+        data = data.reshape((int(data.size / nb), nb))
+        data_resamp = []
+        for x in data:
+            use = x > 0
+            x_resamp = interp1d(
+                wl_LUT[use],
+                x[use],
+                bounds_error=False,
+                fill_value='extrapolate'
+            )(wl)
+            x_resamp[x_resamp < 0] = 0
+            data_resamp.append(x_resamp)
+        self.data = np.array(data_resamp).reshape(new_shape)
 
-    # Get band for the subtraction
-    self.ref_band = np.argmin(abs(ref_wave - wl))
+        # We use the 'vector interpolator' object from ISOFIT
+        self.data = VectorInterpolator(
+            self.lut_grid,
+            self.data,
+            self.interp_types
+        )
 
-    # Wavelengths for the correction
-    self.use = np.logical_and(self.wl > wl_LUT[0], self.wl < wl_LUT[-1])
+        # Get band for the subtraction
+        self.ref_band = np.argmin(abs(ref_wave - wl))
+
+        # Wavelengths for the correction
+        self.use = np.logical_and(self.wl > wl_LUT[0], self.wl < wl_LUT[-1])
 
 
 def optimize_windspeed_correction(hy_obj):
@@ -249,13 +229,13 @@ def optimize_windspeed_correction(hy_obj):
     This is the optimization step to find the effective wind speed
     """
     corr_wave = hy_obj.get_wave(hy_obj.glint['correction_wave'])
-    
+
     # Get solar zenith array
     solar_zn = hy_obj.get_anc('solar_zn', radians=False)
 
     # Get LUT
     lut = LUT(
-        hy_obj.wavelengths, 
+        hy_obj.wavelengths,
         hy_obj.glint['correction_wave'],
         hy_obj.glint['lut']
     )
@@ -289,41 +269,42 @@ def optimize_windspeed_correction(hy_obj):
         )
         glint = glint_spectrum(lut, float(res.x), sol_zen)
         correction[y, x, :] = glint
-        windspeeds[y, x, :] = res.x 
+        windspeeds[y, x, :] = res.x
 
-     return correction 
+    return correction
 
 
-def apply_sky_sun_glint_correction(hy_obj,data,dimension,index):
+def apply_sky_sun_glint_correction(hy_obj, data, dimension, index):
     """
     Glint correction algorithm following a Hochberg + Sky Glint correction
 
     This applies the correction to the sample of data
     """
 
+    if 'water' not in hy_obj.mask:
+        hy_obj.gen_mask(mask_create, 'water', hy_obj.glint['calc_mask'])
+
     if 'sky_glint_correction' not in hy_obj.ancillary:
         hy_obj.ancillary['sky_glint_correction'] = (
             optimize_windspeed_correction(hy_obj)
         )
 
-    if 'water' not in hy_obj.mask:
-        hy_obj.gen_mask(mask_create,'water',hy_obj.glint['calc_mask'])
-
     if dimension == 'line':
-        correction = hy_obj.ancillary['sky_glint_correciton'][index, :]
+        correction = hy_obj.ancillary['sky_glint_correction'][index, :]
 
     elif dimension == 'column':
-        correction = hy_obj.ancillary['sky_glint_correciton'][:, index]
+        correction = hy_obj.ancillary['sky_glint_correction'][:, index]
 
     elif dimension == 'band':
-        correction = hy_obj.ancillary['sky_glint_correciton'][:, :, index]
+        correction = hy_obj.ancillary['sky_glint_correction'][:, :, index]
 
     elif dimension == 'chunk':
-        correction = hy_obj.ancillary['sky_glint_correciton'][y1:y2, x1:x2, :]
+        x1, x2, y1, y2 = index
+        correction = hy_obj.ancillary['sky_glint_correction'][y1:y2, x1:x2, :]
 
     elif dimension == 'pixels':
         y, x = index
-        correction = hy_obj.ancillary['sky_glint_correciton'][y, x, :]
+        correction = hy_obj.ancillary['sky_glint_correction'][y, x, :]
 
     data = data - correction
 
@@ -332,13 +313,13 @@ def apply_sky_sun_glint_correction(hy_obj,data,dimension,index):
 
 def glint_spectrum(lut, windspeed, solzen):
     """
-    Given the windspeed and solar zenith angle, produce a glint 
+    Given the windspeed and solar zenith angle, produce a glint
     spectrum in reflectance units
     """
-    cloudfrac = 0 
-    vector = np.array([windspeed,solzen,cloudfrac])
+    cloudfrac = 0
+    vector = np.array([windspeed, solzen, cloudfrac])
 
-    return lut.data(vector) 
+    return lut.data(vector)
 
 
 def err(x, corr_val, lut, sol_zen):
