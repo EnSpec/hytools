@@ -29,7 +29,7 @@ def apply_hedley_2005_correction(hy_obj, data, dimension, index):
         raise KeyError("No Deep Water Sample Provided")
 
     if 'water' not in hy_obj.mask:
-        hy_obj.gen_mask(mask_create, 'water', hy_obj.glint['calc_mask'])
+        hy_obj.mask['water'] = hy_obj.get_anc('water')
 
     hy_obj.glint['correction_band'] = hy_obj.wave_to_band(
         hy_obj.glint['correction_wave']

@@ -282,7 +282,7 @@ def apply_sky_sun_glint_correction(hy_obj, data, dimension, index):
     """
 
     if 'water' not in hy_obj.mask:
-        hy_obj.gen_mask(mask_create, 'water', hy_obj.glint['calc_mask'])
+        hy_obj.mask['water'] = hy_obj.get_anc('water')
 
     if 'sky_glint_correction' not in hy_obj.ancillary:
         hy_obj.ancillary['sky_glint_correction'] = (
