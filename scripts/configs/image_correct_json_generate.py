@@ -230,25 +230,45 @@ config_dict["brdf"]['ndvi_perc_max'] = 95
 # ##------------------
 config_dict["glint"]  = {}
 # Included types are: hedley, hochberg, gao and sky_sun
+# Glint correction options
+'''
+Types supported:
+    - hochberg
+    - hedley
+    - gao
+    - sky_sun
+'''
 config_dict['glint']['type'] = 'hochberg'
 
 # Reference band to guide corrections (nm)
+'''
+Common reference bands include:
+    - 860nm (NIR)
+    - 1650nm (SWIR)
+    - 2190nm (SWIR)
+'''
 config_dict['glint']['correction_wave'] = 1650 
 
 # If glint correction is Hedley method, you need column, row chnks for homogenous deep water.
-# in form of [ImagePath]: [y1, y2, x1, x1]
-if config_dict['glint']['type'] == 'hedley':
-    config_dict["glint"]["deep_water_sample"] = {
-         "/path_to_image1": [
-            137, 574, 8034, 8470
-         ],
-         "/path_to_image2": [
-            48, 393, 5780, 5925
-         ],
-    }
+'''
+The Hedley-specific config would be in the form of:
+[ImagePath]: [y1, y2, x1, x1]
+
+e.g.:
+config_dict["glint"]["deep_water_sample"] = {
+     "/path_to_image1": [
+        137, 574, 8034, 8470
+     ],
+     "/path_to_image2": [
+        48, 393, 5780, 5925
+     ],
+}
+'''
 # If glint type is "Sky_Sun" it requires path to the look-up table
-if config_dict['glint']['type'] == 'sky_sun':
-    config_dict['glint']['lut'] = '/path_to/glint.mat'
+'''
+This would be in the form of:
+config_dict['glint']['lut'] = '/path_to/glint.mat'
+'''
 
 #Wavelength resampling options
 ##############################
