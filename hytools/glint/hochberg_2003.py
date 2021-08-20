@@ -32,7 +32,9 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
     """
 
     if 'water' not in hy_obj.mask:
-        hy_obj.gen_mask(mask_create, 'water', hy_obj.glint['calc_mask'])
+        hy_obj.mask['water'] = hy_obj.get_anc('water')
+        hy_obj.mask['water'][~hy_obj.mask['no_data']] = 0 
+        hy_obj.mask['water'] = hy_obj.mask['water'].astype(bool)
 
     if 'hochberg_correction' not in hy_obj.ancillary:
         hy_obj.ancillary['hochberg_correction'] = (
