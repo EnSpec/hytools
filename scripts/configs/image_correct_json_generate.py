@@ -53,6 +53,13 @@ for i,image in enumerate(images):
     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
                                                 [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
 
+# Water masks for glint corrections
+mask_files = glob.glob("/data1/temp/ht_test/*mask")
+mask_files.sort()
+for i, image in enumerate(images):
+	config_dict["anc_files"][image]['water'] = [mask_files[i], 0]
+
+
 # Export settings
 #################################################################
 ''' Options for subset waves:
@@ -222,19 +229,15 @@ config_dict["brdf"]['ndvi_perc_max'] = 95
 # ## Glint correction configs
 # ##------------------
 config_dict["glint"]  = {}
-# Included types are: Hedley, Simple, and Sky_Sun
-config_dict['glint']['type'] = 'Sky_Sun'
+# Included types are: hedley, hochberg, gao and sky_sun
+config_dict['glint']['type'] = 'hochberg'
 
-# Reference band to guide corrections
-config_dict['glint']['correction_wave'] = 2190 
+# Reference band to guide corrections (nm)
+config_dict['glint']['correction_wave'] = 1650 
 
-# Water mask threshold
-config_dict["glint"]["apply_mask"] = [
-    ["water", {'band_1': 860,'band_2': 1240, 'threshold': 0.3}], 
-]
 # If glint correction is Hedley method, you need column, row chnks for homogenous deep water.
 # in form of [ImagePath]: [y1, y2, x1, x1]
-if config_dict['glint']['type'] == 'Hedley':
+if config_dict['glint']['type'] == 'hedley':
     config_dict["glint"]["deep_water_sample"] = {
          "/path_to_image1": [
             137, 574, 8034, 8470
@@ -244,7 +247,7 @@ if config_dict['glint']['type'] == 'Hedley':
          ],
     }
 # If glint type is "Sky_Sun" it requires path to the look-up table
-if config_dict['glint']['type'] == 'Sky_Sun':
+if config_dict['glint']['type'] == 'sky_sun':
     config_dict['glint']['lut'] = '/path_to/glint.mat'
 
 #Wavelength resampling options
