@@ -45,7 +45,6 @@ def apply_glint_correct(hy_obj, data, dimension, index):
         Options include:
             Hochberg et al., 2003: hochberg
             Gao et al., 2021: gao
-            Hochberg + Sky glint: sky_glint
             Hedley et al. 2005: hedley
             ...
     '''
@@ -53,9 +52,6 @@ def apply_glint_correct(hy_obj, data, dimension, index):
     # Perform one of the corrections
     if hy_obj.glint['type'] == 'hochberg':
         data = apply_hochberg_2003_correction(hy_obj, data, dimension, index)
-
-    elif hy_obj.glint['type'] == 'sky_glint':
-        data = apply_sky_sun_glint_correction(hy_obj, data, dimension, index)
 
     elif hy_obj.glint['type'] == 'gao':
         data = apply_gao_2021_correction(hy_obj, data, dimension, index)

@@ -229,14 +229,13 @@ config_dict["brdf"]['ndvi_perc_max'] = 95
 # ## Glint correction configs
 # ##------------------
 config_dict["glint"]  = {}
-# Included types are: hedley, hochberg, gao and sky_sun
+# Included types are: hedley, hochberg, and gao
 # Glint correction options
 '''
 Types supported:
     - hochberg
     - hedley
     - gao
-    - sky_sun
 '''
 config_dict['glint']['type'] = 'hochberg'
 
@@ -263,12 +262,6 @@ config_dict["glint"]["deep_water_sample"] = {
         48, 393, 5780, 5925
      ],
 }
-'''
-# If glint type is "Sky_Sun" it requires path to the look-up table
-'''
-This would be in the form of:
-config_dict['glint']['lut'] = '/path_to/glint.mat'
-'''
 
 #Wavelength resampling options
 ##############################
