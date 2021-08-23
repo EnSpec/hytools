@@ -8,6 +8,7 @@ import hytools as ht
 from hytools.io.envi import *
 from hytools.topo import calc_topo_coeffs
 from hytools.brdf import calc_brdf_coeffs
+from hytools.glint import set_glint_parameters
 from hytools.masks import mask_create
 
 warnings.filterwarnings("ignore")
@@ -20,7 +21,7 @@ def main():
     with open(config_file, 'r') as outfile:
         config_dict = json.load(outfile)
 
-    images= config_dict["input_files"]
+    images = config_dict["input_files"]
 
     if ray.is_initialized():
         ray.shutdown()
@@ -32,8 +33,9 @@ def main():
 
     if config_dict['file_type'] == 'envi':
         anc_files = config_dict["anc_files"]
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+        _ = ray.get([a.read_file.remote(image,config_dict['file_type'], 
                                         anc_files[image]) for a,image in zip(actors,images)])
+
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
 
@@ -44,6 +46,8 @@ def main():
             calc_topo_coeffs(actors,config_dict['topo'])
         elif correction == 'brdf':
             calc_brdf_coeffs(actors,config_dict)
+        elif correction == 'glint':
+            set_glint_parameters(actors,config_dict)
 
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
@@ -66,6 +70,8 @@ def export_coeffs(hy_obj,export_dict):
         with open(coeff_file, 'w') as outfile:
             if correction == 'topo':
                 corr_dict = hy_obj.topo
+            elif correction == 'glint':
+                continue
             else:
                 corr_dict = hy_obj.brdf
             json.dump(corr_dict,outfile)
@@ -96,8 +102,8 @@ def apply_corrections(hy_obj,config_dict):
         header_dict['wavelength'] = waves
 
         writer = WriteENVI(output_name,header_dict)
-        iterator = hy_obj.iterate(by = 'line', corrections = hy_obj.corrections,
-                                  resample = config_dict['resample'])
+        iterator = hy_obj.iterate(by='line', corrections=hy_obj.corrections, 
+                                  resample=config_dict['resample'])
         while not iterator.complete:
             line = iterator.read_next()
             writer.write_line(line,iterator.current_line)
@@ -114,7 +120,7 @@ def apply_corrections(hy_obj,config_dict):
         writer = WriteENVI(output_name,header_dict)
         for b,band_num in enumerate(bands):
             band = hy_obj.get_band(band_num,
-                                   corrections = hy_obj.corrections)
+                                   corrections=hy_obj.corrections)
             writer.write_band(band, b)
         writer.close()
 
@@ -146,7 +152,7 @@ def apply_corrections(hy_obj,config_dict):
         writer = WriteENVI(output_name,header_dict)
 
         for band_num,mask in enumerate(masks):
-            mask =mask.astype(int)
+            mask = mask.astype(int)
             mask[~hy_obj.mask['no_data']] = 255
             writer.write_band(mask,band_num)
 

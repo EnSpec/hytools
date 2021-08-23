@@ -51,3 +51,11 @@ def set_brdf(hy_obj,brdf_dict):
 
 def update_brdf(hy_obj,args):
     hy_obj.brdf[args['key']] = args['value']
+
+def set_glint(hy_obj,glint_dict):
+
+    # If the type is hedley, need to specify deep water area
+    if glint_dict['type'] == 'Hedley':
+        glint_dict['deep_water_sample'] = glint_dict['deep_water_sample'][hy_obj.file_name]
+
+    hy_obj.glint = glint_dict

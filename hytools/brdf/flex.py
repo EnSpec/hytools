@@ -32,12 +32,14 @@ from ..masks import mask_create
 from ..misc import progbar, pairwise
 from ..misc import update_brdf
 
+
 def flex_brdf(actors,config_dict):
     brdf_dict= config_dict['brdf']
     if brdf_dict['grouped']:
         actors = calc_flex_group(actors,brdf_dict)
     else:
         _ = ray.get([a.do.remote(calc_flex_single,brdf_dict) for a in actors])
+
 
 def ndvi_stratify(hy_obj):
     '''Create NDVI bin stratification mask

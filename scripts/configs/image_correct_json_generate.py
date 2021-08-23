@@ -53,6 +53,13 @@ for i,image in enumerate(images):
     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
                                                 [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
 
+# Water masks for glint corrections
+mask_files = glob.glob("/data1/temp/ht_test/*mask")
+mask_files.sort()
+for i, image in enumerate(images):
+	config_dict["anc_files"][image]['water'] = [mask_files[i], 0]
+
+
 # Export settings
 #################################################################
 ''' Options for subset waves:
@@ -217,6 +224,44 @@ config_dict["brdf"]['ndvi_perc_max'] = 95
 # config_dict["brdf"]['type'] =  'precomputed'
 # config_dict["brdf"]['coeff_files'] =  {}
 ##------------------------------
+
+#----------------------
+# ## Glint correction configs
+# ##------------------
+config_dict["glint"]  = {}
+# Included types are: hedley, hochberg, and gao
+# Glint correction options
+'''
+Types supported:
+    - hochberg
+    - hedley
+    - gao
+'''
+config_dict['glint']['type'] = 'hochberg'
+
+# Reference band to guide corrections (nm)
+'''
+Common reference bands include:
+    - 860nm (NIR)
+    - 1650nm (SWIR)
+    - 2190nm (SWIR)
+'''
+config_dict['glint']['correction_wave'] = 1650 
+
+# If glint correction is Hedley method, you need column, row chnks for homogenous deep water.
+'''
+The Hedley-specific config would be in the form of:
+[ImagePath]: [y1, y2, x1, x1]
+
+e.g.:
+config_dict["glint"]["deep_water_sample"] = {
+     "/path_to_image1": [
+        137, 574, 8034, 8470
+     ],
+     "/path_to_image2": [
+        48, 393, 5780, 5925
+     ],
+}
 
 #Wavelength resampling options
 ##############################
