@@ -32,10 +32,8 @@ def apply_hedley_2005_correction(hy_obj, data, dimension, index):
         hy_obj.glint['correction_wave']
     )
 
-    if 'water' not in hy_obj.mask:
-        hy_obj.mask['water'] = hy_obj.get_anc('water')
-        hy_obj.mask['water'][~hy_obj.mask['no_data']] = 0 
-        hy_obj.mask['water'] = hy_obj.mask['water'].astype(bool)
+    if 'apply_glint' not in hy_obj.mask:
+        hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
 
     if 'hedley_slopes' not in hy_obj.ancillary:
         hy_obj.ancillary['hedley_slopes'] = optimize_slopes(hy_obj)
@@ -48,21 +46,21 @@ def apply_hedley_2005_correction(hy_obj, data, dimension, index):
             hy_obj.ancillary['hedley_nir_swir_diff'][index, :].reshape(-1, 1)
             * hy_obj.ancillary['hedley_slopes']
         )
-        correction[~hy_obj.mask['water'][index, :], :] = 0
+        correction[~hy_obj.mask['apply_glint'][index, :], :] = 0
 
     elif dimension == 'column':
         correction = (
             hy_obj.ancillary['hedley_nir_swir_diff'][:, index].reshape(-1, 1)
             * hy_obj.ancillary['hedley_slopes']
         )
-        correction[~hy_obj.mask['water'][:, index], :] = 0
+        correction[~hy_obj.mask['apply_glint'][:, index], :] = 0
 
     elif (dimension == 'band'):
         correction = (
             hy_obj.ancillary['hedley_nir_swir_diff']
             * hy_obj.ancillary['hedley_slopes'][0, index]
         )
-        correction[~hy_obj.mask['water']] = 0
+        correction[~hy_obj.mask['apply_glint']] = 0
 
     elif dimension == 'chunk':
         x1, x2, y1, y2 = index
@@ -75,7 +73,7 @@ def apply_hedley_2005_correction(hy_obj, data, dimension, index):
         )
 
         correction = corr_diff * hy_obj.ancillary['hedley_slopes']
-        correction[~hy_obj.mask['water'][y1:y2, x1:x2], :] = 0
+        correction[~hy_obj.mask['apply_glint'][y1:y2, x1:x2], :] = 0
 
     elif dimension == 'pixels':
         y, x = index
@@ -84,7 +82,7 @@ def apply_hedley_2005_correction(hy_obj, data, dimension, index):
             hy_obj.ancillary['hedley_nir_swir_diff'][y, x].reshape(-1, 1)
             * hy_obj.ancillary['hedley_slopes']
         )
-        correction[~hy_obj.mask['water'][y, x], :] = 0
+        correction[~hy_obj.mask['apply_glint'][y, x], :] = 0
 
     return data - correction
 
@@ -127,7 +125,7 @@ def nir_swir_diff(hy_obj):
     nir_swir_array = np.copy(
         hy_obj.get_wave(hy_obj.glint['correction_wave'])
     )
-    nir_swir_array[~hy_obj.mask['water']] = 0
+    nir_swir_array[~hy_obj.mask['apply_glint']] = 0
     nir_swir_min = np.percentile(nir_swir_array[nir_swir_array > 0], .0001)
 
     return nir_swir_array - nir_swir_min

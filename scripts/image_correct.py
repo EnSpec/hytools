@@ -33,7 +33,7 @@ def main():
 
     if config_dict['file_type'] == 'envi':
         anc_files = config_dict["anc_files"]
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type'], 
+        _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
                                         anc_files[image]) for a,image in zip(actors,images)])
 
     elif config_dict['file_type'] == 'neon':
@@ -102,7 +102,7 @@ def apply_corrections(hy_obj,config_dict):
         header_dict['wavelength'] = waves
 
         writer = WriteENVI(output_name,header_dict)
-        iterator = hy_obj.iterate(by='line', corrections=hy_obj.corrections, 
+        iterator = hy_obj.iterate(by='line', corrections=hy_obj.corrections,
                                   resample=config_dict['resample'])
         while not iterator.complete:
             line = iterator.read_next()
@@ -130,7 +130,7 @@ def apply_corrections(hy_obj,config_dict):
         mask_names = []
 
         for correction in config_dict["corrections"]:
-            for mask_type in config_dict[correction]['calc_mask']:
+            for mask_type in config_dict[correction]['apply_mask']:
                 mask_names.append(correction + '_' + mask_type[0])
                 masks.append(mask_create(hy_obj, [mask_type]))
 
@@ -160,18 +160,3 @@ def apply_corrections(hy_obj,config_dict):
 
 if __name__== "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

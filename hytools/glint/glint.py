@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import ray
 from ..misc import set_glint
-from .sky_glint import apply_sky_sun_glint_correction
 from .hochberg_2003 import apply_hochberg_2003_correction
 from .gao_2021 import apply_gao_2021_correction
 from .hedley_2005 import apply_hedley_2005_correction

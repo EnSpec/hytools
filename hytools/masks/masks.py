@@ -26,14 +26,15 @@ mask_dict = {'ndi' : ndi,
              'kernel_finite': kernel_finite,
              'ancillary':  ancillary,
              'cloud': cloud,
-             'water': water}
+             'water': water,
+             'external' : external}
 
 def mask_create(hy_obj,masks):
     ''' Combine a series of boolean masks using an
     and operator
     '''
     mask = np.copy(hy_obj.mask['no_data'])
-    
+
     for mask_name,args in masks:
         mask &= mask_dict[mask_name](hy_obj,args)
 

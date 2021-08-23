@@ -86,3 +86,24 @@ def water(hy_obj,args):
     mask = binary_erosion(mask)
 
     return mask
+
+
+def external(hy_obj,args):
+    '''Load a mask from an external dataset
+    '''
+
+    hy_obj.anc_path['external_mask'] = [args['files'][hy_obj.file_name], 0]
+    mask = hy_obj.get_anc('external_mask') == args['class']
+
+    return mask
+
+
+
+
+
+
+
+
+
+
+

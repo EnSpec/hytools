@@ -4,7 +4,6 @@
     all situations and may need to be adjusted
 '''
 
-import os
 import json
 import glob
 import numpy as np
@@ -42,23 +41,16 @@ config_dict['file_type'] = 'envi'
 aviris_anc_names = ['path_length','sensor_az','sensor_zn',
                     'solar_az', 'solar_zn','phase','slope',
                     'aspect', 'cosine_i','utc_time']
-images= glob.glob("/data1/temp/ht_test/*img")
+images= glob.glob("/data2/prisma/rfl/PRS_20210629153937_20210629153942_0001_modtran/*prj_rfl")
 images.sort()
 config_dict["input_files"] = images
 
 config_dict["anc_files"] = {}
-anc_files = glob.glob("/data1/temp/ht_test/*ort")
+anc_files = glob.glob("/data2/prisma/rdn/PRS_20210629153937_20210629153942_0001/*obs_prj")
 anc_files.sort()
 for i,image in enumerate(images):
     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
                                                 [[anc_files[i],a] for a in range(len(aviris_anc_names))]))
-
-# Water masks for glint corrections
-mask_files = glob.glob("/data1/temp/ht_test/*mask")
-mask_files.sort()
-for i, image in enumerate(images):
-	config_dict["anc_files"][image]['water'] = [mask_files[i], 0]
-
 
 # Export settings
 #################################################################
@@ -73,9 +65,9 @@ config_dict['export'] = {}
 config_dict['export']['coeffs']  = True
 config_dict['export']['image']  = True
 config_dict['export']['masks']  = True
-config_dict['export']['subset_waves']  = [660,550,440,850]
-config_dict['export']['output_dir'] = "/data1/temp/ht_test/"
-config_dict['export']["suffix"] = 'brdf'
+config_dict['export']['subset_waves']  = []
+config_dict['export']['output_dir'] = "/data2/prisma/rfl/PRS_20210629153937_20210629153942_0001_modtran/"
+config_dict['export']["suffix"] = 'glint_hedley'
 
 #Corrections
 #################################################################
@@ -86,13 +78,15 @@ Options include:
 
     ['topo']
     ['brdf']
+    ['glint']
     ['topo','brdf']
     ['brdf','topo']
+    ['brdf','topo','glint']
     [] <---Export uncorrected images
 
 '''
 
-config_dict["corrections"]  = ['topo','brdf']
+config_dict["corrections"]  = ['glint']
 
 #Topographic Correction options
 #################################################################
@@ -225,31 +219,20 @@ config_dict["brdf"]['ndvi_perc_max'] = 95
 # config_dict["brdf"]['coeff_files'] =  {}
 ##------------------------------
 
-#----------------------
-# ## Glint correction configs
-# ##------------------
-config_dict["glint"]  = {}
-# Included types are: hedley, hochberg, and gao
-# Glint correction options
+#Glint Correction options
+#################################################################
+
 '''
 Types supported:
     - hochberg
     - hedley
     - gao
-'''
-config_dict['glint']['type'] = 'hochberg'
 
-# Reference band to guide corrections (nm)
-'''
 Common reference bands include:
     - 860nm (NIR)
     - 1650nm (SWIR)
     - 2190nm (SWIR)
-'''
-config_dict['glint']['correction_wave'] = 1650 
 
-# If glint correction is Hedley method, you need column, row chnks for homogenous deep water.
-'''
 The Hedley-specific config would be in the form of:
 [ImagePath]: [y1, y2, x1, x1]
 
@@ -262,6 +245,22 @@ config_dict["glint"]["deep_water_sample"] = {
         48, 393, 5780, 5925
      ],
 }
+'''
+config_dict["glint"]  = {}
+config_dict['glint']['type'] = 'hedley'
+config_dict['glint']['correction_wave'] = 1650
+
+# External masks for glint correction
+mask_files = glob.glob("/data2/prisma/rfl/PRS_20210629153937_20210629153942_0001_modtran/*_cls")
+mask_files.sort()
+file_dict = dict(zip(images,mask_files))
+config_dict['glint']['apply_mask'] = [["external", {'class' : 1,
+                                                     'files' : file_dict}]]
+
+config_dict["glint"]["deep_water_sample"] = {
+     images[0]: [
+        225,250,240,260
+     ]}
 
 #Wavelength resampling options
 ##############################

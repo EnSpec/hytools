@@ -31,10 +31,8 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
     IEEE Transactions on Geoscience and Remote Sensing, 41: 1724–1729.
     """
 
-    if 'water' not in hy_obj.mask:
-        hy_obj.mask['water'] = hy_obj.get_anc('water')
-        hy_obj.mask['water'][~hy_obj.mask['no_data']] = 0 
-        hy_obj.mask['water'] = hy_obj.mask['water'].astype(bool)
+    if 'apply_glint' not in hy_obj.mask:
+        hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
 
     if 'hochberg_correction' not in hy_obj.ancillary:
         hy_obj.ancillary['hochberg_correction'] = (
@@ -95,13 +93,13 @@ def get_hochberg_correction(hy_obj):
 
     nir_swir_array = np.copy(hy_obj.get_wave(hy_obj.glint['correction_wave']))
 
-    nir_swir_array[~hy_obj.mask['water']] = 0
+    nir_swir_array[~hy_obj.mask['apply_glint']] = 0
 
     nir_swir_min = np.percentile(
         nir_swir_array[nir_swir_array > 0], .001
     )
 
     hochberg_correction = nir_swir_array - nir_swir_min
-    hochberg_correction[~hy_obj.mask['water']] = 0
+    hochberg_correction[~hy_obj.mask['apply_glint']] = 0
 
     return hochberg_correction

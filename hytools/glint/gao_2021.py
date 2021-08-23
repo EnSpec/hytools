@@ -89,10 +89,8 @@ def apply_gao_2021_correction(hy_obj, data, dimension, index):
         hy_obj.glint['correction_wave']
     )
 
-    if 'water' not in hy_obj.mask:
-        hy_obj.mask['water'] = hy_obj.get_anc('water')
-        hy_obj.mask['water'][~hy_obj.mask['no_data']] = 0 
-        hy_obj.mask['water'] = hy_obj.mask['water'].astype(bool)
+    if 'apply_brdf' not in hy_obj.mask:
+        hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
 
     if 'gao_b_simu' not in hy_obj.ancillary:
         hy_obj.ancillary['gao_b_simu'] = get_b_simu(hy_obj)
@@ -200,8 +198,8 @@ def get_rto(hy_obj):
 
     b_ref_min = np.percentile(
         b_ref[
-            (hy_obj.mask['water']) 
-            & (b_ref > 0) 
+            (hy_obj.mask['apply_glint'])
+            & (b_ref > 0)
         ],
         .0001
     )
@@ -211,7 +209,6 @@ def get_rto(hy_obj):
         b_ref
         / hy_obj.ancillary['gao_b_simu'][0, :][hy_obj.glint['correction_band']]
     )
-    rto[~hy_obj.mask['no_data']] = 0
-    rto[~hy_obj.mask['water']] = 0
+    rto[~hy_obj.mask['apply_glint']] = 0
 
     return rto
