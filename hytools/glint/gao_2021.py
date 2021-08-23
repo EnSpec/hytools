@@ -89,7 +89,7 @@ def apply_gao_2021_correction(hy_obj, data, dimension, index):
         hy_obj.glint['correction_wave']
     )
 
-    if 'apply_brdf' not in hy_obj.mask:
+    if 'apply_glint' not in hy_obj.mask:
         hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
 
     if 'gao_b_simu' not in hy_obj.ancillary:
