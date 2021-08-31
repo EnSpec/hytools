@@ -23,7 +23,10 @@ inputs:
     type: file
   - name: trait_models_repo_url
     type: positional
+    default: "None"
   - name: image_correct_config
     type: config
+    default: "{}"
   - name: trait_estimate_config
     type: config
+    default: "{}"
