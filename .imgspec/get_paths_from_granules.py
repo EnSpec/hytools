@@ -23,7 +23,7 @@ def parse_args():
             sys.exit(1)
     if args.format:
         if args.format not in formats:
-            print("ERROR: Format \"%s\" is not a valid format choice." % f)
+            print("ERROR: Format \"%s\" is not a valid format choice." % args.format)
             sys.exit(1)
     return args
 
@@ -42,6 +42,7 @@ def main():
 
     # Get paths based on product type file matching
     # TODO: Add support for multiple formats
+    paths = []
     if args.product == "obs_ort":
         # AVIRIS SDS uses *obs_ort for distributed files
         paths = glob.glob(os.path.join(input_dir, "*rdn*", "*obs_ort"))
