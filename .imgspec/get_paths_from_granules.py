@@ -43,10 +43,16 @@ def main():
     # Get paths based on product type file matching
     # TODO: Add support for multiple formats
     if args.product == "obs_ort":
+        # AVIRIS SDS uses *obs_ort for distributed files
         paths = glob.glob(os.path.join(input_dir, "*rdn*", "*obs_ort"))
+        # PRISMA uses *obs_proj
+        paths += glob.glob(os.path.join(input_dir, "*", "*obs_prj"))
     elif args.product == "rfl":
+        # AVIRIS SDS uses *rfl*img and *corr*img for distributed files
         paths = glob.glob(os.path.join(input_dir, "*", "*rfl*img"))
         paths += glob.glob(os.path.join(input_dir, "*", "*corr*img"))
+        # ISOFIT uses *rfl for processed reflectance files
+        paths += glob.glob(os.path.join(input_dir, "*", "*rfl"))
     elif args.product == "topo_coeffs":
         paths = glob.glob(os.path.join(input_dir, "*topo_coeffs*", "*topo_coeffs*json"))
     elif args.product == "brdf_coeffs":
