@@ -1,0 +1,278 @@
+{
+   "bad_bands": [],
+   "file_type": "envi",
+   "input_files": [
+      "/data2/avng/l2/hytools_avng_example/ang20190629t203832_rfl",
+      "/data2/avng/l2/hytools_avng_example/ang20190629t210339_rfl"
+   ],
+   "anc_files": {
+      "/data2/avng/l2/hytools_avng_example/ang20190629t203832_rfl": {
+         "path_length": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            0
+         ],
+         "sensor_az": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            1
+         ],
+         "sensor_zn": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            2
+         ],
+         "solar_az": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            3
+         ],
+         "solar_zn": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            4
+         ],
+         "phase": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            5
+         ],
+         "slope": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            6
+         ],
+         "aspect": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            7
+         ],
+         "cosine_i": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            8
+         ],
+         "utc_time": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t203832_obs",
+            9
+         ]
+      },
+      "/data2/avng/l2/hytools_avng_example/ang20190629t210339_rfl": {
+         "path_length": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            0
+         ],
+         "sensor_az": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            1
+         ],
+         "sensor_zn": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            2
+         ],
+         "solar_az": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            3
+         ],
+         "solar_zn": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            4
+         ],
+         "phase": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            5
+         ],
+         "slope": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            6
+         ],
+         "aspect": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            7
+         ],
+         "cosine_i": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            8
+         ],
+         "utc_time": [
+            "/data2/avng/l2/hytools_avng_example/ang20190629t210339_obs",
+            9
+         ]
+      }
+   },
+   "num_cpus": 2,
+   "export": {
+      "coeffs": false,
+      "image": true,
+      "masks": true,
+      "subset_waves": [],
+      "output_dir": "/data2/avng/l2/hytools_avng_example/",
+      "suffix": "topo_brdf_glint"
+   },
+   "topo": {
+      "type": "scs+c",
+      "calc_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 550,
+               "band_2": 2150,
+               "min": -1,
+               "max": 0
+            }
+         ],
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.1,
+               "max": 1
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "slope",
+               "min": 0.08726646259971647,
+               "max": "+inf"
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "cosine_i",
+               "min": 0.12,
+               "max": "+inf"
+            }
+         ]
+      ],
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 550,
+               "band_2": 2150,
+               "min": -1,
+               "max": 0
+            }
+         ],
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.1,
+               "max": 1
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "slope",
+               "min": 0.08726646259971647,
+               "max": "+inf"
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "cosine_i",
+               "min": 0.12,
+               "max": "+inf"
+            }
+         ]
+      ],
+      "c_fit_type": "nnls"
+   },
+   "corrections": [
+      "topo",
+      "brdf",
+      "glint"
+   ],
+   "brdf": {
+      "type": "flex",
+      "grouped": true,
+      "geometric": "li_dense_r",
+      "volume": "ross_thick",
+      "b/r": 2.5,
+      "h/b": 2,
+      "sample_perc": 0.1,
+      "interp_kind": "linear",
+      "calc_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 550,
+               "band_2": 2150,
+               "min": -1,
+               "max": 0
+            }
+         ],
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.1,
+               "max": 1
+            }
+         ],
+         [
+            "kernel_finite",
+            {}
+         ],
+         [
+            "ancillary",
+            {
+               "name": "sensor_zn",
+               "min": 0.03490658503988659,
+               "max": "inf"
+            }
+         ]
+      ],
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 550,
+               "band_2": 2150,
+               "min": -1,
+               "max": 0
+            }
+         ],
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.1,
+               "max": 1
+            }
+         ]
+      ],
+      "bin_type": "dynamic",
+      "num_bins": 18,
+      "ndvi_bin_min": 0.05,
+      "ndvi_bin_max": 1.0,
+      "ndvi_perc_min": 10,
+      "ndvi_perc_max": 95,
+      "solar_zn_type": "scene"
+   },
+   "glint": {
+      "type": "hochberg",
+      "correction_wave": 2150,
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 550,
+               "band_2": 2150,
+               "min": 0,
+               "max": 1
+            }
+         ],
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": -1,
+               "max": 0.1
+            }
+         ]
+      ]
+   },
+   "resample": false
+}

@@ -1,0 +1,49 @@
+{
+   "bad_bands": [],
+   "file_type": "envi",
+   "input_files": [
+      "/data2/avng/l2/hytools_avng_example/ang20190629t203832_rfl",
+      "/data2/avng/l2/hytools_avng_example/ang20190629t210339_rfl"
+   ],
+   "anc_files": {
+      "/data2/avng/l2/hytools_avng_example/ang20190629t203832_rfl": {},
+      "/data2/avng/l2/hytools_avng_example/ang20190629t210339_rfl": {}
+   },
+   "num_cpus": 2,
+   "export": {
+      "coeffs": false,
+      "image": true,
+      "masks": true,
+      "subset_waves": [],
+      "output_dir": "/data2/avng/l2/hytools_avng_example/",
+      "suffix": "glint"
+   },
+   "corrections": [
+      "glint"
+   ],
+   "glint": {
+      "type": "hochberg",
+      "correction_wave": 2150,
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 550,
+               "band_2": 2150,
+               "min": 0,
+               "max": 1
+            }
+         ],
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": -1,
+               "max": 0.1
+            }
+         ]
+      ]
+   },
+   "resample": false
+}
