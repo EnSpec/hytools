@@ -12,11 +12,7 @@ transforms, masking and more. We have also created a series of command
 line tools which combine these functions and provide a streamlined
 workflow for processing images.
 
-For complete documentation see:
-[hytools.readthedocs.io](https://hytools.readthedocs.io/en/latest/contents.html)
-
 For more examples see the HyTools basics ipython notebook [here](https://github.com/EnSpec/hytools/blob/master/examples/hytools_basics_notebook.ipynb).
-
 
 # Installation
 
