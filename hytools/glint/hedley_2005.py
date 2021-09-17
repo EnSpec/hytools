@@ -23,7 +23,13 @@ from ..masks import mask_create
 
 
 def apply_hedley_2005_correction(hy_obj, data, dimension, index):
+    """
+    Glint correction algorithm following:
 
+    Hedley, J. D., Harborne, A. R., & Mumby, P. J. (2005).
+    Simple and robust removal of sun glint for mapping shallow‐water benthos.
+    International Journal of Remote Sensing, 26(10), 2107-2112.
+    """
     # Raise exception is there is no deep water sample provided
     if isinstance(hy_obj.glint.get('deep_water_sample'), type(None)):
         raise KeyError("No Deep Water Sample Provided")
