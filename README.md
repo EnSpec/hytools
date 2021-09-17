@@ -1,13 +1,13 @@
 # HyTools
 
 HyTools is a python library for processing airborne and spaceborne
-imaging spectroscopy data, with a focus on terrestrial scenes. At it's
+imaging spectroscopy data. At it's
 core it consists of functions for reading and writing
 [ENVI](https://www.l3harrisgeospatial.com/docs/ENVIImageFiles.html)
 formatted images and reading [NEON
 AOP](https://www.neonscience.org/data-collection/airborne-remote-sensing)
 HDF files along with a series of image processing functions including
-spectral resampling, topographic and BRDF correction, spectral
+spectral resampling, topographic, BRDF and glint correction, spectral
 transforms, masking and more. We have also created a series of command
 line tools which combine these functions and provide a streamlined
 workflow for processing images.
