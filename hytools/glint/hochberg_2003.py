@@ -40,43 +40,28 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
         )
 
     if dimension == 'line':
-        correction = hy_obj.ancillary['hochberg_correction'][index, :]
-        correction = np.repeat(
-            correction[:, np.newaxis],
-            hy_obj.bands,
-            axis=1
-        )
+        correction = hy_obj.ancillary['hochberg_correction'][index, :][:,np.newaxis]
 
     elif dimension == 'column':
-        correction = hy_obj.ancillary['hochberg_correction'][:, index]
-        correction = np.repeat(
-            correction[:, np.newaxis],
-            hy_obj.bands,
-            axis=1
-        )
+        correction = hy_obj.ancillary['hochberg_correction'][:, index][np.newaxis,:]
 
-    elif (dimension == 'band'):
+    elif dimension == 'band':
         correction = hy_obj.ancillary['hochberg_correction']
 
     elif dimension == 'chunk':
-        # Get Index
         x1, x2, y1, y2 = index
         correction = hy_obj.ancillary['hochberg_correction'][y1:y2, x1:x2]
-        correction = np.repeat(
-            correction[:, :, np.newaxis],
-            hy_obj.bands,
-            axis=2
-        )
 
     elif dimension == 'pixels':
         y, x = index
         correction = hy_obj.ancillary['hochberg_correction'][y, x]
-        correction = np.repeat(
-            correction[:, np.newaxis],
-            hy_obj.bands,
-            axis=1
-        )
-    return data - correction
+
+    data_correct = data - correction
+
+    if hy_obj.glint['truncate']:
+        data_correct[(data_correct < 0) & (data != hy_obj.no_data)]= 0
+
+    return data_correct
 
 
 def get_hochberg_correction(hy_obj):
@@ -86,7 +71,13 @@ def get_hochberg_correction(hy_obj):
     attributed to glint. Zeros out non-water pixels
     """
 
-    nir_swir_array = np.copy(hy_obj.get_wave(hy_obj.glint['correction_wave']))
+    if isinstance(hy_obj.glint['correction_wave'],list):
+        nir_swir_array = np.zeros((hy_obj.lines,hy_obj.columns))
+        for wave in hy_obj.glint['correction_wave']:
+            nir_swir_array+= hy_obj.get_wave(wave)
+        nir_swir_array/=len(hy_obj.glint['correction_wave'])
+    else:
+        nir_swir_array = np.copy(hy_obj.get_wave(hy_obj.glint['correction_wave']))
 
     nir_swir_array[~hy_obj.mask['apply_glint']] = 0
 
