@@ -56,13 +56,7 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
         y, x = index
         correction = hy_obj.ancillary['hochberg_correction'][y, x]
 
-    data_correct = data - correction
-
-    if hy_obj.glint['truncate']:
-        data_correct[(data_correct < 0) & (data != hy_obj.no_data)]= 0
-
-    return data_correct
-
+    return data - correction
 
 def get_hochberg_correction(hy_obj):
     """

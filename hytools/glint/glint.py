@@ -57,6 +57,9 @@ def apply_glint_correct(hy_obj, data, dimension, index):
 
     elif hy_obj.glint['type'] == 'hedley':
         data = apply_hedley_2005_correction(hy_obj, data, dimension, index)
-    # Can add more corrections here
+
+    #Truncate reflectance values below 0
+    if hy_obj.glint['truncate']:
+        data[(data < 0) & (data != hy_obj.no_data)]= 0
 
     return data
