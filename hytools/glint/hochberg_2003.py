@@ -41,19 +41,17 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
 
     if dimension == 'line':
         correction = hy_obj.ancillary['hochberg_correction'][index, :]
-        bandnums = len(hy_obj.wavelengths)
         correction = np.repeat(
             correction[:, np.newaxis],
-            bandnums,
+            hy_obj.bands,
             axis=1
         )
 
     elif dimension == 'column':
         correction = hy_obj.ancillary['hochberg_correction'][:, index]
-        bandnums = len(hy_obj.wavelengths)
         correction = np.repeat(
             correction[:, np.newaxis],
-            bandnums,
+            hy_obj.bands,
             axis=1
         )
 
@@ -64,23 +62,20 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
         # Get Index
         x1, x2, y1, y2 = index
         correction = hy_obj.ancillary['hochberg_correction'][y1:y2, x1:x2]
-        bandnums = len(hy_obj.wavelengths)
         correction = np.repeat(
             correction[:, :, np.newaxis],
-            bandnums,
+            hy_obj.bands,
             axis=2
         )
 
     elif dimension == 'pixels':
         y, x = index
         correction = hy_obj.ancillary['hochberg_correction'][y, x]
-        bandnums = len(hy_obj.wavelengths)
         correction = np.repeat(
             correction[:, np.newaxis],
-            bandnums,
+            hy_obj.bands,
             axis=1
         )
-
     return data - correction
 
 
