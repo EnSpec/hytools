@@ -1,5 +1,8 @@
 # HyTools
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.5997756.svg
+   :target: https://doi.org/10.5281/zenodo.5997756
+
 HyTools is a python library for processing airborne and spaceborne
 imaging spectroscopy data. At it's
 core it consists of functions for reading and writing
