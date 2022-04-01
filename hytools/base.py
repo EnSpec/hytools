@@ -93,6 +93,20 @@ class HyTools:
 
         # Create a no data mask
         self.mask['no_data'] = self.get_band(0) != self.no_data
+
+        #Match mask with ancillary mask
+        if anc_path:
+            ancillary = HyTools()
+            ancillary.read_file(self.anc_path['solar_zn'][0],'envi')
+            ancillary.load_data()
+            anc_data = np.copy(ancillary.get_band(0))
+            if self.endianness != sys.byteorder:
+                anc_data = anc_data.byteswap()
+
+            self.mask['no_data'] &= ancillary.get_band(0) != ancillary.no_data
+            ancillary.close_data()
+            del ancillary
+
         self.base_name = os.path.basename(os.path.splitext(self.file_name)[0])
 
     def create_bad_bands(self,bad_regions):
