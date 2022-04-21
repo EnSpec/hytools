@@ -46,7 +46,7 @@ def load_brdf_precomputed(hy_obj,brdf_dict):
 def set_solar_zn(hy_obj):
     solar_zn = hy_obj.get_anc('solar_zn')
     solar_zn = np.mean(solar_zn[hy_obj.mask['no_data']])
-    hy_obj.brdf['solar_zn_norm_radians'] = float(solar_zn)
+    hy_obj.brdf['norm_solar_zn'] = float(solar_zn)
     return solar_zn
 
 def calc_brdf_coeffs(actors,config_dict):
@@ -64,23 +64,36 @@ def calc_brdf_coeffs(actors,config_dict):
         # Create masks used for calculating coefficients
         _ = ray.get([a.gen_mask.remote(mask_create,'calc_brdf',
                                        brdf_dict['calc_mask']) for a in actors])
-        # Calculate mean solar zenith
-        if isinstance(brdf_dict['solar_zn_type'],str):
 
-            # Assign per line mean solar zenith
-            solar_zn_samples = ray.get([a.do.remote(set_solar_zn) for a in actors])
-            # Calculate and assign scene average solar zenith
-            if brdf_dict['solar_zn_type'] == 'scene':
-                scene_mean = float(np.mean(solar_zn_samples))
-                _ =  ray.get([a.do.remote(update_brdf,{'key':'solar_zn_norm_radians',
-                                                      'value': scene_mean }) for a in actors])
-                print("Scene average solar zenith angle : %s degrees" % round(np.degrees(scene_mean),3))
+        solar_zn_samples = ray.get([a.do.remote(set_solar_zn) for a in actors])
 
-        elif isinstance(brdf_dict['solar_zn_type'],float):
-            _ =  ray.get([a.do.remote(update_brdf,{'key':'solar_zn_norm_radians',
-                                                   'value': brdf_dict['solar_zn_type']}) for a in actors])
+        #Calculate and assign normalization angles
+        if 'norm_solar_zn' in brdf_dict.keys():
+            if brdf_dict['norm_solar_zn'] == 'scene':
+                norm_angle = float(np.mean(solar_zn_samples))
+                _ =  ray.get([a.do.remote(update_brdf,{'key':'norm_solar_zn',
+                           'value': norm_angle}) for a in actors])
+                print("Scene average solar zenith angle : %s degrees" % round(np.degrees(norm_angle),3))
+            elif isinstance(brdf_dict['norm_solar_zn'],float):
+                norm_angle = brdf_dict['norm_solar_zn']
+                _ =  ray.get([a.do.remote(update_brdf,{'key':'norm_solar_zn',
+                           'value': norm_angle}) for a in actors])
+            elif brdf_dict['norm_solar_zn'] == 'line':
+                print('Using solar zenith line mean')
+            else:
+                print('Unrecognized solar zenith angle normalization, using line mean')
         else:
-            print('Unrecognized solar zenith angle normalization')
+            print("solar_zn normalization angle not set, using line mean.")
+
+
+        for angle in ['sensor_az','sensor_zn','solar_az']:
+            if "norm_%s" % angle in brdf_dict.keys():
+                norm_angle = brdf_dict["norm_%s" % angle]
+            else:
+                print("%s normalization angle not set, using 0." % angle )
+                norm_angle = 0
+            _ =  ray.get([a.do.remote(update_brdf,{'key':"norm_%s" % angle,
+                                                       'value': norm_angle}) for a in actors])
 
         print("Calculating BRDF coefficients")
         if brdf_dict['type']== 'universal':
@@ -91,13 +104,3 @@ def calc_brdf_coeffs(actors,config_dict):
             print('Local/class BRDF correction....under development')
 
     _ = ray.get([a.do.remote(lambda x: x.corrections.append('brdf')) for a in actors])
-
-
-
-
-
-
-
-
-
-

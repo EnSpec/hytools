@@ -14,7 +14,7 @@ config_dict = {}
 
 #Only coefficients for good bands will be calculated
 config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
-config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
+# config_dict['bad_bands'] =[[300,400],[900,2600]]  # Subset for testing
 
 # Input data settings for NEON
 #################################################################
@@ -41,12 +41,12 @@ config_dict['file_type'] = 'envi'
 aviris_anc_names = ['path_length','sensor_az','sensor_zn',
                     'solar_az', 'solar_zn','phase','slope',
                     'aspect', 'cosine_i','utc_time']
-images= glob.glob("/data2/prisma/rfl/PRS_20210629153937_20210629153942_0001_modtran/*prj_rfl")
+images= glob.glob("/data1/temp/ht_test/*img_30m")
 images.sort()
 config_dict["input_files"] = images
 
 config_dict["anc_files"] = {}
-anc_files = glob.glob("/data2/prisma/rdn/PRS_20210629153937_20210629153942_0001/*obs_prj")
+anc_files = glob.glob("/data1/temp/ht_test/*obs_ort_30m")
 anc_files.sort()
 for i,image in enumerate(images):
     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
@@ -66,8 +66,8 @@ config_dict['export']['coeffs']  = True
 config_dict['export']['image']  = True
 config_dict['export']['masks']  = True
 config_dict['export']['subset_waves']  = []
-config_dict['export']['output_dir'] = "/data2/prisma/rfl/PRS_20210629153937_20210629153942_0001_modtran/"
-config_dict['export']["suffix"] = 'glint_hedley'
+config_dict['export']['output_dir'] = "/data1/temp/ht_test/"
+config_dict['export']["suffix"] = 'angle_test_45'
 
 #Corrections
 #################################################################
@@ -86,7 +86,7 @@ Options include:
 
 '''
 
-config_dict["corrections"]  = ['glint']
+config_dict["corrections"]  = ['brdf']
 
 #Topographic Correction options
 #################################################################
@@ -155,9 +155,21 @@ is the full path to coefficients file, one per image.
 
 config_dict["brdf"]  = {}
 
-# Options are 'line','scene', or a float for a custom solar zn
-# Custom solar zenith angle should be in radians
-config_dict["brdf"]['solar_zn_type'] ='scene'
+''''
+Normalization angles, optional.
+
+Options are 'line','scene', or a float for a custom solar zn
+For all other angles provide a float
+
+ANGLES MUST BE IN RADIANS.
+
+If no angle are set line mean will be using for solar_zn and
+0 for all other angles
+# '''
+config_dict["brdf"]['norm_solar_zn']  = 45
+config_dict["brdf"]['norm_solar_az']  = 0
+config_dict["brdf"]['norm_sensor_az'] = 0
+config_dict["brdf"]['norm_sensor_zn'] = 0
 
 # Universal BRDF config
 #----------------------
@@ -251,7 +263,7 @@ config_dict['glint']['type'] = 'hedley'
 config_dict['glint']['correction_wave'] = 1650
 
 # External masks for glint correction
-mask_files = glob.glob("/data2/prisma/rfl/PRS_20210629153937_20210629153942_0001_modtran/*_cls")
+mask_files = glob.glob("/data2/prisma/rfl/PRS_20210629453937_20210629153942_0001_modtran/*_cls")
 mask_files.sort()
 file_dict = dict(zip(images,mask_files))
 config_dict['glint']['apply_mask'] = [["external", {'class' : 1,

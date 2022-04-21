@@ -224,11 +224,14 @@ def apply_flex(hy_obj,data,dimension,index):
                                      b_r=hy_obj.brdf["b/r"],
                                      h_b =hy_obj.brdf["h/b"])
     if ('k_vol_nadir' not in hy_obj.ancillary) or ('k_geom_nadir' not in hy_obj.ancillary):
-        solar_zn = hy_obj.brdf['solar_zn_norm_radians']  * np.ones((hy_obj.lines,hy_obj.columns))
-        hy_obj.ancillary['k_vol_nadir']  = calc_volume_kernel(0,solar_zn,
-                                                               0,0,hy_obj.brdf['volume'])
-        hy_obj.ancillary['k_geom_nadir']  = calc_geom_kernel(0,solar_zn,
-                                                             0,0,hy_obj.brdf['geometric'],
+        solar_zn = hy_obj.brdf['norm_solar_zn']  * np.ones((hy_obj.lines,hy_obj.columns))
+
+        hy_obj.ancillary['k_vol_nadir']  = calc_volume_kernel(hy_obj.brdf['norm_solar_az'],solar_zn,
+                                                               hy_obj.brdf['norm_sensor_az'],hy_obj.brdf['norm_sensor_zn'],
+                                                               hy_obj.brdf['volume'])
+        hy_obj.ancillary['k_geom_nadir']  = calc_geom_kernel(hy_obj.brdf['norm_solar_az'],solar_zn,
+                                                             hy_obj.brdf['norm_sensor_az'],hy_obj.brdf['norm_sensor_zn'],
+                                                             hy_obj.brdf['geometric'],
                                                              b_r=hy_obj.brdf["b/r"],
                                                              h_b =hy_obj.brdf["h/b"])
     if 'apply_brdf' not in hy_obj.mask:
