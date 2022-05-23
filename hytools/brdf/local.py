@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 HyTools:  Hyperspectral image processing library
 Copyright (C) 2021 University of Wisconsin
 
