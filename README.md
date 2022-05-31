@@ -38,10 +38,10 @@ python setup.py install
 import hytools as ht
 
 #Create a HyTools container object
-envi = ht.HyTools()
+hy_obj = ht.HyTools()
 
 #Read and load file metadata
-envi.read_file('./envi_file.bin',file_type= 'envi')
+hy_obj.read_file('./envi_file.bin',file_type= 'envi')
 
 #Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)
