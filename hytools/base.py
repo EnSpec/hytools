@@ -98,12 +98,10 @@ class HyTools:
         if anc_path:
             ancillary = HyTools()
             ancillary.read_file(self.anc_path['solar_zn'][0],'envi')
-            ancillary.load_data()
-            anc_data = np.copy(ancillary.get_band(0))
-            if self.endianness != sys.byteorder:
-                anc_data = anc_data.byteswap()
+            if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
+                print('Reflectance and ancillary no data extents do no match, combining no data masks.')
+                self.mask['no_data'] &= ancillary.mask['no_data']
 
-            self.mask['no_data'] &= ancillary.get_band(0) != ancillary.no_data
             ancillary.close_data()
             del ancillary
 
