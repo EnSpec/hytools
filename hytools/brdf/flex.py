@@ -148,7 +148,7 @@ def calc_flex_single(hy_obj,brdf_dict):
             coeffs= []
 
             for bin_num in hy_obj.brdf['bins']:
-                bin_mask = [kernel_samples[:,3] == bin_num]
+                bin_mask = (kernel_samples[:,3] == bin_num)
                 X = kernel_samples[:,:3][bin_mask]
                 y = band_samples[bin_mask]
                 coeffs.append(np.linalg.lstsq(X, y,rcond=-1)[0].flatten().tolist())
@@ -192,7 +192,7 @@ def calc_flex_group(actors,brdf_dict):
             band_samples = np.concatenate(band_samples)
             band_coeffs= []
             for bin_num in bins:
-                bin_mask = [kernel_samples[:,3] == bin_num]
+                bin_mask = (kernel_samples[:,3] == bin_num)
                 X = kernel_samples[:,:3][bin_mask]
                 y = band_samples[bin_mask]
                 band_coeffs.append(np.linalg.lstsq(X, y,rcond=-1)[0].flatten().tolist())
