@@ -93,7 +93,7 @@ field_dict = {"acquisition time": "str",
               "z plot titles": "str"}
 
 
-def open_envi(hy_obj,anc_path = {}):
+def open_envi(hy_obj,anc_path = {}, ext = False):
     """Open ENVI formated image file and populate Hytools object.
 
 
@@ -101,17 +101,23 @@ def open_envi(hy_obj,anc_path = {}):
         src_file (str): Pathname of input ENVI image file, header assumed to be located in
         same directory.
         anc_path (dict): Dictionary with pathnames and band numbers of ancillary datasets.
+        ext: (bool) Input ENVI file has a file extension
 
     Returns:
         HyTools file object: Populated HyTools file object.
 
     """
 
-    if not os.path.isfile(os.path.splitext(hy_obj.file_name)[0] + ".hdr"):
+    if ext:
+        header_file = os.path.splitext(hy_obj.file_name)[0] + ".hdr"
+    else:
+        header_file = hy_obj.file_name + ".hdr"
+
+    if not header_file:
         print("ERROR: Header file not found.")
         return None
 
-    header_dict = parse_envi_header(os.path.splitext(hy_obj.file_name)[0] + ".hdr")
+    header_dict = parse_envi_header(header_file)
     hy_obj.lines =  header_dict["lines"]
     hy_obj.columns =  header_dict["samples"]
     hy_obj.bands =   header_dict["bands"]
@@ -125,12 +131,12 @@ def open_envi(hy_obj,anc_path = {}):
     hy_obj.map_info = header_dict['map info']
     hy_obj.byte_order = header_dict['byte order']
     hy_obj.anc_path = anc_path
+    hy_obj.header_file = header_file
 
     if hy_obj.byte_order == 1:
         hy_obj.endianness = 'big'
     else:
         hy_obj.endianness = 'little'
-
 
     if isinstance(header_dict['bbl'],np.ndarray):
         hy_obj.bad_bands = np.array([x==1 for x in header_dict['bbl']])
