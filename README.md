@@ -61,7 +61,7 @@ chunk = hy_obj.get_chunk(0,100,0,100)
 pixels = hy_obj.get_pixels([102,434],[324,345])
 
 # Create a writer object to write to new file
-writer = ht.io.WriteENVI('output_envi.bin',hy_obj.header_dict)
+writer = ht.io.WriteENVI('output_envi',hy_obj.get_header())
 
 #Create an iterator object to cycle though image
 iterator = hy_obj.iterate(by = 'line')
