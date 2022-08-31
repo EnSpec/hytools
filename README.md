@@ -41,7 +41,7 @@ import hytools as ht
 hy_obj = ht.HyTools()
 
 #Read and load file metadata
-hy_obj.read_file('./envi_file.bin',file_type= 'envi')
+hy_obj.read_file('./envi_file.bin',file_type= 'envi',ext= True)
 
 #Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)
