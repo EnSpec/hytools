@@ -343,19 +343,20 @@ def envi_header_from_neon(hy_obj, interleave = 'bsq'):
     return header_dict
 
 
-def write_envi_header(output_name,header_dict):
+def write_envi_header(output_name,header_dict,mode = 'w'):
     """Write ENVI header file to disk.
 
     Args:
         output_name (str): Header file pathname.
-        header_dict (dict): Populated ENVI header dictionary..
+        header_dict (dict): Populated ENVI header dictionary.
+        mode (str): File open mode. default: w
 
     Returns:
         None.
 
     """
 
-    header_file = open(output_name + ".hdr",'w+')
+    header_file = open(output_name + ".hdr",mode)
     header_file.write("ENVI\n")
 
     for key in header_dict.keys():
