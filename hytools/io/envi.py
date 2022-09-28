@@ -113,7 +113,7 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
     else:
         header_file = hy_obj.file_name + ".hdr"
 
-    if not header_file:
+    if not os.path.isfile(header_file):
         print("ERROR: Header file not found.")
         return None
 
