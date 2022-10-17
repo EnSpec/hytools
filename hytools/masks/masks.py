@@ -27,6 +27,7 @@ mask_dict = {'ndi' : ndi,
              'ancillary':  ancillary,
              'cloud': cloud,
              'water': water,
+             'band': band,
              'external' : external}
 
 def mask_create(hy_obj,masks):
@@ -39,4 +40,3 @@ def mask_create(hy_obj,masks):
         mask &= mask_dict[mask_name](hy_obj,args)
 
     return mask
-

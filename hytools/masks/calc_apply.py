@@ -98,12 +98,12 @@ def external(hy_obj,args):
     return mask
 
 
+def band(hy_obj,args):
+    '''
+    Create mask using band thresholds
+    '''
 
+    mask = hy_obj.get_wave(args['band'])
+    mask = (mask >= float(args['min'])) & (mask <= float(args['max']))
 
-
-
-
-
-
-
-
+    return mask
