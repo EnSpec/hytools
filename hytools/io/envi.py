@@ -108,10 +108,8 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
 
     """
 
-    if ext:
-        header_file = os.path.splitext(hy_obj.file_name)[0] + ".hdr"
-    else:
-        header_file = hy_obj.file_name + ".hdr"
+    header_file = os.path.splitext(hy_obj.file_name)[0] + ".hdr"
+
 
     if not os.path.isfile(header_file):
         print("ERROR: Header file not found.")
@@ -356,7 +354,8 @@ def write_envi_header(output_name,header_dict,mode = 'w'):
 
     """
 
-    header_file = open(output_name + ".hdr",mode)
+    base_name = os.path.splitext(output_name)[0]
+    header_file = open(base_name + ".hdr",mode)
     header_file.write("ENVI\n")
 
     for key in header_dict.keys():
