@@ -85,12 +85,14 @@ def apply_gao_2021_correction(hy_obj, data, dimension, index):
     Adv Environ Eng Res 2021;2(3):16; doi:10.21926/aeer.2103017.
     """
 
-    hy_obj.glint['correction_band'] = hy_obj.wave_to_band(
-        hy_obj.glint['correction_wave']
-    )
 
     if 'apply_glint' not in hy_obj.mask:
         hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
+
+    if hy_obj.mask['apply_glint'].sum() == 0:
+        return data
+
+    hy_obj.glint['correction_band'] = hy_obj.wave_to_band(hy_obj.glint['correction_wave'])
 
     if 'gao_b_simu' not in hy_obj.ancillary:
         hy_obj.ancillary['gao_b_simu'] = get_b_simu(hy_obj)

@@ -34,6 +34,9 @@ def apply_hochberg_2003_correction(hy_obj, data, dimension, index):
     if 'apply_glint' not in hy_obj.mask:
         hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
 
+    if hy_obj.mask['apply_glint'].sum() == 0:
+        return data
+
     if 'hochberg_correction' not in hy_obj.ancillary:
         hy_obj.ancillary['hochberg_correction'] = (
             get_hochberg_correction(hy_obj)

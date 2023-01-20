@@ -34,12 +34,15 @@ def apply_hedley_2005_correction(hy_obj, data, dimension, index):
     if isinstance(hy_obj.glint.get('deep_water_sample'), type(None)):
         raise KeyError("No Deep Water Sample Provided")
 
+    if 'apply_glint' not in hy_obj.mask:
+        hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
+
+    if hy_obj.mask['apply_glint'].sum() == 0:
+        return data
+
     hy_obj.glint['correction_band'] = hy_obj.wave_to_band(
         hy_obj.glint['correction_wave']
     )
-
-    if 'apply_glint' not in hy_obj.mask:
-        hy_obj.gen_mask(mask_create,'apply_glint',hy_obj.glint['apply_mask'])
 
     if 'hedley_slopes' not in hy_obj.ancillary:
         hy_obj.ancillary['hedley_slopes'] = optimize_slopes(hy_obj)
