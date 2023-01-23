@@ -20,6 +20,3 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Initialize hytools
 """
 from .base import HyTools
-
-
-__version__ = '1.4.2'
