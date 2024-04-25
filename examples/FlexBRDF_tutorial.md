@@ -1,6 +1,6 @@
 
 # FlexBRDF 
-This is a tutorial on how to implement FlexBRDF [[1](##Reference)] to normalized illumination conditions with  Bidirectional Reflectance Distribution Function (BRDF) in hyperspectral image like AVIRIS-NG. Specially, it it about correcting the images with the terminal command line script.
+This is a tutorial on how to implement FlexBRDF [[1](#Reference)] to normalized illumination conditions with  Bidirectional Reflectance Distribution Function (BRDF) in hyperspectral image like AVIRIS-NG. Specially, it it about correcting the images with the terminal command line script.
 
 
 ## 1. Preparation
@@ -40,7 +40,7 @@ The *export* part in the configuration determines whether the BRDF model estimat
   * *output_dir* and *suffix* are the about the final location and suffix of the outputs.
 
 #### Choose how to correct the images
-Currently, there are three corrections ([TOPO](####TOPO), [BRDF](####BRDF), [Glint](####glint)) user can choose from in HyTools. They can all be enabled.
+Currently, there are three corrections ([TOPO](#TOPO), [BRDF](#BRDF), [Glint](#glint)) user can choose from in HyTools. They can all be enabled.
 ```json
 "corrections": [
       "topo",
@@ -59,7 +59,7 @@ Order matters in the correction. Some common settings are shown as below.
 |['topo','brdf','glint']|Three corrections in order|
 
 #### TOPO
- Options for topographic methods are ['scs','scs+c','c','cosine','mod_minneart'], corresponding to sun-canopy-sensor method[[2](##Reference)], sun-canopy-sensor+C method[[2](##Reference)], C method[[3](##Reference)], cosine method [[3](##Reference)], and modified Minnaert method [[3](##Reference)], respectively. The recommended method for topographic correction is "scs+c".
+ Options for topographic methods are ['scs','scs+c','c','cosine','mod_minneart'], corresponding to sun-canopy-sensor method[[2](#Reference)], sun-canopy-sensor+C method[[2](#Reference)], C method[[3](#Reference)], cosine method [[3](#Reference)], and modified Minnaert method [[3](#Reference)], respectively. The recommended method for topographic correction is "scs+c".
 ```json
 "topo": {
       "type": "scs+c",
@@ -71,7 +71,7 @@ Order matters in the correction. Some common settings are shown as below.
 
 #### BRDF
 
-Options for BRDF correction methods are ['flex','universal'], corresponding to FlexBRDF method [[1](##Reference)] and universal method.
+Options for BRDF correction methods are ['flex','universal'], corresponding to FlexBRDF method [[1](#Reference)] and universal method.
 
 Geometric kernel can be selected from ['li_sparse','li_dense','li_dense_r','li_dense_r','roujean'].
 Volumetric kernel can be selected from['ross_thin','ross_thick','hotspot','roujean'].
@@ -108,7 +108,7 @@ If there are more than one flightline in the group for the purpose of BRDF corre
 
 #### Glint
 
-Options for glint correction include ['hochberg','gao','hedley'], corresponding to the method Hochberg et al., 2003[[4](##Reference)], Gao et al., 2021[[5](##Reference)], and Hedley et al. 2005[[6](##Reference)].
+Options for glint correction include ['hochberg','gao','hedley'], corresponding to the method Hochberg et al., 2003[[4](#Reference)], Gao et al., 2021[[5](#Reference)], and Hedley et al. 2005[[6](#Reference)].
 
 
 
