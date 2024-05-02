@@ -110,6 +110,10 @@ If there are more than one flightline in the group for the purpose of BRDF corre
 
 Options for glint correction include ['hochberg','gao','hedley'], corresponding to the method Hochberg et al., 2003[[4](#Reference)], Gao et al., 2021[[5](#Reference)], and Hedley et al. 2005[[6](#Reference)].
 
+#### A simplified GUI for generating congig file
+This [python-based GUI](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate_gui.py) only provides the least options for generating image correction configuration file. It has the most of the functions of [image_correct_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate.py), but it assumes files of the same group are exclusively in the same directory. It does not provide all the options, and it is rather an example of how the configuration is generated.
+
+![GUI for the config file](./config_json_gen_gui.jpg "GUI")
 
 
 ## 3. Execution
