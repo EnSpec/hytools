@@ -18,11 +18,11 @@ def fill_config(images, anc_files,out_coef_dir,img_file_type,corr_list, flag_pre
   config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
   
   config_dict['file_type'] = img_file_type #'envi'
-  #aviris_anc_names = ['path_length','sensor_az','sensor_zn',
-  #                    'solar_az', 'solar_zn','phase','slope',
-  #                    'aspect', 'cosine_i','utc_time']
-  aviris_anc_names = ['sensor_az','sensor_zn',
-                      'solar_az', 'solar_zn']                    
+  aviris_anc_names = ['path_length','sensor_az','sensor_zn',
+                      'solar_az', 'solar_zn','phase','slope',
+                      'aspect', 'cosine_i','utc_time']
+  #aviris_anc_names = ['sensor_az','sensor_zn',
+  #                    'solar_az', 'solar_zn']                    
   images.sort()
   config_dict["input_files"] = images
 
@@ -48,8 +48,12 @@ def fill_config(images, anc_files,out_coef_dir,img_file_type,corr_list, flag_pre
   config_dict['export']['subset_waves']  =  [660,550,440] #[440,550,660,850] #
   config_dict['export']['output_dir'] = out_coef_dir
   print('_'.join(corr_list))
-  config_dict['export']["suffix"] = '_'.join(corr_list)  # 'brdf'  
-  
+
+  if len(corr_list)>0:
+    config_dict['export']["suffix"] = '_'.join(corr_list)  # 'brdf'  
+  else:  
+    config_dict['export']["suffix"] = 'raw'
+    
   config_dict["corrections"]  =  corr_list # ['brdf'] 
   
   
@@ -124,7 +128,7 @@ def update_corr_list(corr_list_):
   
 def gen_config(entry_outdir, entry_outjson,img_list_out, obs_list_out, radio_f_type, corr_list,chk_precompute, topo_list_out,brdf_list_out):  
 
-  outdir_name = entry_outdir.get()
+  outdir_name = entry_outdir.get()+'/'
   out_json = entry_outjson.get()
   images = img_list_out['text'].split('\n')
   anc_files = obs_list_out['text'].split('\n')
