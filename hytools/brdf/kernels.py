@@ -151,7 +151,7 @@ def calc_volume_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel):
         k_vol = ((np.pi/2 - phase)*np.cos(phase) + np.sin(phase))/ (np.cos(sensor_zn)*np.cos(solar_zn)) - (np.pi/2)
     elif kernel == 'ross_thick':
         # Eq 7. Wanner et al. JGRA 1995
-        k_vol = ((np.pi/2 - phase)*np.cos(phase) + np.sin(phase))/ (np.cos(sensor_zn)*np.cos(solar_zn)) - (np.pi/4)
+        k_vol = ((np.pi/2 - phase)*np.cos(phase) + np.sin(phase))/ (np.cos(sensor_zn)+np.cos(solar_zn)) - (np.pi/4)
     elif kernel in ('hotspot','roujean'):
         # Eq 8 Roujean et al. JGR 1992
         k_vol1 = (4/(3*np.pi)) * (1/(np.cos(solar_zn) + np.cos(sensor_zn)))
