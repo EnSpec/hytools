@@ -50,7 +50,7 @@ def neon_edge(hy_obj,args):
     '''
     radius =args['radius']
     y_grid, x_grid = np.ogrid[-radius: radius + 1, -radius: radius + 1]
-    window =  (x_grid**2 + y_grid**2 <= radius**2).astype(np.float)
+    window =  (x_grid**2 + y_grid**2 <= radius**2).astype(np.float32)
     buffer_edge = binary_erosion(hy_obj.mask['no_data'], window).astype(bool)
     return buffer_edge
 
