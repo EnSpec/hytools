@@ -49,8 +49,14 @@ def pairwise(iterable):
 def set_brdf(hy_obj,brdf_dict):
     hy_obj.brdf = brdf_dict
 
+def set_topo(hy_obj,topo_dict):
+    hy_obj.topo = topo_dict
+
 def update_brdf(hy_obj,args):
     hy_obj.brdf[args['key']] = args['value']
+
+def update_topo(hy_obj,args):
+    hy_obj.topo[args['key']] = args['value']
 
 def set_glint(hy_obj,glint_dict):
 
@@ -59,3 +65,22 @@ def set_glint(hy_obj,glint_dict):
         glint_dict['deep_water_sample'] = glint_dict['deep_water_sample'][hy_obj.file_name]
 
     hy_obj.glint = glint_dict
+
+def update_topo_group(subgroup_dict_in):
+
+    subgroup_dict = {}
+    group_tag_list=[]
+
+    for file_name in subgroup_dict_in.keys():
+        group_tag = subgroup_dict_in[file_name]
+        if group_tag in subgroup_dict:
+            subgroup_dict[group_tag]+=[file_name]
+        else:
+            subgroup_dict[group_tag]=[file_name]
+            group_tag_list+=[group_tag]
+
+    update_name_list=[]
+    for group_tag in subgroup_dict.keys():
+        update_name_list+=[subgroup_dict[group_tag]]
+
+    return update_name_list,group_tag_list

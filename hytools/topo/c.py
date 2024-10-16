@@ -92,6 +92,51 @@ def calc_c_coeffs(hy_obj,topo_dict):
                                                    fit_type=topo_dict['c_fit_type'])
     hy_obj.topo = topo_dict
 
+def get_band_samples(hy_obj,args):
+    band = hy_obj.get_band(args['band_num'],
+                           corrections = hy_obj.corrections)
+    return band[hy_obj.ancillary['sample_mask'] !=0]
+
+def get_cosine_i_samples(hy_obj):
+    '''Calculate and sample cosine_i
+    '''
+    cosine_i=hy_obj.cosine_i()
+    cosine_i = cosine_i[hy_obj.ancillary['sample_mask'] !=0]
+
+    return cosine_i
+
+def calc_c_coeffs_group(actors,topo_dict,group_tag):
+
+    cosine_i_samples = ray.get([a.do.remote(get_cosine_i_samples) for a in actors])
+    cosine_i_samples = np.concatenate(cosine_i_samples)
+
+    print(f'Topo Subgroup {group_tag}')
+
+    bad_bands = ray.get(actors[0].do.remote(lambda x: x.bad_bands))
+    coeffs = {}
+
+    for band_num,band in enumerate(bad_bands):
+        if ~band:
+            coeffs[band_num] = {}
+            band_samples = ray.get([a.do.remote(get_band_samples,
+                                     {'band_num':band_num}) for a in actors])
+            band_samples = np.concatenate(band_samples)
+
+            coeffs[band_num] = calc_c(band_samples,cosine_i_samples,fit_type=topo_dict['c_fit_type'])
+            progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
+
+    print('\n')
+
+    #Update TOPO coeffs
+    _ = ray.get([a.do.remote(update_topo,{'key':'coeffs',
+                                          'value': coeffs}) for a in actors])
+    _ = ray.get([a.do.remote(update_topo,{'key':'subgroup',
+                                          'value': group_tag}) for a in actors])
+
+
+
+
+
 def apply_c(hy_obj,data,dimension,index):
     ''' Apply SCSS correction to a slice of the data
 
