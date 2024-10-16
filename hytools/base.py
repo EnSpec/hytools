@@ -30,8 +30,9 @@ import warnings
 import sys
 from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
-from .io.envi import open_envi,parse_envi_header,envi_header_from_neon
+from .io.envi import open_envi,parse_envi_header,envi_header_from_neon,envi_header_from_nc
 from .io.neon import open_neon
+from .io.netcdf import open_netcdf
 from .brdf import apply_brdf_correct
 from .glint import apply_glint_correct
 from .brdf.kernels import calc_volume_kernel,calc_geom_kernel
@@ -56,6 +57,7 @@ class HyTools:
         self.glint= {'type': None}
         self.byte_order = None
         self.columns = None
+        self.columns_glt = None
         self.corrections = []
         self.crs = None
         self.data = None
@@ -63,12 +65,18 @@ class HyTools:
         self.endianness = None
         self.file_name = None
         self.file_type = None
+        self.fill_mask = None
         self.fwhm = []
+        self.glt_path = {}
+        self.glt_x = None
+        self.glt_y = None
         self.hdf_obj  = None
         self.interleave = None
         self.lines = None
+        self.lines_glt = None
         self.map_info = None
         self.mask = {}
+        self.nc4_obj  = None
         self.no_data = None
         self.offset = 0
         self.projection = None
@@ -80,7 +88,7 @@ class HyTools:
         self.wavelength_units = None
         self.wavelengths = []
 
-    def read_file(self,file_name,file_type = 'envi',anc_path = None, ext = False):
+    def read_file(self,file_name,file_type = 'envi',anc_path = None, ext = False, glt_path = None):
         self.file_name = file_name
         self.file_type = file_type
 
@@ -88,6 +96,10 @@ class HyTools:
             open_envi(self,anc_path,ext)
         elif file_type == "neon":
             open_neon(self)
+        elif file_type == "nc":
+            #print("anc_path",anc_path)
+            #print("glt_path",glt_path)
+            open_netcdf(self,anc_path,glt_path)    
         else:
             print("Unrecognized file type.")
 
@@ -96,13 +108,23 @@ class HyTools:
 
         #Match mask with ancillary mask
         if anc_path:
-            ancillary = HyTools()
-            ancillary.read_file(self.anc_path['solar_zn'][0],'envi')
-            if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
-                print('Reflectance and ancillary no data extents do not match, combining no data masks.')
-                self.mask['no_data'] &= ancillary.mask['no_data']
-            ancillary.close_data()
-            del ancillary
+
+            if file_type == 'envi':
+                ancillary = HyTools()
+                ancillary.read_file(self.anc_path['solar_zn'][0],'envi')
+                if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
+                    print('Reflectance and ancillary no data extents do not match, combining no data masks.')
+                    self.mask['no_data'] &= ancillary.mask['no_data']
+                ancillary.close_data()
+                del ancillary
+            elif file_type == 'nc':
+                ancillary = HyTools()
+                ancillary.read_file(self.anc_path['slope'][0],'envi')
+                if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
+                    print('Reflectance and ancillary no data extents do not match, combining no data masks.')
+                    self.mask['no_data'] &= ancillary.mask['no_data']
+                ancillary.close_data()
+                del ancillary
 
         self.base_name = os.path.basename(os.path.splitext(self.file_name)[0])
 
@@ -146,6 +168,13 @@ class HyTools:
         elif self.file_type  == "neon":
             self.hdf_obj = h5py.File(self.file_name,'r')
             self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
+        elif self.file_type  == "nc":   
+            self.nc4_obj = h5py.File(self.file_name,'r')
+            self.data = self.nc4_obj["reflectance"]
+            self.glt_x = self.load_glt('glt_x')
+            self.glt_y = self.load_glt('glt_y')
+            self.fill_mask = (self.glt_x>0)
+
 
     def close_data(self):
         """Close data object.
@@ -156,6 +185,9 @@ class HyTools:
         elif self.file_type  == "neon":
             self.hdf_obj.close()
             self.hdf_obj = None
+        elif self.file_type  == "nc":
+            self.nc4_obj.close()
+            self.nc4_obj = None    
         self.data = None
 
 
@@ -210,6 +242,8 @@ class HyTools:
         self.load_data()
         if self.file_type == "neon":
             band =  self.data[:,:,index]
+        elif self.file_type == "nc":
+            band =  self.data[:,:,index]    
         elif self.file_type == "envi":
             band = envi_read_band(self.data,index,self.interleave)
             if self.endianness != sys.byteorder:
@@ -258,7 +292,7 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon":
+        if self.file_type == "neon" or self.file_type == "nc":
             pixels = []
             for line,column in zip(lines,columns):
                 pixels.append(self.data[line,column,:])
@@ -289,7 +323,7 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon":
+        if self.file_type == "neon" or self.file_type == "nc":
             line = self.data[index,:,:]
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
@@ -316,7 +350,7 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon":
+        if self.file_type == "neon" or self.file_type == "nc":
             column = self.data[:,index,:]
         elif self.file_type == "envi":
             column = envi_read_column(self.data,index,self.interleave)
@@ -349,7 +383,7 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon":
+        if self.file_type == "neon" or self.file_type == "nc":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
         elif self.file_type == "envi":
             chunk =  envi_read_chunk(self.data,col_start,col_end,
@@ -394,11 +428,11 @@ class HyTools:
             ancillary.read_file(self.anc_path[anc][0],'envi')
             ancillary.load_data()
             anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
-            if self.endianness != sys.byteorder:
+            if ancillary.endianness != sys.byteorder:
                 anc_data = anc_data.byteswap()
             ancillary.close_data()
 
-        else:
+        elif self.file_type == "neon":
             hdf_obj = h5py.File(self.file_name,'r')
             metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
             keys = self.anc_path[anc]
@@ -411,6 +445,24 @@ class HyTools:
                 anc_data = np.ones((self.lines, self.columns)) * anc_data
             hdf_obj.close()
 
+        elif self.file_type == "nc":
+            if bool(self.anc_path)==False:
+                return None
+
+            else:    
+                if (self.anc_path[anc][0]).endswith('nc'):
+                    nc4_anc_obj = h5py.File(self.anc_path[anc][0],'r')
+                    anc_data = nc4_anc_obj['obs'][()][:,:,self.anc_path[anc][1]]
+                    nc4_anc_obj.close()
+                else:
+                    ancillary = HyTools()
+                    ancillary.read_file(self.anc_path[anc][0],'envi')
+                    ancillary.load_data()
+                    anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
+                    if ancillary.endianness != sys.byteorder:
+                        anc_data = anc_data.byteswap()
+                    ancillary.close_data()                
+
         if radians and (anc in angular_anc):
             anc_data= np.radians(anc_data)
 
@@ -422,6 +474,23 @@ class HyTools:
 
     def load_anc(self,anc,radians = True):
         self.ancillary[anc] = self.get_anc(self,anc,radians)
+
+
+    def load_glt(self,glt):
+        # check if GLT inside nc is used 
+        if self.glt_path[glt][0]=='location':
+            glt_data = self.nc4_obj[self.glt_path[glt][0]][self.glt_path[glt][1]][()]
+        else:
+            glt_img = HyTools()
+            glt_img.read_file(self.glt_path[glt][0],'envi')
+            glt_img.load_data()
+            glt_data = np.copy(glt_img.get_band(self.glt_path[glt][1]))
+            if glt_img.endianness != sys.byteorder:
+                glt_data = glt_data.byteswap()
+            glt_img.close_data()               
+
+        return glt_data   
+
 
     def volume_kernel(self,kernel):
         """Calculate volume scattering kernel.
@@ -501,12 +570,14 @@ class HyTools:
             return function(self)
 
 
-    def get_header(self):
+    def get_header(self,warp_glt = False):
         """ Return header dictionary
 
         """
         if self.file_type == "neon":
             header_dict = envi_header_from_neon(self)
+        elif self.file_type == "nc":
+            header_dict = envi_header_from_nc(self,warp_glt = warp_glt)    
         elif self.file_type == "envi":
             header_dict = parse_envi_header(self.header_file)
         return header_dict

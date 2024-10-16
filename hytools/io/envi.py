@@ -167,7 +167,6 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
             low_l = hy_obj.data[0,-1,0]
             low_r = hy_obj.data[0,-1,-1]
 
-
         if hy_obj.endianness != sys.byteorder:
             up_l = up_l.byteswap()
             up_r = up_r.byteswap()
@@ -237,6 +236,38 @@ class WriteENVI:
         elif self.interleave == "bsq":
             self.data[:,index,:] = np.moveaxis(line,0,1)
 
+
+    def write_line_glt(self,arr,glt_indices_y,glt_indices_x):
+        """
+        Args:
+            line (numpy.ndarray): Line array (columns,bands).
+            index (int): Zero-based line index.
+
+        Returns:
+            None.
+
+        """
+        #print(glt_indices_y[:3])
+        #print(glt_indices_x[:3])
+
+        #ind=np.where(fill_mask[glt_indices_y,glt_indices_x]==1)
+        #print(arr.shape)
+        #tmp_arr=self.data[:,glt_indices_y,glt_indices_x]
+        #print(self.data.shape)
+        #print(glt_indices_y.shape)
+        
+        
+
+        if self.interleave == "bip":
+            self.data[glt_indices_y,glt_indices_x,:] = arr
+
+        elif self.interleave == "bil":
+            self.data[glt_indices_y,:,glt_indices_x] = arr #np.moveaxis(line,0,1)
+
+        elif self.interleave == "bsq":
+            self.data[:,glt_indices_y,glt_indices_x] = np.moveaxis(arr,0,1)
+
+
     def write_column(self,column,index):
         """
         Args:
@@ -272,6 +303,30 @@ class WriteENVI:
             self.data[:,index,:] = band
         elif self.interleave == "bsq":
             self.data[index,:,:]= band
+
+    def write_band_glt(self,band,index,glt_indices,fill_mask):
+        """
+        Args:
+            band (numpy.ndarray): Band array (lines,columns).
+            index (int): Zero-based band index.
+            glt_indices (numpy.ndarray,numpy.ndarray): Zero-based tuple indices.
+
+        Returns:
+            None.
+
+        """
+
+        if self.interleave == "bip":
+            self.data[:,:,index][fill_mask] = band[glt_indices]
+            self.data[:,:,index][~fill_mask] = self.header_dict['data ignore value']
+        elif self.interleave == "bil":
+            self.data[:,index,:][fill_mask] = band[glt_indices]
+            self.data[:,index,:][~fill_mask] = self.header_dict['data ignore value']
+        elif self.interleave == "bsq":
+            self.data[index,:,:][fill_mask] = band[glt_indices]
+            self.data[index,:,:][~fill_mask] = self.header_dict['data ignore value']
+
+
 
     def write_chunk(self,chunk,line_index,column_index):
         """
@@ -350,6 +405,44 @@ def envi_header_from_neon(hy_obj, interleave = 'bsq'):
     header_dict["wavelength units"] = hy_obj.wavelength_units
     header_dict["data ignore value"] =hy_obj.no_data
     header_dict["wavelength"] =hy_obj.wavelengths
+    return header_dict
+
+def envi_header_from_nc(hy_obj, interleave = 'bsq', warp_glt = False):
+    """Create an ENVI header dictionary from NetCDF metadata
+
+    Args:
+        hy_obj (Hytools object): Populated HyTools file object.
+        interleave (str, optional): Date interleave type. Defaults to 'bil'.
+
+    Returns:
+        dict: Populated ENVI header dictionary.
+
+    """
+
+    header_dict = {}
+    header_dict["ENVI description"] = "{}"
+    
+    if warp_glt == False:
+        header_dict["samples"] = hy_obj.columns
+        header_dict["lines"]   = hy_obj.lines
+    else:
+        header_dict["samples"] = hy_obj.columns_glt
+        header_dict["lines"]   = hy_obj.lines_glt
+        header_dict["map info"] = hy_obj.map_info
+        header_dict["coordinate system string"] = hy_obj.projection
+    
+    header_dict["bands"] = 2 #hy_obj.bands
+    header_dict["header offset"] = 0
+    header_dict["file type"] = "ENVI Standard"
+    header_dict["data type"] = 4
+    header_dict["interleave"] = interleave
+    header_dict["sensor type"] = ""
+    header_dict["byte order"] = 0
+    
+
+    header_dict["wavelength units"] = hy_obj.wavelength_units
+    header_dict["data ignore value"] = hy_obj.no_data
+    header_dict["wavelength"] = hy_obj.wavelengths
     return header_dict
 
 
