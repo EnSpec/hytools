@@ -13,7 +13,9 @@ Two scripts will be used concecutively for this purpose
 
 ### Extraction
 
-Target flightline can be set with the last commandline parameter. Order is determined by the order of the ```input_files``` in the configuration json file. In this step, each single run can be independent. The output h5 file will be stored in the output path defined in the configuration file, which may or may not necessarily be the same for each run. If *'topo'* is enabled, the resultant coefficient json file will also stored there, and the extracted reflectance samples in h5 will be topograhically corrected.
+Target flightline can be set with the last commandline parameter. The order is determined by the order of the ```input_files``` in the configuration json file. In this step, each single run can be independent. The output h5 file will be stored in the output path defined in the configuration file, which may or may not necessarily be the same for each run. If ```topo``` is enabled, the resultant coefficient json file will also be stored there, and the extracted reflectance samples in h5 will be topograhically corrected. 
+
+Please make sure the bands for computing NDVI are in the good band range of the configuration file.
 
 ```bash
 # first line
@@ -35,3 +37,47 @@ python ./scripts/image_correct_combine_sample_chtc.py path/to/the/configuration/
 ```
 
 All brdf coefficient json files will be stored in the same path specified in the configuration json file.
+
+### Script to run the two steps together
+
+If scripts are not run in a HTC-like system, they can still be run in a single machine with multiple CPU cores. This script is a simplified version of the workflow for combining two steps of FlexBRDF ([run_single_process_merge.py](../scripts/run_single_process_merge.py)). It requires "*path/to/the/configuration/json/file*" and the total number of flightlines in the group as inputs.
+
+```python
+import sys, os
+import multiprocessing
+import subprocess, json
+
+exec_str="python ./script/image_correct_get_sample_chtc.py "
+
+merge_str="python ./script/image_correct_combine_sample_chtc.py {} {}"
+
+def run_command(command):
+    print(command)
+    subprocess.run(command,shell=True) 
+
+
+def main():
+
+    config_file = sys.argv[1]
+    total_count = int(sys.argv[2])
+    worker_count = min(os.cpu_count()-1,total_count)
+    
+    with open(config_file, 'r') as outfile:
+        config_dict = json.load(outfile)
+        h5_folder=config_dict["export"]["output_dir"]
+
+        pool = multiprocessing.Pool(processes=worker_count)
+
+        commands =  [f"{exec_str} {config_file} {order}" for order in range(total_count)]
+        pool.map(run_command, commands)
+        pool.close()
+        pool.join()  # Wait for all subprocesses to finish
+
+        print('All extractions are done.')
+        
+        # Final step to use all pixels in the group to estimate BRDF coefficients
+        subprocess.run(merge_str.format(config_file,h5_folder),shell=True) 
+
+if __name__== "__main__":
+    main()
+```
