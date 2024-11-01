@@ -55,7 +55,7 @@ def main():
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
         export_coeffs_topo(Ht_Obj,config_dict['export'])
-    
+
 
 def export_h5(hy_obj,export_dict,obj_dict):
 

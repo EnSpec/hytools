@@ -3,7 +3,7 @@ import sys, os
 import multiprocessing
 import subprocess, json
 
-exec_str="python ~/hys_test/gdrive_test/image_correct_export_image.py "   
+exec_str="python ../no_ray/image_correct_export_image.py " 
 
 def run_command(command):
     print(command)
@@ -17,11 +17,14 @@ def main():
 
     with open(config_file, 'r') as outfile:
         config_dict = json.load(outfile)
-        h5_folder=config_dict["export"]["output_dir"]
+
+        if total_count > len(config_dict["input_files"]):
+            print("Out of upper bound")
+            return
 
         pool = multiprocessing.Pool(processes=worker_count)
 
-        commands =  [f"{exec_str} {config_file} {order}" for order in range(total_count)]  #[f"{exec_str} 0", f"{exec_str} 1"]
+        commands =  [f"{exec_str} {config_file} {order}" for order in range(total_count)]
         pool.map(run_command, commands)
         pool.close()
         pool.join()  # Wait for all subprocesses to finish

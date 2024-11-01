@@ -3,7 +3,7 @@ import sys, os
 import multiprocessing
 import subprocess, json
 
-exec_str="python /home/ye6/hys_test/gdrive_test/trait_estimate_inde.py "   
+exec_str="python ../no_ray/trait_estimate_inde.py "
 
 def run_command(command):
     print(command)
@@ -33,7 +33,7 @@ def main():
             for trait_j in range(total_trait_count):
                 param_list+=[[img_i,trait_j]]
 
-        commands =  [f"{exec_str} {config_file} {param_order[0]} {param_order[1]}" for param_order in param_list]  #[f"{exec_str} 0", f"{exec_str} 1"]
+        commands=[f"{exec_str} {config_file} {param_order[0]} {param_order[1]}" for param_order in param_list]
         pool.map(run_command, commands)
         pool.close()
         pool.join()  # Wait for all subprocesses to finish

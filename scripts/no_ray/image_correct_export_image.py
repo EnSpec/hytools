@@ -28,8 +28,8 @@ def main():
     actor = ht.HyTools()
 
     if config_dict['file_type'] == 'envi':
-        anc_files = config_dict["anc_files"]
-        actor.read_file(image,config_dict['file_type'],anc_files[image])
+        anc_file = config_dict["anc_files"][image]
+        actor.read_file(image,config_dict['file_type'],anc_file)
 
     elif config_dict['file_type'] == 'neon':
         actor.read_file(image,config_dict['file_type'])
@@ -75,7 +75,7 @@ def apply_corrections_single(hy_obj,config_dict):
     output_name = config_dict['export']['output_dir']
     output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0]
     output_name +=  "_%s" % config_dict['export']["suffix"]
-    
+
     #Export all wavelengths
     if len(config_dict['export']['subset_waves']) == 0:
 
@@ -110,12 +110,12 @@ def apply_corrections_single(hy_obj,config_dict):
                                    corrections=hy_obj.corrections)
             writer.write_band(band, b)
         writer.close()
-    
+
     #Export masks
     if (config_dict['export']['masks']) and (len(config_dict["corrections"]) > 0):
         masks = []
         mask_names = []
-        
+
         for correction in config_dict["corrections"]:
             for mask_type in getattr(hy_obj,correction)['apply_mask']:
                 mask_names.append(correction + '_' + mask_type[0])

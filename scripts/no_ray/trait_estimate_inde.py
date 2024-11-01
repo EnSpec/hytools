@@ -21,25 +21,23 @@ def main():
 
     image= config_dict["input_files"][image_order]
 
-    HyTools = ht.HyTools()
+    actor = ht.HyTools()
 
     # Load data
     if config_dict['file_type'] == 'envi':
-        anc_file = config_dict["anc_files"][image]        
-        HyTools.read_file(image,config_dict['file_type'])
+        anc_file = config_dict["anc_files"][image]
+        actor.read_file(image,config_dict['file_type'],anc_file)
 
     elif config_dict['file_type'] == 'neon':
-        HyTools.read_file(image,config_dict['file_type'])
- 
-    trait = config_dict['trait_models'][trait_order]
-    
+        actor.read_file(image,config_dict['file_type'])
 
-    #for trait in config_dict['trait_models']:
+    trait = config_dict['trait_models'][trait_order]
+
     with open(trait, 'r') as json_file:
         trait_model = json.load(json_file)
         print("\t %s" % trait_model["name"])
 
-    apply_single_trait_models(HyTools,config_dict,trait_order)
+    apply_single_trait_models(actor,config_dict,trait_order)
 
 
 def apply_single_trait_models(hy_obj,config_dict,trait_order):

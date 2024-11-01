@@ -50,6 +50,8 @@ def main():
 
 
 def load_sample_h5(h5_file_list):
+    '''Load information from H5 files, and return a dictionary with all the info needed.
+    '''
 
     combine_refl = []
     combine_kernel = []
@@ -57,7 +59,7 @@ def load_sample_h5(h5_file_list):
     ndi_list = []
 
     bad_bands=None #get from the 1st image
-  
+
     for i_order, h5name in enumerate(h5_file_list):
         h5_obj = h5py.File(h5name, "r")
         wavelist = h5_obj["wavelengths"][()]
@@ -67,7 +69,7 @@ def load_sample_h5(h5_file_list):
 
         if i_order==0:
             bad_bands = h5_obj["bad_bands"][()] 
-        
+
         h5_obj.close()
 
         sample_nir=refl_samples[:,get_wave(850,wavelist)]
@@ -86,7 +88,7 @@ def load_sample_h5(h5_file_list):
         "mean_solar_zn": np.array(solar_zn_list).mean(),
         "bad_bands":bad_bands,
     }
-    
+
 
 def export_coeffs_brdf(data_dict,export_dict,images):
     '''Export correction coefficients to file.
@@ -102,25 +104,23 @@ def export_coeffs_brdf(data_dict,export_dict,images):
             json.dump(corr_dict,outfile)
 
 def get_wave(wave,wavelengths):
-        """Return the band image corresponding to the input wavelength.
-        If not an exact match the closest wavelength will be returned.
+    """Return the band image corresponding to the input wavelength.
+    If not an exact match the closest wavelength will be returned.
+    Args:
+        wave (float): Wavelength in image units.
+        wavelengths (list): Wavelength list
 
-        Args:
-            wave (float): Wavelength in image units.
-            wavelengths (list): Wavelength list
+    Returns:
+        band index 0-based.
 
+    """
 
-        Returns:
-            band index 0-based.
-
-        """
-
-        if (wave  > wavelengths.max()) | (wave  < wavelengths.min()):
-            print("Input wavelength outside wavelength range!")
-            band_ind = None
-        else:
-            band_ind = np.argmin(np.abs(wavelengths - wave))
-        return band_ind
+    if (wave  > wavelengths.max()) | (wave  < wavelengths.min()):
+        print("Input wavelength outside wavelength range!")
+        band_ind = None
+    else:
+        band_ind = np.argmin(np.abs(wavelengths - wave))
+    return band_ind
 
 if __name__== "__main__":
     main()
