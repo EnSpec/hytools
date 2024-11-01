@@ -9,7 +9,7 @@ Extracted samples are stored in HDF files in the current solution, which is one 
 Take HTC as an example, DAG management can be used to monitor and control the work flow.
 
 Two scripts will be used concecutively for this purpose
-([image_correct_get_sample_chtc.py](../scripts/image_correct_get_sample_chtc.py) and [image_correct_combine_sample_chtc.py](../scripts/image_correct_combine_sample_chtc.py)).
+([image_correct_get_sample_chtc.py](../scripts/no_ray/image_correct_get_sample_chtc.py) and [image_correct_combine_sample_chtc.py](../scripts/no_ray/image_correct_combine_sample_chtc.py)).
 
 ### Extraction
 
@@ -19,11 +19,11 @@ Please make sure the bands for computing NDVI are in the good band range of the 
 
 ```bash
 # first line
-python ./scripts/image_correct_get_sample_chtc.py path/to/the/configuration/json/file  0 
+python ./scripts/no_ray/image_correct_get_sample_chtc.py path/to/the/configuration/json/file  0 
 # second line
-python ./scripts/image_correct_get_sample_chtc.py path/to/the/configuration/json/file  1 
+python ./scripts/no_ray/image_correct_get_sample_chtc.py path/to/the/configuration/json/file  1 
 # third line
-python ./scripts/image_correct_get_sample_chtc.py path/to/the/configuration/json/file  2 
+python ./scripts/no_ray/image_correct_get_sample_chtc.py path/to/the/configuration/json/file  2 
 # so forth
 ... ...
 ```
@@ -33,23 +33,23 @@ python ./scripts/image_correct_get_sample_chtc.py path/to/the/configuration/json
 After all the independent jobs are finished, the final step is to combin all samples and continue the BRDF modeling. 
 
 ```bash
-python ./scripts/image_correct_combine_sample_chtc.py path/to/the/configuration/json/file folder/of/the/h5files/in/the/same/group
+python ./scripts/no_ray/image_correct_combine_sample_chtc.py path/to/the/configuration/json/file folder/of/the/h5files/in/the/same/group
 ```
 
 All brdf coefficient json files will be stored in the same path specified in the configuration json file.
 
 ### Script to run the two steps together
 
-If scripts are not run in a HTC-like system, they can still be run in a single machine with multiple CPU cores. This script is a simplified version of the workflow for combining two steps of FlexBRDF ([run_single_process_merge.py](../scripts/run_single_process_merge.py)). It requires "*path/to/the/configuration/json/file*" and the total number of flightlines in the group as inputs.
+If scripts are not run in a HTC-like system, they can still be run in a single machine with multiple CPU cores. This script is a simplified version of the workflow for combining two steps of FlexBRDF ([run_single_process_merge.py](../scripts/no_ray/run_single_process_merge.py)). It requires "*path/to/the/configuration/json/file*" and the total number of flightlines in the group as inputs. It initiates multiple instances of the script [image_correct_get_sample_chtc.py](../scripts/no_ray/image_correct_get_sample_chtc.py)
 
 ```python
 import sys, os
 import multiprocessing
 import subprocess, json
 
-exec_str="python ./script/image_correct_get_sample_chtc.py "
+exec_str="python ./script/no_ray/image_correct_get_sample_chtc.py "
 
-merge_str="python ./script/image_correct_combine_sample_chtc.py {} {}"
+merge_str="python ./script/no_ray/image_correct_combine_sample_chtc.py {} {}"
 
 def run_command(command):
     print(command)
@@ -81,3 +81,16 @@ def main():
 if __name__== "__main__":
     main()
 ```
+
+### Export corrected images
+
+After the previous two steps for TOPO/BRDF model estimation, user can export correctd images with those precomputed coefficients. 
+
+This script is a simplified version of the workflow for exporting images and masks ([run_single_process_export.py](../scripts/no_ray/run_single_process_export.py)). It requires "*path/to/the/configuration/json/file*" and the total number of flightlines in the group as inputs. It initiates multiple instances of the script [image_correct_export_image.py](../scripts/no_ray/image_correct_export_image.py)
+
+
+### Export trait estimation with corrected image
+
+The correction coefficients can also be used for trait mapping. If the any of the three corrections is enabled, trait prediction will be applied to corrected pixels.
+
+This script is a simplified version of the workflow for exporting images and masks ([run_single_process_trait.py](../scripts/no_ray/run_single_process_trait.py)). It requires "*path/to/the/trait/export/configuration/json/file*", the total number of flightlines in the group, and the total number of traits as inputs. It initiates multiple instances of the script [trait_estimate_inde.py](../scripts/no_ray/trait_estimate_inde.py)

@@ -38,6 +38,16 @@ def set_glint_parameters(actors, config_dict):
         a.do.remote(lambda x: x.corrections.append('glint')) for a in actors
     ])
 
+def set_glint_parameters_single(hy_obj, config_dict):
+    # Assign glint dict
+    glint_dict = config_dict['glint']
+
+    # Set Glint dict
+    set_glint(hy_obj, glint_dict)
+
+    # Add glint correction
+    hy_obj.corrections.append('glint')
+
 
 def apply_glint_correct(hy_obj, data, dimension, index):
     ''' Corrects glint based on the specified algorithm in the config.
