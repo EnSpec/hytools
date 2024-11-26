@@ -8,12 +8,12 @@ Extracted samples are stored in HDF files in the current solution, which is one 
 
 Take HTC as an example, DAG management can be used to monitor and control the work flow.
 
-Two scripts will be used concecutively for this purpose
+Two scripts will be used consecutively for this purpose
 ([image_correct_get_sample_chtc.py](../scripts/no_ray/image_correct_get_sample_chtc.py) and [image_correct_combine_sample_chtc.py](../scripts/no_ray/image_correct_combine_sample_chtc.py)).
 
 ### Extraction
 
-Target flightline can be set with the last commandline parameter. The order is determined by the order of the ```input_files``` in the configuration json file. In this step, each single run can be independent. The output h5 file will be stored in the output path defined in the configuration file, which may or may not necessarily be the same for each run. If ```topo``` is enabled, the resultant coefficient json file will also be stored there, and the extracted reflectance samples in h5 will be topograhically corrected. 
+Target flightline can be set with the last commandline parameter. The order is determined by the order of the ```input_files``` in the configuration json file. In this step, each single run can be independent. The output h5 file will be stored in the output path defined in the configuration file, which may or may not necessarily be the same for each run. If ```topo``` is enabled, the resultant coefficient json file will also be stored there, and the extracted reflectance samples in h5 will be topographically corrected. 
 
 Please make sure the bands for computing NDVI are in the good band range of the configuration file.
 
@@ -30,7 +30,7 @@ python ./scripts/no_ray/image_correct_get_sample_chtc.py path/to/the/configurati
 
 ### Combination
 
-After all the independent jobs are finished, the final step is to combin all samples and continue the BRDF modeling. 
+After all the independent jobs are finished, the final step is to combine all samples and continue the BRDF modeling. 
 
 ```bash
 python ./scripts/no_ray/image_correct_combine_sample_chtc.py path/to/the/configuration/json/file folder/of/the/h5files/in/the/same/group
@@ -84,7 +84,7 @@ if __name__== "__main__":
 
 ### Export corrected images
 
-After the previous two steps for TOPO/BRDF model estimation, user can export correctd images with those precomputed coefficients. 
+After the previous two steps for TOPO/BRDF model estimation, user can export corrected images with those precomputed coefficients. 
 
 This script is a simplified version of the workflow for exporting images and masks ([run_single_process_export.py](../scripts/no_ray/run_single_process_export.py)). It requires "*path/to/the/configuration/json/file*" and the total number of flightlines in the group as inputs. It initiates multiple instances of the script [image_correct_export_image.py](../scripts/no_ray/image_correct_export_image.py)
 

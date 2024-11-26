@@ -24,7 +24,7 @@ config_dict['bad_bands'] =[[300,400],[1337,1430],[1800,1960],[2450,2600]]
 
 # Input data settings for ENVI
 #################################################################
-''' Only differnce between ENVI and NEON settings is the specification
+''' Only difference between ENVI and NEON settings is the specification
 of the ancillary datasets (ex. viewing and solar geometry). All hytools
 functions assume that the ancillary data and the image date are the same
 size, spatially, and are ENVI formatted files.
@@ -80,7 +80,7 @@ config_dict["resampling"]['type'] =  'cubic'
 # Masks
 ##########################################################
 '''Specify list of masking layers to be appended to the
-trait map. Each will be placed in a seperate layer.
+trait map. Each will be placed in a separate layer.
 
 For no masks provide an empty list: []
 '''

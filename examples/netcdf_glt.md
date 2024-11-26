@@ -6,7 +6,7 @@ Configuration json file is slightly different from the basic configuration (an e
 
 ## Topograhic Correction
 
-NetCDF and its OBS files can be accessed to implement the basic normalization like topographic correction. Configuration file can be steup like below. anc_files can be eaither nc format or envi format.
+NetCDF and its OBS files can be accessed to implement the basic normalization like topographic correction. Configuration file can be setup like below. anc_files can be either nc format or envi format.
 
 
 
@@ -115,7 +115,7 @@ Export without using GLT
 
 ![RGB without GLT](./img/emit_001_20231101T024133_2330502_014_rgb.jpg "Raw")
 
-Export warpped image with GLT
+Export warped image with GLT
 
 ![RGB with GLT](./img/emit_001_20231101T024133_2330502_014_rgb_warp.jpg "warp")
 

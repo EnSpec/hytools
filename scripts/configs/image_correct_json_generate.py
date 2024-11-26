@@ -1,6 +1,6 @@
 '''Template script for generating image_correct configuration JSON files.
 
-    These settiing are meant only as an example, are not appropriate for
+    These setting are meant only as an example, are not appropriate for
     all situations and may need to be adjusted
 '''
 
