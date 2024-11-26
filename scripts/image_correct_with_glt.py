@@ -43,7 +43,7 @@ def main():
                                         anc_files[image]) for a,image in zip(actors,images)])
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
-    elif config_dict['file_type'] == 'nc':
+    elif config_dict['file_type'] == 'emit' or config_dict['file_type'] == 'ncav':
         anc_files = config_dict["anc_files"]
         if bool(config_dict["glt_files"]):
             glt_files = config_dict["glt_files"]

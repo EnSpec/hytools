@@ -50,7 +50,7 @@ def main():
         group_tag_list=None
 
 
-    if config_dict['file_type'] == 'envi':
+    if config_dict['file_type'] == 'envi' or config_dict['file_type'] == 'ncav' or config_dict['file_type'] == 'emit':
         anc_files = config_dict["anc_files"]
         _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
                                         anc_files[image]) for a,image in zip(actors,images)])
@@ -65,7 +65,7 @@ def main():
         if correction =='topo':
             time_topo_start = time.perf_counter() #process_time_ns()
 
-            calc_topo_coeffs(actors,actor_subgroup,config_dict['topo'],group_tag_list)
+            calc_topo_coeffs(actors,config_dict['topo'],actor_group_list=actor_subgroup,group_tag_list=group_tag_list)
 
             time_topo_end = time.perf_counter() #process_time_ns()
             print("TOPO Time: {} sec.".format(time_topo_end - time_topo_start))

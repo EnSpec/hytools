@@ -96,10 +96,11 @@ class HyTools:
             open_envi(self,anc_path,ext)
         elif file_type == "neon":
             open_neon(self)
-        elif file_type == "nc":
-            #print("anc_path",anc_path)
-            #print("glt_path",glt_path)
-            open_netcdf(self,anc_path,glt_path)    
+        elif file_type == "emit":
+            open_netcdf(self,'EMIT',anc_path,glt_path)
+        elif file_type == "ncav":
+            open_netcdf(self,'AV',anc_path,glt_path)
+
         else:
             print("Unrecognized file type.")
 
@@ -117,7 +118,7 @@ class HyTools:
                     self.mask['no_data'] &= ancillary.mask['no_data']
                 ancillary.close_data()
                 del ancillary
-            elif file_type == 'nc':
+            elif file_type == 'emit':
                 ancillary = HyTools()
                 ancillary.read_file(self.anc_path['slope'][0],'envi')
                 if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
@@ -168,12 +169,15 @@ class HyTools:
         elif self.file_type  == "neon":
             self.hdf_obj = h5py.File(self.file_name,'r')
             self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
-        elif self.file_type  == "nc":   
+        elif self.file_type  == "emit":
             self.nc4_obj = h5py.File(self.file_name,'r')
             self.data = self.nc4_obj["reflectance"]
             self.glt_x = self.load_glt('glt_x')
             self.glt_y = self.load_glt('glt_y')
             self.fill_mask = (self.glt_x>0)
+        elif self.file_type  == "ncav":
+            self.nc4_obj = h5py.File(self.file_name,'r')
+            self.data = self.nc4_obj["reflectance"]["reflectance"]
 
 
     def close_data(self):
@@ -185,9 +189,9 @@ class HyTools:
         elif self.file_type  == "neon":
             self.hdf_obj.close()
             self.hdf_obj = None
-        elif self.file_type  == "nc":
+        elif self.file_type  == "emit" or self.file_type == "ncav":
             self.nc4_obj.close()
-            self.nc4_obj = None    
+            self.nc4_obj = None
         self.data = None
 
 
@@ -242,8 +246,10 @@ class HyTools:
         self.load_data()
         if self.file_type == "neon":
             band =  self.data[:,:,index]
-        elif self.file_type == "nc":
-            band =  self.data[:,:,index]    
+        elif self.file_type == "emit":
+            band =  self.data[:,:,index]
+        elif self.file_type == "ncav":
+            band =  self.data[index,:,:]
         elif self.file_type == "envi":
             band = envi_read_band(self.data,index,self.interleave)
             if self.endianness != sys.byteorder:
@@ -292,10 +298,15 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon" or self.file_type == "nc":
+        if self.file_type == "neon" or self.file_type == "emit":
             pixels = []
             for line,column in zip(lines,columns):
                 pixels.append(self.data[line,column,:])
+            pixels = np.array(pixels)
+        elif self.file_type == "ncav":
+            pixels = []
+            for line,column in zip(lines,columns):
+                pixels.append(self.data[:,line,column])
             pixels = np.array(pixels)
         elif self.file_type == "envi":
             pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
@@ -323,8 +334,10 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon" or self.file_type == "nc":
+        if self.file_type == "neon" or self.file_type == "emit":
             line = self.data[index,:,:]
+        elif self.file_type == "ncav":
+            line = self.data[:,index,:]
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
             if self.endianness != sys.byteorder:
@@ -350,8 +363,10 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon" or self.file_type == "nc":
+        if self.file_type == "neon" or self.file_type == "emit":
             column = self.data[:,index,:]
+        elif self.file_type == "ncav":
+            column = self.data[:,:,index]
         elif self.file_type == "envi":
             column = envi_read_column(self.data,index,self.interleave)
             if self.endianness != sys.byteorder:
@@ -383,8 +398,10 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon" or self.file_type == "nc":
+        if self.file_type == "neon" or self.file_type == "emit":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
+        elif self.file_type == "ncav":
+            chunk = self.data[:,line_start:line_end,col_start:col_end]
         elif self.file_type == "envi":
             chunk =  envi_read_chunk(self.data,col_start,col_end,
                                      line_start,line_end,self.interleave)
@@ -445,14 +462,25 @@ class HyTools:
                 anc_data = np.ones((self.lines, self.columns)) * anc_data
             hdf_obj.close()
 
-        elif self.file_type == "nc":
+        elif self.file_type == "emit" or self.file_type == "ncav":
             if bool(self.anc_path)==False:
                 return None
 
             else:    
                 if (self.anc_path[anc][0]).endswith('nc'):
                     nc4_anc_obj = h5py.File(self.anc_path[anc][0],'r')
-                    anc_data = nc4_anc_obj['obs'][()][:,:,self.anc_path[anc][1]]
+                    
+                    if self.file_type == "emit":
+                        anc_data = nc4_anc_obj['obs'][()][:,:,self.anc_path[anc][1]]
+                    elif self.file_type == "ncav":
+                        anc_data_raw = nc4_anc_obj['observation_parameters'][self.anc_path[anc][1]][()]
+                        obs_glt_x = np.abs(nc4_anc_obj['geolocation_lookup_table']['sample'][()]) # some values in the GLT are negative for unknown reason
+                        obs_glt_y = np.abs(nc4_anc_obj['geolocation_lookup_table']['line'][()])
+                        anc_data = np.zeros(obs_glt_x.shape)
+                        anc_data[obs_glt_x<=0] = nc4_anc_obj['observation_parameters'][self.anc_path[anc][1]].attrs['_FillValue'][0]  # -9999
+                        data_mask_to_fill = (obs_glt_x>0)
+                        anc_data[data_mask_to_fill] = anc_data_raw[obs_glt_y[data_mask_to_fill].astype(int)-1,obs_glt_x[data_mask_to_fill].astype(int)-1]
+                        
                     nc4_anc_obj.close()
                 else:
                     ancillary = HyTools()
@@ -461,7 +489,7 @@ class HyTools:
                     anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
                     if ancillary.endianness != sys.byteorder:
                         anc_data = anc_data.byteswap()
-                    ancillary.close_data()                
+                    ancillary.close_data()
 
         if radians and (anc in angular_anc):
             anc_data= np.radians(anc_data)
@@ -477,7 +505,7 @@ class HyTools:
 
 
     def load_glt(self,glt):
-        # check if GLT inside nc is used 
+        # check if GLT inside nc is used
         if self.glt_path[glt][0]=='location':
             glt_data = self.nc4_obj[self.glt_path[glt][0]][self.glt_path[glt][1]][()]
         else:
@@ -487,9 +515,9 @@ class HyTools:
             glt_data = np.copy(glt_img.get_band(self.glt_path[glt][1]))
             if glt_img.endianness != sys.byteorder:
                 glt_data = glt_data.byteswap()
-            glt_img.close_data()               
+            glt_img.close_data()
 
-        return glt_data   
+        return glt_data
 
 
     def volume_kernel(self,kernel):
@@ -576,7 +604,7 @@ class HyTools:
         """
         if self.file_type == "neon":
             header_dict = envi_header_from_neon(self)
-        elif self.file_type == "nc":
+        elif self.file_type == "emit" or self.file_type == "ncav":
             header_dict = envi_header_from_nc(self,warp_glt = warp_glt)    
         elif self.file_type == "envi":
             header_dict = parse_envi_header(self.header_file)

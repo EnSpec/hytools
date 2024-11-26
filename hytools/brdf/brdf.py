@@ -63,6 +63,14 @@ def ndvi_stratify_samples(combine_dict):
     class_mask = class_mask.astype(np.int8)
     combine_dict['ndvi_classes'] = class_mask
 
+def get_topo_var_samples_pre(hy_obj):
+    '''Get variables for group_topo correction, run after ndvi_stratify()
+    '''
+    slope = hy_obj.get_anc('slope')
+    cosine_i = hy_obj.cosine_i()
+    sample_ind = (hy_obj.ancillary['ndvi_classes'] !=0)
+
+    return slope[sample_ind], cosine_i[sample_ind]
 
 def calc_flex_single_post(combine_data_dict,brdf_dict):
     
@@ -108,7 +116,7 @@ def calc_flex_single_post(combine_data_dict,brdf_dict):
 
 
 def calc_flex_single_pre(hy_obj,brdf_dict):
-    ''' get samples of a single image for future BRDF coefficents estimation
+    ''' get samples of a single image for future BRDF coefficients estimation
     '''
     hy_obj.brdf['coeffs'] ={}
 
@@ -135,7 +143,9 @@ def calc_flex_single_pre(hy_obj,brdf_dict):
     
     refl_samples = np.concatenate(refl_samples_list,axis=1)
 
-    return kernel_samples[:,:2], refl_samples, used_band
+    slope_samples, cos_i_samples = get_topo_var_samples_pre(hy_obj)  # slope and cosine_i
+
+    return kernel_samples[:,:2], refl_samples, used_band, slope_samples, cos_i_samples
 
 
 def calc_brdf_coeffs(actors,config_dict):
@@ -198,7 +208,7 @@ def calc_brdf_coeffs_pre(hy_obj,config_dict):
         # Create masks used for calculating coefficients
         hy_obj.gen_mask(mask_create,'calc_brdf',brdf_dict['calc_mask'])
 
-        kernel_samples, reflectance_samples,used_band = calc_flex_single_pre(hy_obj,brdf_dict)
+        kernel_samples, reflectance_samples, used_band, slope_samples, cos_i_samples = calc_flex_single_pre(hy_obj,brdf_dict)
 
     hy_obj.corrections.append('brdf')
 
@@ -208,6 +218,8 @@ def calc_brdf_coeffs_pre(hy_obj,config_dict):
         "kernel_samples":kernel_samples,
         "reflectance_samples":reflectance_samples,
         "used_band":used_band,
+        "slope_samples":slope_samples,
+        "cos_i_samples":cos_i_samples,
     }
 
 

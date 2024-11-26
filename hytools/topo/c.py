@@ -55,6 +55,10 @@ def calc_c(data,cosine_i,fit_type = 'ols'):
 
     # Reshape for regression
     cosine_i = np.expand_dims(cosine_i,axis=1)
+
+    if cosine_i.shape[0]==0:
+        return 100000.0
+
     X = np.concatenate([cosine_i,np.ones(cosine_i.shape)],axis=1)
 
     # Eq 7. Soenen et al. 2005

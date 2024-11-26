@@ -94,7 +94,7 @@ field_dict = {"acquisition time": "str",
 
 
 def open_envi(hy_obj,anc_path = {}, ext = False):
-    """Open ENVI formated image file and populate Hytools object.
+    """Open ENVI formatted image file and populate Hytools object.
 
 
     Args:
@@ -425,6 +425,9 @@ def envi_header_from_nc(hy_obj, interleave = 'bsq', warp_glt = False):
     if warp_glt == False:
         header_dict["samples"] = hy_obj.columns
         header_dict["lines"]   = hy_obj.lines
+        if hy_obj.file_type=='ncav':
+            header_dict["map info"] = hy_obj.map_info
+            header_dict["coordinate system string"] = hy_obj.projection
     else:
         header_dict["samples"] = hy_obj.columns_glt
         header_dict["lines"]   = hy_obj.lines_glt
@@ -465,7 +468,7 @@ def write_envi_header(output_name,header_dict,mode = 'w'):
 
     for key in header_dict.keys():
         value = header_dict[key]
-        # Convert list to comma seperated strings
+        # Convert list to comma separated strings
         if isinstance(value,(list,np.ndarray)):
             value = "{%s}" % ",".join(map(str, value))
         else:
@@ -573,7 +576,7 @@ def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
         data (numpy.memmap): Numpy memory-map.
         col_start (int):  Zero-based left column index.
         col_end (int): Non-inclusive zero-based right column index.
-        line_start (int): Zero -ased top line index.
+        line_start (int): Zero-based top line index.
         line_end (int): Non-inclusive zero-based bottom line index.
         interleave (str): Data interleave type.
 

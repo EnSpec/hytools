@@ -87,15 +87,16 @@ def load_topo_precomputed(hy_obj,topo_dict):
 
 def get_topo_sample_mask(hy_obj,topo_dict):
 
-    sample_ratio = float(topo_dict["sample_perc"])   
-    
+    sample_ratio = float(topo_dict["sample_perc"])
+
     subsample_mask = np.copy(hy_obj.mask['calc_topo'])
 
     idx = np.array(np.where(subsample_mask!=0)).T
 
-    idxRand= idx[np.random.choice(range(len(idx)),int(len(idx)*(1-sample_ratio)), replace = False)].T
+    if idx.shape[0]>5:
+        idxRand= idx[np.random.choice(range(len(idx)),int(len(idx)*(1-sample_ratio)), replace = False)].T
+        subsample_mask[idxRand[0],idxRand[1]] = 0
 
-    subsample_mask[idxRand[0],idxRand[1]] = 0
     subsample_mask = subsample_mask.astype(np.int8)
 
     hy_obj.ancillary['sample_mask']=subsample_mask
@@ -136,7 +137,7 @@ def calc_topo_coeffs(actors,topo_dict,actor_group_list=None,group_tag_list=None)
             #_ = ray.get([a.do.remote(lambda x: x.corrections.append('topo')) for a in actors])
 
         else:
-            
+
             _ = ray.get([a.do.remote(get_topo_sample_mask,topo_dict) for a in actors])
 
             for group_order, sub_actors in enumerate(actor_group_list):
@@ -178,6 +179,5 @@ def calc_topo_coeffs_single(hy_obj,topo_dict):
 
         elif topo_dict['type'] == 'c':
             calc_c_coeffs(hy_obj,topo_dict)
-    
-    hy_obj.corrections.append('topo')
 
+    hy_obj.corrections.append('topo')
