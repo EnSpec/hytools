@@ -401,7 +401,7 @@ class HyTools:
         if self.file_type == "neon" or self.file_type == "emit":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
         elif self.file_type == "ncav":
-            chunk = self.data[:,line_start:line_end,col_start:col_end]
+            chunk = np.moveaxis(self.data[:,line_start:line_end,col_start:col_end],0,-1)
         elif self.file_type == "envi":
             chunk =  envi_read_chunk(self.data,col_start,col_end,
                                      line_start,line_end,self.interleave)

@@ -24,9 +24,15 @@ def main():
     actor = ht.HyTools()
 
     # Load data
-    if config_dict['file_type'] == 'envi':
+    if config_dict['file_type'] in ('envi','emit','ncav'):
         anc_file = config_dict["anc_files"][image]
-        actor.read_file(image,config_dict['file_type'],anc_file)
+        if "glt_files" in config_dict:
+            if bool(config_dict["glt_files"]):
+                actor.read_file(image,config_dict['file_type'],anc_path=anc_file,glt_path=config_dict["glt_files"][image]) # chunk_glt writing is not supported
+            else:
+                actor.read_file(image,config_dict['file_type'],anc_path=anc_file)
+        else:
+            actor.read_file(image,config_dict['file_type'],anc_path=anc_file)
 
     elif config_dict['file_type'] == 'neon':
         actor.read_file(image,config_dict['file_type'])
@@ -93,14 +99,19 @@ def apply_single_trait_models(hy_obj,config_dict,trait_order):
 
         writer = WriteENVI(output_name,header_dict)
 
-        if config_dict['file_type'] == 'envi':
+        if config_dict['file_type'] == 'envi' or config_dict['file_type'] == 'emit':
             iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (2,hy_obj.columns), 
+                      chunk_size = (2,hy_obj.columns),
                       corrections =  hy_obj.corrections,
                       resample=resample)
         elif config_dict['file_type'] == 'neon':
             iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (int(np.ceil(hy_obj.lines/32)),int(np.ceil(hy_obj.columns/32))), 
+                      chunk_size = (int(np.ceil(hy_obj.lines/32)),int(np.ceil(hy_obj.columns/32))),
+                      corrections =  hy_obj.corrections,
+                      resample=resample)
+        elif config_dict['file_type'] == 'ncav':
+            iterator = hy_obj.iterate(by = 'chunk',
+                      chunk_size = (512,512),
                       corrections =  hy_obj.corrections,
                       resample=resample)
 
