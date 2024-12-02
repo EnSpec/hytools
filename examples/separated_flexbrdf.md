@@ -82,6 +82,10 @@ if __name__== "__main__":
     main()
 ```
 
+### Script to run the three steps together for Subgrouped-TOPO correction 
+There is also a script for combining three steps of FlexBRDF with subgroup for TOPO ([run_single_process_topogroup_merge_v3.py](../scripts/no_ray/run_single_process_topogroup_merge_v3.py)) It controls and monitors the workflow to run three related scripts ([image_correct_get_raw_sample_chtc.py](../scripts/no_ray/image_correct_get_raw_sample_chtc.py) for extracting raw samples, [image_correct_combine_topo_sample_chtc.py](../scripts/no_ray/image_correct_combine_topo_sample_chtc.py) for gathering samples in the same TOPO subgroup, and the final script for merging them for BRDF [image_correct_combine_sample_chtc.py](../scripts/no_ray/image_correct_combine_sample_chtc.py)). 
+
+
 ### Export corrected images
 
 After the previous two steps for TOPO/BRDF model estimation, user can export corrected images with those precomputed coefficients. 

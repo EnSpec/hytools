@@ -17,7 +17,7 @@
          2600
       ]
    ],
-   "file_type": "nc",
+   "file_type": "emit",
    "input_files": [
       "/data/EMIT/EMIT_L2A_RFL_001_20231101T024133_2330502_014.nc"
    ],
