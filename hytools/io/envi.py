@@ -151,21 +151,22 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
     # If no_data value is not specified guess using image corners.
     if hy_obj.no_data is None:
         hy_obj.load_data()
+        band_ind = 5
         if header_dict["interleave"] == 'bip':
-            up_l = hy_obj.data[0,0,0]
-            up_r = hy_obj.data[0,-1,0]
-            low_l = hy_obj.data[-1,0,0]
-            low_r = hy_obj.data[-1,-1,0]
+            up_l = hy_obj.data[0,0,band_ind]
+            up_r = hy_obj.data[0,-1,band_ind]
+            low_l = hy_obj.data[-1,0,band_ind]
+            low_r = hy_obj.data[-1,-1,band_ind]
         elif header_dict["interleave"] == 'bil':
-            up_l = hy_obj.data[0,0,0]
-            up_r = hy_obj.data[0,0,-1]
-            low_l = hy_obj.data[-1,0,0]
-            low_r = hy_obj.data[-1,0,-1]
+            up_l = hy_obj.data[0,band_ind,0]
+            up_r = hy_obj.data[0,band_ind,-1]
+            low_l = hy_obj.data[-1,band_ind,0]
+            low_r = hy_obj.data[-1,band_ind,-1]
         elif header_dict["interleave"] == 'bsq':
-            up_l = hy_obj.data[0,0,0]
-            up_r = hy_obj.data[0,0,-1]
-            low_l = hy_obj.data[0,-1,0]
-            low_r = hy_obj.data[0,-1,-1]
+            up_l = hy_obj.data[band_ind,0,0]
+            up_r = hy_obj.data[band_ind,0,-1]
+            low_l = hy_obj.data[band_ind,-1,0]
+            low_r = hy_obj.data[band_ind,-1,-1]
 
         if hy_obj.endianness != sys.byteorder:
             up_l = up_l.byteswap()

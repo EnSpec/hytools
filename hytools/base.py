@@ -105,7 +105,10 @@ class HyTools:
             print("Unrecognized file type.")
 
         # Create a no data mask
-        self.mask['no_data'] = self.get_band(0) != self.no_data
+        if self.bands>11:
+          self.mask['no_data'] = self.get_wave(660) > 0.5*self.no_data
+        else:
+          self.mask['no_data'] = self.get_band(0) > 0.5*self.no_data
 
         #Match mask with ancillary mask
         if anc_path:
