@@ -121,7 +121,7 @@ class HyTools:
                     self.mask['no_data'] &= ancillary.mask['no_data']
                 ancillary.close_data()
                 del ancillary
-            elif file_type == 'emit':
+            elif file_type == 'emit' and not self.anc_path['slope'][0].endswith('.nc'):
                 ancillary = HyTools()
                 ancillary.read_file(self.anc_path['slope'][0],'envi')
                 if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
