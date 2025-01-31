@@ -10,17 +10,18 @@ import hytools as ht
 from hytools.io.envi import *
 from hytools.topo import calc_topo_coeffs
 from hytools.brdf import calc_brdf_coeffs
-#from hytools.unsmooth import load_unsmooth
 from hytools.masks import mask_create
 from hytools.misc import update_topo_group
 
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s',level=logging.INFO)
 
 warnings.filterwarnings("ignore")
 np.seterr(divide='ignore', invalid='ignore')
 
 def main():
 
-    time_start = time.perf_counter() 
+    time_start = time.perf_counter()
 
     config_file = sys.argv[1]
 
@@ -31,20 +32,25 @@ def main():
 
     if ray.is_initialized():
         ray.shutdown()
-    print("Using %s CPUs." % config_dict['num_cpus'])
+    logging.info("Using %s CPUs." % config_dict['num_cpus'])
     ray.init(num_cpus = config_dict['num_cpus'])
 
     HyTools = ray.remote(ht.HyTools)
    
-    if config_dict["topo"]["subgrouped"]:
-        subgroup_list, group_tag_list = update_topo_group(config_dict["topo"]["subgroup"])
-        actor_subgroup = []
-        for file_name_list in subgroup_list:
-            actor_subgroup+=[[HyTools.remote() for image in file_name_list]]
-        actors = []
-        for actor_list in actor_subgroup:
-            actors+= actor_list
-    else:        
+    if "subgrouped" in config_dict["topo"]:
+        if config_dict["topo"]["subgrouped"]:
+            subgroup_list, group_tag_list = update_topo_group(config_dict["topo"]["subgroup"])
+            actor_subgroup = []
+            for file_name_list in subgroup_list:
+                actor_subgroup+=[[HyTools.remote() for image in file_name_list]]
+            actors = []
+            for actor_list in actor_subgroup:
+                actors+= actor_list
+        else:        
+            actors = [HyTools.remote() for image in images]
+            actor_subgroup = None
+            group_tag_list=None
+    else:
         actors = [HyTools.remote() for image in images]
         actor_subgroup = None
         group_tag_list=None
@@ -63,34 +69,34 @@ def main():
 
     for correction in config_dict["corrections"]:
         if correction =='topo':
-            time_topo_start = time.perf_counter() #process_time_ns()
+            time_topo_start = time.perf_counter()
 
             calc_topo_coeffs(actors,config_dict['topo'],actor_group_list=actor_subgroup,group_tag_list=group_tag_list)
 
-            time_topo_end = time.perf_counter() #process_time_ns()
-            print("TOPO Time: {} sec.".format(time_topo_end - time_topo_start))
+            time_topo_end = time.perf_counter()
+            logging.info("TOPO Time: {} sec.".format(time_topo_end - time_topo_start))
         elif correction == 'brdf':
-            time_brdf_start = time.perf_counter() #.process_time_ns()
+            time_brdf_start = time.perf_counter()
             calc_brdf_coeffs(actors,config_dict)
-            time_brdf_end = time.perf_counter() #.process_time_ns()
-            print("BRDF Time: {} sec.".format(time_brdf_end - time_brdf_start))
+            time_brdf_end = time.perf_counter()
+            logging.info("BRDF Time: {} sec.".format(time_brdf_end - time_brdf_start))
 
 
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
-        print("Exporting correction coefficients.")
+        logging.info("Exporting correction coefficients.")
         _ = ray.get([a.do.remote(export_coeffs,config_dict['export']) for a in actors])
 
-    time_export_start = time.perf_counter() #process_time_ns()
+    time_export_start = time.perf_counter()
     if config_dict['export']['image']:
-        print("Exporting corrected images.")
+        logging.info("Exporting corrected images.")
         _ = ray.get([a.do.remote(apply_corrections,config_dict) for a in actors])
-    time_export_end = time.perf_counter() #process_time_ns()
-    print("Export Time: {} sec.".format(time_export_end - time_export_start))
+    time_export_end = time.perf_counter()
+    logging.info("Export Time: {} sec.".format(time_export_end - time_export_start))
 
     ray.shutdown()
 
-    time_end = time.perf_counter() #process_time_ns()
-    print("Total Time: {} sec.".format(time_end - time_start))
+    time_end = time.perf_counter()
+    logging.info("Total Time: {} sec.".format(time_end - time_start))
 
 def export_coeffs(hy_obj,export_dict):
     '''Export correction coefficients to file.

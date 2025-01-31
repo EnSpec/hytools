@@ -453,17 +453,29 @@ class HyTools:
             ancillary.close_data()
 
         elif self.file_type == "neon":
-            hdf_obj = h5py.File(self.file_name,'r')
-            metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
             keys = self.anc_path[anc]
-            for key in keys:
-                metadata = metadata[key]
-            anc_data = metadata[()]
+
+            if len(keys)==2 and isinstance(keys[-1],int):
+                ancillary = HyTools()
+                ancillary.read_file(self.anc_path[anc][0],'envi')
+                ancillary.load_data()
+                anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
+                if ancillary.endianness != sys.byteorder:
+                    anc_data = anc_data.byteswap()
+                ancillary.close_data()
+                
+            else:
+                hdf_obj = h5py.File(self.file_name,'r')
+
+                metadata = hdf_obj[self.base_key]["Reflectance"]["Metadata"]
+                for key in keys:
+                    metadata = metadata[key]
+                anc_data = metadata[()]
+                hdf_obj.close()
 
             #Make solar geometry into 2D array
             if anc in ['solar_zn','solar_az']:
                 anc_data = np.ones((self.lines, self.columns)) * anc_data
-            hdf_obj.close()
 
         elif self.file_type == "emit" or self.file_type == "ncav":
             if bool(self.anc_path)==False:
