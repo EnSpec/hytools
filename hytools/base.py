@@ -340,7 +340,7 @@ class HyTools:
         if self.file_type == "neon" or self.file_type == "emit":
             line = self.data[index,:,:]
         elif self.file_type == "ncav":
-            line = self.data[:,index,:]
+            line = np.moveaxis(self.data[:,index,:],0,1)
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
             if self.endianness != sys.byteorder:
