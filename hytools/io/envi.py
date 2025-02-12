@@ -151,7 +151,7 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
     # If no_data value is not specified guess using image corners.
     if hy_obj.no_data is None:
         hy_obj.load_data()
-        band_ind = 5
+        band_ind = 5 if hy_obj.bands > 10 else 0
         if header_dict["interleave"] == 'bip':
             up_l = hy_obj.data[0,0,band_ind]
             up_r = hy_obj.data[0,-1,band_ind]
