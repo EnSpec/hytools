@@ -86,6 +86,7 @@
          2217
       ],
       "output_dir": "/data/EMIT/out/",
+	  "image_format":"netcdf",
       "suffix": "topo"
    },
    "corrections": [
@@ -151,5 +152,6 @@
    },
    "brdf": { },
    "resample": false,
-   "num_cpus": 1
+   "num_cpus": 1,
+   "outside_metadata":{"reflectance/ref-attr01":"dummy text","root_meta_tag":"dummy0"}
 }

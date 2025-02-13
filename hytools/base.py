@@ -307,10 +307,7 @@ class HyTools:
                 pixels.append(self.data[line,column,:])
             pixels = np.array(pixels)
         elif self.file_type == "ncav":
-            pixels = []
-            for line,column in zip(lines,columns):
-                pixels.append(self.data[:,line,column])
-            pixels = np.array(pixels)
+            pixels = self.data[:,lines,columns]
         elif self.file_type == "envi":
             pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
             if self.endianness != sys.byteorder:
@@ -713,6 +710,21 @@ class Iterator:
             subset = self.hy_obj.get_chunk(x_start,x_end, y_start,y_end,
                                             corrections =self.corrections,
                                             resample = self.resample)
+
+        elif self.by == "glt_line":
+            self.current_line +=1
+            if self.current_line == self.hy_obj.lines-1:
+                self.complete = True
+            valid_mask=self.hy_obj.fill_mask[self.current_line,:]
+            
+            valid_subset = self.hy_obj.get_pixels(
+                                            self.hy_obj.glt_y[self.current_line,valid_mask]-1,self.hy_obj.glt_x[self.current_line,valid_mask]-1,
+                                            corrections = self.corrections,
+                                            resample = self.resample)
+
+            subset = np.full((self.hy_obj.columns_glt,valid_subset.shape[1]),-9999).astype(np.float32)
+            subset[valid_mask,:] = valid_subset
+
         return subset
 
     def reset(self):

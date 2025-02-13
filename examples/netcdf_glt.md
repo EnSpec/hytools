@@ -1,6 +1,6 @@
 # Processing NetCDF file
 
-Other than ENVI and HDF5, NetCDF support is added for reading. Meanwhile, Geographic Lookup Table (GLT) of raster image can be used to reproject input image.
+Other than ENVI and HDF5, NetCDF support is added for reading and writing. Meanwhile, Geographic Lookup Table (GLT) of raster image can be used to reproject input image.
 
 Configuration json file is slightly different from the basic configuration (an example for topo correction: [nc_topo_correct_config.json](../examples/configs/nc_topo_correct_config.json)). 
 
@@ -58,7 +58,7 @@ NetCDF and its OBS files can be accessed to implement the basic normalization li
 
 ```
 
-There is a sample image correct script for nc files and GLT ( [image_correct_with_glt.py](../scripts/image_correct_with_glt.py)).
+There is a sample image correct script for nc files and GLT ( [image_correct_export_nc.py](../scripts/image_correct_export_nc.py)).
 
 ```bash
 python ./scripts/image_correct_with_glt.py path/to/the/configuration/json/file
@@ -119,3 +119,44 @@ Export warped image with GLT
 
 ![RGB with GLT](./img/emit_001_20231101T024133_2330502_014_rgb_warp.jpg "warp")
 
+To export NetCDF image or not is controlled by ```image_format``` in ```export```. ```"envi"``` is the default output format, if ```image_format``` is not set. If ```"netcdf"``` is selected, information from ```"outside_metadata"``` will be written in the output. Information can either be in a dictionary in the config file or a json file. 
+```json
+   "export": {
+      ...
+      "image_format": "netcdf",
+      ...
+   },  
+   ...
+   "outside_metadata":{ "XXX":"XXXXX", ... },
+   ...
+```
+Alternatively, it can be 
+```json
+   "export": {
+      ...
+      "image_format": "netcdf",
+      ...
+   },  
+   ...
+   "outside_metadata":"XXX/XXXX.json",
+   ... 
+```
+
+##  Trait Prediction
+
+Output format of trait prediction image file can also be ```"netcdf"```, which is ```"envi"``` by default.
+
+There is a sample trait export script for nc files and GLT ( [trait_estimate_nc.py](../scripts/trait_estimate_nc.py)).
+
+Accordingly, several items in the trait configuration file has to be set for this purpose.
+
+```json
+{
+    "file_type": "ncav",
+    "export_type":"netcdf",
+    "use_glt":false,
+    "output_dir": "...",
+    "outside_metadata": "...",
+    ...
+}    
+```    
