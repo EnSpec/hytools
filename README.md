@@ -15,7 +15,7 @@ transforms, masking and more. We have also created a series of command
 line tools which combine these functions and provide a streamlined
 workflow for processing images.
 
-For examples see the HyTools basics ipython notebook [here](./examples/hytools_basics_notebook.ipynb). For FlexBRDF correction see the tutorial [here](./examples/FlexBRDF_tutorial.md). An alternative of FlexBRDF correction without using Ray can be checked out [here](./examples/separated_flexbrdf.md). NetCDF and Geographic Lookup Table (GLT) support is added in the latest version [here](./examples/netcdf_glt.md).
+For examples see the HyTools basics ipython notebook [here](./examples/hytools_basics_notebook.ipynb). For FlexBRDF correction see the tutorial [here](./examples/FlexBRDF_tutorial.md). An alternative of FlexBRDF correction without using Ray can be checked out [here](./examples/separated_flexbrdf.md). NetCDF (EMIT and AVIRIS-NG) and Geographic Lookup Table (GLT) support are added in the latest version [here](./examples/netcdf_glt.md).
 
 # Installation
 

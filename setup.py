@@ -9,11 +9,12 @@ setup(
     author = 'Adam Chlus, Zhiwei Ye, Ting Zheng, Natalie Queally, Evan Greenberg and Philip Townsend',
     packages=find_packages(),
     install_requires=['h5py',
+                      'h5netcdf',
                       'matplotlib',
                       'numpy',
                       'pandas',
                       'ray',
                       'scikit-learn',
                       'scipy'],
-    python_requires='>=3.6, !=3.9.*'
+    python_requires='>=3.9'
     )
