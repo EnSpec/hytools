@@ -27,7 +27,11 @@ def main():
     images = config_dict["input_files"]
     brdf_dict = config_dict['brdf']
 
-    sample_h5_list = [ f"{sample_folder}/{os.path.splitext(os.path.basename(image))[0]}_prebrdf_sample.h5" for image in images]
+    sample_h5_list = []
+    for image in images:
+        tmp_file_name = f"{sample_folder}/{os.path.splitext(os.path.basename(image))[0]}_prebrdf_sample.h5"
+        if os.path.exists(tmp_file_name):
+            sample_h5_list+=[tmp_file_name]    
 
     sample_dict = load_sample_h5(sample_h5_list)
 

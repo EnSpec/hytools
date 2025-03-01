@@ -36,6 +36,9 @@ def main():
         sample_h5_list=[]
         for each_img_name in subgroup.keys():
             each_h5_name = f"{sample_folder}/{os.path.splitext(os.path.basename(each_img_name))[0]}_pretopo_sample.h5"
+            if not os.path.exists(each_h5_name):
+                print(f"File:'{each_h5_name}' is not found, skip this...")
+                continue            
             if subgroup[each_img_name]==topo_subgroup_id:
                 sample_h5_list+=[each_h5_name]
                 images+=[each_img_name]

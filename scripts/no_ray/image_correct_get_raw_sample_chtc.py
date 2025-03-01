@@ -45,6 +45,11 @@ def main():
 
     Ht_Obj.create_bad_bands(config_dict['bad_bands'])
 
+    non_water_count = np.count_nonzero(Ht_Obj.ndi()[Ht_Obj.mask['no_data']]>0.001)
+    if non_water_count<50:
+        print("Not enough ground pixels... exit")
+        return
+
     for correction in config_dict["corrections"]:
         if correction =='topo':
             if group_topo_bool is False: # get single line topo coeffs 
