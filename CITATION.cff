@@ -1,0 +1,67 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: HyTools
+message: >-
+  HyTools: a python library for processing airborne and
+  spaceborne imaging spectroscopy data
+type: software
+authors:
+  - given-names: Adam
+    family-names: Chlus
+    email: adam.chlus@jpl.nasa.gov
+    affiliation: Jet Propulsion Laboratory, California Institute of Technology; University of Wisconsin - Madison
+  - given-names: Zhiwei
+    family-names: Ye
+    email: ye6@wisc.edu
+    affiliation: University of Wisconsin - Madison
+    orcid: 'https://orcid.org/0000-0001-5673-7034'
+  - given-names: Ting
+    family-names: Zheng
+    email: tzheng39@wisc.edu
+    affiliation: University of Wisconsin - Madison
+    orcid: 'https://orcid.org/0000-0003-4728-6627'
+  - given-names: Natalie
+    family-names: Queally
+    email: nqueally@ucla.edu
+    affiliation: University of California, Los Angeles; University of Wisconsin - Madison
+  - given-names: Evan
+    family-names: Greenberg
+    email: egreenberg@ucsb.edu
+    affiliation: University of California, Santa Barbara
+  - given-names: Philip
+    family-names: Townsend
+    email: ptownsend@wisc.edu
+    affiliation: University of Wisconsin - Madison
+
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.12573700
+    description: Release 1.5.1
+  - type: doi
+    value: 10.5281/zenodo.7591966
+    description: Release 1.5.0
+repository-code: 'https://github.com/EnSpec/hytools'
+abstract: >-
+  HyTools is a python library for processing airborne and
+  spaceborne imaging spectroscopy data. At it's core it
+  consists of functions for reading and writing ENVI or
+  NetCDF formatted images and reading NEON AOP HDF files
+  along with a series of image processing functions
+  including spectral resampling, topographic, BRDF and glint
+  correction, spectral transforms, masking and more. We have
+  also created a series of command line tools which combine
+  these functions and provide a streamlined workflow for
+  processing images.
+keywords:
+  - imaging spectroscopy
+  - remote sensing
+  - BRDF correction
+  - glint correction
+  - topographic correction
+  - hyperspectral
+license: GPL-3.0
+commit: acd11db3d655b017ad2dd6ed382fe1e7f385fde9
+version: 1.5.1
+date-released: '2024-06-27'

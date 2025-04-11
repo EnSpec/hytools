@@ -20,6 +20,11 @@ def main():
 
     config_file = sys.argv[1]
     sample_folder = sys.argv[2]
+    load_reflectance_mode = int(sys.argv[3])
+
+    if not load_reflectance_mode in [1,0]:
+        print("Please set the mode for loading H5 reflectance (0-Whole;1-By Band)")
+        return
 
     with open(config_file, 'r') as outfile:
         config_dict = json.load(outfile)
@@ -31,9 +36,9 @@ def main():
     for image in images:
         tmp_file_name = f"{sample_folder}/{os.path.splitext(os.path.basename(image))[0]}_prebrdf_sample.h5"
         if os.path.exists(tmp_file_name):
-            sample_h5_list+=[tmp_file_name]    
+            sample_h5_list+=[tmp_file_name]
 
-    sample_dict = load_sample_h5(sample_h5_list)
+    sample_dict = load_sample_h5(sample_h5_list,load_reflectance_mode)
 
     if isinstance(brdf_dict['solar_zn_type'],str):
         if brdf_dict['solar_zn_type'] == 'scene':
@@ -45,7 +50,7 @@ def main():
             print('Unrecognized solar zenith angle normalization')
 
 
-    calc_flex_single_post(sample_dict,brdf_dict) #,Ht_Obj.bad_bands
+    calc_flex_single_post(sample_dict,brdf_dict,load_reflectance_mode)
 
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
@@ -53,7 +58,7 @@ def main():
 
 
 
-def load_sample_h5(h5_file_list):
+def load_sample_h5(h5_file_list,load_reflectance_mode):
     '''Load information from H5 files, and return a dictionary with all the info needed.
     '''
 
@@ -72,7 +77,7 @@ def load_sample_h5(h5_file_list):
         kernel_samples = h5_obj["kernels_samples"][()]
 
         if i_order==0:
-            bad_bands = h5_obj["bad_bands"][()] 
+            bad_bands = h5_obj["bad_bands"][()]
 
         h5_obj.close()
 
@@ -81,7 +86,12 @@ def load_sample_h5(h5_file_list):
         sample_ndi = (sample_nir-sample_red)/(sample_nir+sample_red)
         ndi_list+=[sample_ndi]
 
-        combine_refl+=[refl_samples]
+        if load_reflectance_mode==0:
+            combine_refl+=[refl_samples]
+            refl_samples=None
+        else:
+            combine_refl+=[[h5name]]
+
         solar_zn_list+=[set_solar_zn]
         combine_kernel+=[kernel_samples]
 
