@@ -16,5 +16,5 @@ setup(
                       'ray',
                       'scikit-learn',
                       'scipy'],
-    python_requires='>=3.9'
+    python_requires='>3.9'
     )
