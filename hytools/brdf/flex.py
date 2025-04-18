@@ -31,14 +31,19 @@ from .kernels import calc_volume_kernel,calc_geom_kernel
 from ..masks import mask_create
 from ..misc import progbar, pairwise
 from ..misc import update_brdf
-
+from ..plotting import flex_diagno_plot
 
 def flex_brdf(actors,config_dict):
     brdf_dict= config_dict['brdf']
     if brdf_dict['grouped']:
-        actors = calc_flex_group(actors,brdf_dict)
+        calc_flex_group(actors,brdf_dict)
     else:
         _ = ray.get([a.do.remote(calc_flex_single,brdf_dict) for a in actors])
+
+    if "diagnostic_plots" in brdf_dict:
+        if brdf_dict['diagnostic_plots']:
+            print('Exporting diagnostic plots.')
+            _ = ray.get([a.do.remote(flex_diagno_plot,config_dict) for a in actors])
 
 
 def ndvi_stratify(hy_obj):

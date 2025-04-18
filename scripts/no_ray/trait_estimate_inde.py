@@ -2,8 +2,8 @@ import json
 import os
 import warnings
 import sys
-import ray
 import numpy as np
+
 import hytools as ht
 from hytools.io.envi import *
 from hytools.masks import mask_dict
@@ -13,38 +13,40 @@ warnings.filterwarnings("ignore")
 def main():
 
     config_file = sys.argv[1]
+    image_order = int(sys.argv[2])
+    trait_order = int(sys.argv[3])
 
     with open(config_file, 'r') as outfile:
         config_dict = json.load(outfile)
 
-    images= config_dict["input_files"]
+    image= config_dict["input_files"][image_order]
 
-    if ray.is_initialized():
-        ray.shutdown()
-    print("Using %s CPUs." % config_dict['num_cpus'])
-    ray.init(num_cpus = config_dict['num_cpus'])
-
-    HyTools = ray.remote(ht.HyTools)
-    actors = [HyTools.remote() for image in images]
+    actor = ht.HyTools()
 
     # Load data
     if config_dict['file_type'] in ('envi','emit','ncav'):
-        anc_files = config_dict["anc_files"]
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_files[image]) for a,image in zip(actors,images)])
+        anc_file = config_dict["anc_files"][image]
+        if "glt_files" in config_dict:
+            if bool(config_dict["glt_files"]):
+                actor.read_file(image,config_dict['file_type'],anc_path=anc_file,glt_path=config_dict["glt_files"][image]) # chunk_glt writing is not supported
+            else:
+                actor.read_file(image,config_dict['file_type'],anc_path=anc_file)
+        else:
+            actor.read_file(image,config_dict['file_type'],anc_path=anc_file)
+
     elif config_dict['file_type'] == 'neon':
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+        actor.read_file(image,config_dict['file_type'])
 
-    print("Estimating %s traits:" % len( config_dict['trait_models']))
-    for trait in config_dict['trait_models']:
-        with open(trait, 'r') as json_file:
-            trait_model = json.load(json_file)
-            print("\t %s" % trait_model["name"])
+    trait = config_dict['trait_models'][trait_order]
 
-    _ = ray.get([a.do.remote(apply_trait_models,config_dict) for a in actors])
-    ray.shutdown()
+    with open(trait, 'r') as json_file:
+        trait_model = json.load(json_file)
+        print("\t %s" % trait_model["name"])
 
-def apply_trait_models(hy_obj,config_dict):
+    apply_single_trait_models(actor,config_dict,trait_order)
+
+
+def apply_single_trait_models(hy_obj,config_dict,trait_order):
     '''Apply trait model(s) to image and export to file.
     '''
 
@@ -60,7 +62,7 @@ def apply_trait_models(hy_obj,config_dict):
 
     hy_obj.resampler['type'] = config_dict["resampling"]['type']
 
-    for trait in config_dict['trait_models']:
+    for trait in [config_dict['trait_models'][trait_order]]:
         with open(trait, 'r') as json_file:
             trait_model = json.load(json_file)
             coeffs = np.array(trait_model['model']['coefficients'])
@@ -69,6 +71,7 @@ def apply_trait_models(hy_obj,config_dict):
 
         #Check if wavelengths match
         resample = not all(x in hy_obj.wavelengths for x in model_waves)
+
         if resample:
             hy_obj.resampler['out_waves'] = model_waves
             hy_obj.resampler['out_fwhm'] = trait_model['fwhm']
@@ -84,7 +87,7 @@ def apply_trait_models(hy_obj,config_dict):
         header_dict['band names'] = ["%s_mean" % trait_model["name"],
                                      "%s_std" % trait_model["name"],
                                      'range_mask'] + [mask[0] for mask in config_dict['masks']]
-        header_dict['bands'] = len(header_dict['band names'] )
+        header_dict['bands'] = len(header_dict['band names'] ) 
 
         #Generate masks
         for mask,args in config_dict['masks']:
@@ -106,10 +109,9 @@ def apply_trait_models(hy_obj,config_dict):
                       chunk_size = (int(np.ceil(hy_obj.lines/32)),int(np.ceil(hy_obj.columns/32))),
                       corrections =  hy_obj.corrections,
                       resample=resample)
-
         elif config_dict['file_type'] == 'ncav':
             iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (256,hy_obj.columns),
+                      chunk_size = (512,512),
                       corrections =  hy_obj.corrections,
                       resample=resample)
 
@@ -124,7 +126,7 @@ def apply_trait_models(hy_obj,config_dict):
 
             # Apply spectrum transforms
             for transform in  trait_model['model']["transform"]:
-                if  transform== "vector":
+                if  transform== "vector":    #vnorm
                     norm = np.linalg.norm(chunk,axis=2)
                     chunk = chunk/norm[:,:,np.newaxis]
                 if transform == "absorb":
@@ -142,11 +144,11 @@ def apply_trait_models(hy_obj,config_dict):
                          (trait_est[:,:,0] < trait_model["model_diagnostics"]['max'])
             trait_est[:,:,2] = range_mask.astype(int)
 
+
             # Subset and assign custom masks
             for i,(mask,args) in enumerate(config_dict['masks']):
                 mask = hy_obj.mask[mask][iterator.current_line:iterator.current_line+chunk.shape[0],
                                               iterator.current_column:iterator.current_column+chunk.shape[1]]
-
                 trait_est[:,:,3+i] = mask.astype(int)
 
 
@@ -156,8 +158,8 @@ def apply_trait_models(hy_obj,config_dict):
             writer.write_chunk(trait_est,
                                iterator.current_line,
                                iterator.current_column)
-        writer.close()
 
+        writer.close()
 
 if __name__== "__main__":
     main()

@@ -1,5 +1,6 @@
 # hytools dependencies
 h5py
+h5netcdf
 matplotlib
 numpy
 pandas

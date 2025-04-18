@@ -1,0 +1,350 @@
+{
+   "bad_bands": [
+      [
+         300,
+         400
+      ],
+      [
+         1320,
+         1430
+      ],
+      [
+         1800,
+         1960
+      ],
+      [
+         2450,
+         2600
+      ]
+   ],
+   "file_type": "ncav",
+   "input_files": [
+      "/data/AVNG/ang20231109t123229_000_L2A_OE_0b4f48b4_RFL_ORT.nc",
+      "/data/AVNG/ang20231109t123229_001_L2A_OE_0b4f48b4_RFL_ORT.nc",
+      "/data/AVNG/ang20231109t123229_002_L2A_OE_0b4f48b4_RFL_ORT.nc",
+      "/data/AVNG/ang20231109t124405_002_L2A_OE_0b4f48b4_RFL_ORT.nc"
+   ],
+   "anc_files": {
+      "/data/AVNG/ang20231109t123229_000_L2A_OE_0b4f48b4_RFL_ORT.nc": {
+         "path_length": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "path_length"
+         ],
+         "sensor_az": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_azimuth"
+         ],
+         "sensor_zn": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_zenith"
+         ],
+         "solar_az": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_azimuth"
+         ],
+         "solar_zn": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_zenith"
+         ],
+         "phase": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "solar_phase"
+         ],
+         "slope": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "slope"
+         ],
+         "aspect": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "aspect"
+         ],
+         "cosine_i": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "cosine_i"
+         ],
+         "utc_time": [
+            "/data/AVNG/ang20231109t123229_000_L1B_ORT_fb78102f_OBS.nc",
+            "utc_time"
+         ]
+      } ,
+      "/data/AVNG/ang20231109t123229_001_L2A_OE_0b4f48b4_RFL_ORT.nc": {
+         "path_length": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "path_length"
+         ],
+         "sensor_az": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_azimuth"
+         ],
+         "sensor_zn": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_zenith"
+         ],
+         "solar_az": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_azimuth"
+         ],
+         "solar_zn": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_zenith"
+         ],
+         "phase": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "solar_phase"
+         ],
+         "slope": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "slope"
+         ],
+         "aspect": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "aspect"
+         ],
+         "cosine_i": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "cosine_i"
+         ],
+         "utc_time": [
+            "/data/AVNG/ang20231109t123229_001_L1B_ORT_fb78102f_OBS.nc",
+            "utc_time"
+         ]
+      } ,
+      "/data/AVNG/ang20231109t123229_002_L2A_OE_0b4f48b4_RFL_ORT.nc": {
+         "path_length": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "path_length"
+         ],
+         "sensor_az": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_azimuth"
+         ],
+         "sensor_zn": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_zenith"
+         ],
+         "solar_az": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_azimuth"
+         ],
+         "solar_zn": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_zenith"
+         ],
+         "phase": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "solar_phase"
+         ],
+         "slope": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "slope"
+         ],
+         "aspect": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "aspect"
+         ],
+         "cosine_i": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "cosine_i"
+         ],
+         "utc_time": [
+            "/data/AVNG/ang20231109t123229_002_L1B_ORT_fb78102f_OBS.nc",
+            "utc_time"
+         ]
+      } ,
+      "/data/AVNG/ang20231109t124405_002_L2A_OE_0b4f48b4_RFL_ORT.nc": {
+         "path_length": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "path_length"
+         ],
+         "sensor_az": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_azimuth"
+         ],
+         "sensor_zn": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sensor_zenith"
+         ],
+         "solar_az": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_azimuth"
+         ],
+         "solar_zn": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "to_sun_zenith"
+         ],
+         "phase": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "solar_phase"
+         ],
+         "slope": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "slope"
+         ],
+         "aspect": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "aspect"
+         ],
+         "cosine_i": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "cosine_i"
+         ],
+         "utc_time": [
+            "/data/AVNG/ang20231109t124405_002_L1B_ORT_fb78102f_OBS.nc",
+            "utc_time"
+         ]
+      } 
+   },
+   "glt_files": {
+   },
+   "export": {
+      "coeffs": true,
+      "image": true,
+      "masks": false,
+      "use_glt":false,
+      "subset_waves": [
+         440,
+         550,
+         660,
+         850,
+         976,
+         1650,
+         2217
+      ],
+      "output_dir": "/data/AVNG/output/",
+      "suffix": "topo_brdf_gp"
+   },
+   "corrections": ["topo","brdf"],
+   "topo": {
+      "type": "scs+c",
+      "calc_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.05,
+               "max": 1.0
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "slope",
+               "min": 0.08726646259971647,
+               "max": "+inf"
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "cosine_i",
+               "min": 0.12,
+               "max": "+inf"
+            }
+         ]
+      ],
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.05,
+               "max": 1.0
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "slope",
+               "min": 0.08726646259971647,
+               "max": "+inf"
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "cosine_i",
+               "min": 0.12,
+               "max": "+inf"
+            }
+         ]
+      ],
+      "c_fit_type": "nnls",
+      "subgrouped":true,
+      "sample_perc": 0.2,
+      "subgroup": {
+          "/data/AVNG/ang20231109t123229_000_L2A_OE_0b4f48b4_RFL_ORT.nc":"group01",
+          "/data/AVNG/ang20231109t123229_001_L2A_OE_0b4f48b4_RFL_ORT.nc":"group00",
+          "/data/AVNG/ang20231109t123229_002_L2A_OE_0b4f48b4_RFL_ORT.nc":"group00",
+          "/data/AVNG/ang20231109t124405_002_L2A_OE_0b4f48b4_RFL_ORT.nc":"group02"
+      }
+   },
+   "brdf": {
+      "solar_zn_type": "scene",
+      "type": "flex",
+      "grouped": true,
+      "geometric": "li_sparse_r",
+      "volume": "ross_thick",
+      "b/r": 2.5,
+      "h/b": 2,
+      "sample_perc": 0.1,
+      "interp_kind": "linear",
+      "calc_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.05,
+               "max": 1.0
+            }
+         ],
+         [
+            "kernel_finite",
+            {}
+         ],
+         [
+            "ancillary",
+            {
+               "name": "sensor_zn",
+               "min": 0.03490658503988659,
+               "max": "inf"
+            }
+         ],
+         [
+            "cloud",
+            {
+               "method": "zhai_2018",
+               "cloud": true,
+               "shadow": true,
+               "T1": 1,
+               "t2": 0.1,
+               "t3": 0.3333333333333333,
+               "t4": 0.5,
+               "T7": 16,
+               "T8": 16
+            }
+         ]
+      ],
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.05,
+               "max": 1.0
+            }
+         ]
+      ],
+      "bin_type": "dynamic",
+      "num_bins": 18,
+      "ndvi_bin_min": 0.05,
+      "ndvi_bin_max": 1.0,
+      "ndvi_perc_min": 10,
+      "ndvi_perc_max": 95
+   },
+   "resample": false,
+   "num_cpus": 4
+}

@@ -14,9 +14,9 @@ from hytools.io.envi import WriteENVI
 
 def main():
     '''This command line tool exports NEON AOP HDF imaging spectroscopy data
-    to an ENVI formated binary file, with the option of also exporting
+    to an ENVI formatted binary file, with the option of also exporting
     ancillary data following formatting used by NASA JPL for AVIRIS
-    observables. The script utilizes ray to export images in parralel.
+    observables. The script utilizes ray to export images in parallel.
 
     '''
     parser = argparse.ArgumentParser(description = "Convert NEON AOP H5 to ENVI format")

@@ -4,7 +4,7 @@ This is a tutorial on how to implement FlexBRDF [[1](#Reference)] to normalized 
 
 
 ## 1. Preparation
-Reflectance images and their ancillary datasets are required in order to generate BRDF-corrected reflectance images. Ancillary datasets include solar zenith and azimuth angles, sensor viewing zenith and azimuth angles. Slope and aspect for the terrain are needed for the optional topographic correction. For AVIRIS-like dataset, ancillary dataset is stored in the *\*_obs_ort / \*_obs* file from the L1B package , while the reflectance dataset is in the L2 package ([AVIRIS-Classic](https://aviris.jpl.nasa.gov/dataportal/20170911_AV_Download.readme)/[AVIRIS-NG](https://avirisng.jpl.nasa.gov/dataportal/ANG_L1B_L2_Data_Product_Readme_v02.txt)). For NEON AOP dataset, the ancillary datasets come along with the reflectnace dataset in the [HDF5 files](https://www.neonscience.org/resources/learning-hub/tutorials/neon-refl-h5-py).
+Reflectance images and their ancillary datasets are required in order to generate BRDF-corrected reflectance images. Ancillary datasets include solar zenith and azimuth angles, sensor viewing zenith and azimuth angles. Slope and aspect for the terrain are needed for the optional topographic correction. For AVIRIS-like dataset, ancillary dataset is stored in the *\*_obs_ort / \*_obs* file from the L1B package , while the reflectance dataset is in the L2 package ([AVIRIS-Classic](https://aviris.jpl.nasa.gov/dataportal/20170911_AV_Download.readme)/[AVIRIS-NG](https://avirisng.jpl.nasa.gov/dataportal/ANG_L1B_L2_Data_Product_Readme_v02.txt)). For NEON AOP dataset, the ancillary datasets come along with the reflectance dataset in the [HDF5 files](https://www.neonscience.org/resources/learning-hub/tutorials/neon-refl-h5-py). Some new datasets from NASA are delivered in NetCDF format, a [preliminary support is added](./netcdf_glt.md).
 
 HyTools and its dependencies are properly [installed](https://github.com/EnSpec/hytools/tree/master#installation). It can be verified with the testing code in this [section](https://github.com/EnSpec/hytools/blob/master/README.md#basic-usage).
 
@@ -23,7 +23,7 @@ A new json file will be generated according to the setting.
 Default and recommended settings are described in [this example configuration file](https://github.com/EnSpec/hytools/blob/master/examples/configs/topo_brdf_glint_correct_config.json). The keys settings are introduced in the coming parts.
 
 #### Choose what to export in the correction outputs
-The *export* part in the configuration determines whether the BRDF model estimation part or the BRDF model application part is to be executed or not. These two parts can be done separatedly in order or done together on the fly.
+The *export* part in the configuration determines whether the BRDF model estimation part or the BRDF model application part is to be executed or not. These two parts can be done separately in order or done together on the fly.
 ```json
 "export": {
       "coeffs": false,
@@ -36,7 +36,7 @@ The *export* part in the configuration determines whether the BRDF model estimat
 ```
   * The main results of the whole correction procedure are the images and the correct coefficients. At least one of their exportations should be enabled (set to *true*). *coeffs* can be *true* so that they can be saved for future use, called '*precomputed*' coefficients. 
   * Mask layers produced during the procedure can also be saved if both *image* and *masks* are *true*.
-  * *subset_waves* is the list denoting which band to export. They are specified by closest wavelgths in nanometers, e.g. ```[440,550,660]``` for a 3-band exportation in the visible range. Empty list ```[]``` means exporting the full image cube.
+  * *subset_waves* is the list denoting which band to export. They are specified by closest wavelengths in nanometers, e.g. ```[440,550,660]``` for a 3-band exportation in the visible range. Empty list ```[]``` means exporting the full image cube.
   * *output_dir* and *suffix* are the about the final location and suffix of the outputs.
 
 #### Choose how to correct the images
@@ -93,32 +93,32 @@ Volumetric kernel can be selected from['ross_thin','ross_thick','hotspot','rouje
     "solar_zn_type": "scene"
 },   
 ```
-Although each flight line can be BRDF-corrected independently, it is recommnded in FlexBRDF to put all lines in the same day and at close geographical location in the same group, and estimate the shared BRDF correction coefficients.
+Although each flight line can be BRDF-corrected independently, it is recommended in FlexBRDF to put all lines in the same day and at close geographical location in the same group, and estimate the shared BRDF correction coefficients.
 
 FlexBRDF uses NDVI to discriminate various land cover type. It dynamically use N bins of NDVI within an NDVI range. By default, pixels in the flight group will be binned into 18 subgroups based on NDVI percentiles. BRDF coefficients are estimated within each subgroup. Pixels outside [*ndvi_bin_min*, *ndvi_bin_max*] are not included for statistics.
 
-Under the setting of BRDF correction, all pixels in the same BRDF flightline group will ultimated be normalized to the illumination condition at the average solar zenith angle of the whole 'scene'.
+Under the setting of BRDF correction, all pixels in the same BRDF flightline group will ultimately be normalized to the illumination condition at the average solar zenith angle of the whole 'scene'.
 
 
 ```json
 "num_cpus":2,
 ```
-If there are more than one flightline in the group for the purpose of BRDF correction, refelctance image should pair with its ancillary file in the confiuration json file. This also means the order of the file list ("*input_files*" and "*anc_files*") in the configuration should match with each other. Basically, the number of CPU assigned to RAY should also match the total number of flightlines. In the example, there are two flightlines.
+If there are more than one flightline in the group for the purpose of BRDF correction, reflectance image should pair with its ancillary file in the configuration json file. This also means the order of the file list ("*input_files*" and "*anc_files*") in the configuration should match with each other. Basically, the number of CPU assigned to RAY should also match the total number of flightlines. In the example, there are two flightlines.
 
 
 #### Glint
 
 Options for glint correction include ['hochberg','gao','hedley'], corresponding to the method Hochberg et al., 2003[[4](#Reference)], Gao et al., 2021[[5](#Reference)], and Hedley et al. 2005[[6](#Reference)].
 
-#### A simplified GUI for generating congig file
+#### A simplified GUI for generating config file
 This [python-based GUI](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate_gui.py) only provides the least options for generating image correction configuration file. It has the most of the functions of [image_correct_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate.py), but it assumes files of the same group are exclusively in the same directory. It does not provide all the options, and it is rather an example of how the configuration is generated.
 
-![GUI for the config file](./config_json_gen_gui.jpg "GUI")
+![GUI for the config file](./img/config_json_gen_gui.jpg "GUI")
 
 
 ## 3. Execution
 
-The actual script for correcting images is [image_corret.py](https://github.com/EnSpec/hytools/blob/master/scripts/image_correct.py). It can either estimate BRDF coefficients, or perform image correction using the coefficients precomputed or on the fly to generate resultant image. 
+The actual script for correcting images is [image_correct.py](https://github.com/EnSpec/hytools/blob/master/scripts/image_correct.py). It can either estimate BRDF coefficients, or perform image correction using the coefficients precomputed or on the fly to generate resultant image. 
 
 ```bash
 python ./scripts/image_correct.py path/to/the/configuration/json/file
@@ -136,9 +136,30 @@ If TOPO/BRDF model coefficients export is enabled, they will be stored in JSON f
 
 
 ## 4. (Optional) Trait prediction
-Trait estimated using linear hyperspectral models can be implemented in HyTools. Similar to BRDF correction, the trait maps in image grid format can be generated by combining a mapping script ([trait_estimate.py](https://github.com/EnSpec/hytools/blob/master/scripts/trait_estimate.py)), a model coefficient JSON file ([example](https://github.com/EnSpec/hytools/blob/master/scripts/configs/plsr_model_format_v0_1.py)), and a confguration JSON file ([trait_estimate_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/trait_estimate_json_generate.py)).
+Trait estimated using linear hyperspectral models can be implemented in HyTools. Similar to BRDF correction, the trait maps in image grid format can be generated by combining a mapping script ([trait_estimate.py](https://github.com/EnSpec/hytools/blob/master/scripts/trait_estimate.py)), a model coefficient JSON file ([example](https://github.com/EnSpec/hytools/blob/master/scripts/configs/plsr_model_format_v0_1.py)), and a configuration JSON file ([trait_estimate_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/trait_estimate_json_generate.py)).
 
-Multiple prediction can be execeuted at the same time, and image reflectance can be corrected by TOPO/BRDF/glint on the fly without the storage-consuming corrected image cube precomputed. The precomputed TOPO/BRDF coefficients from the previous section is therefore playing a critial part.
+Multiple prediction can be executed at the same time, and image reflectance can be corrected by TOPO/BRDF/glint on the fly without the storage-consuming corrected image cube precomputed. The precomputed TOPO/BRDF coefficients from the previous section is therefore playing a critical part.
+
+## 5. (Experimental) Sub-group in Topographic correction
+In some special cases, data are provided in tiles not in lines. That means there is a need to group some tiles in the same line for topographic correction before the whole group BRDF correction.
+
+Some new items are added to the configuration file ([topogroup_brdf_correct_config.json](../examples/configs/topogroup_brdf_correct_config.json)) to fulfil this task. A new script is adjusted for it as well ([image_correct_topogroup.py](../scripts/image_correct_topogroup.py)).
+
+All new items are added in the *'topo'* section. ```subgrouped``` has to be enabled. ```sample_perc``` is the sampling percentage that are used for extracting random samples for estimating topo correction coefficients. In ```subgroup```, group tag in the configuration json attached to each can be any string, as long as lines in the same subgroup share the same group tag.
+
+```json
+"topo": {
+      ... ...
+      "subgrouped":true,
+      "sample_perc": 0.01,
+      "subgroup": {
+          "/data/line1_path_name":"group00",
+          "/data/line2_path_name":"group00",
+          "/data/line3_path_name":"group01"
+      }
+},    
+```
+
 
 
 ## Reference

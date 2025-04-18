@@ -8,7 +8,7 @@
 Loading images
 ==============
 
-HyTools includes options for loading both ENVI formatted binary files
+HyTools includes options for loading both ENVI formatted binary files, NASA NetCDF files,
 and NEON AOP HDF files.
 
 .. code-block:: python
@@ -88,7 +88,7 @@ Next cycle through the image line by line until complete:
 Writing data
 ============
 
-Currently writing is only supported for ENVI files, however data from
+Currently writing is only supported for ENVI files and NetCDF files, however data from
 NEON hdf files can be easy written to ENVI format using builtin
 functions.
 

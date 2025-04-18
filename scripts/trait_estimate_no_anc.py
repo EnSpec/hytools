@@ -28,10 +28,14 @@ def main():
     actors = [HyTools.remote() for image in images]
 
     # Load data
-    if config_dict['file_type'] in ('envi','emit','ncav'):
+    if config_dict['file_type'] == 'envi':
         anc_files = config_dict["anc_files"]
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+        if ('topo' in config_dict['corrections']) or ('brdf' in config_dict['corrections']):
+            _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
                                         anc_files[image]) for a,image in zip(actors,images)])
+        else:
+            _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
 
@@ -71,7 +75,6 @@ def apply_trait_models(hy_obj,config_dict):
         resample = not all(x in hy_obj.wavelengths for x in model_waves)
         if resample:
             hy_obj.resampler['out_waves'] = model_waves
-            hy_obj.resampler['out_fwhm'] = trait_model['fwhm']
         else:
             wave_mask = [np.argwhere(x==hy_obj.wavelengths)[0][0] for x in model_waves]
 
@@ -80,7 +83,6 @@ def apply_trait_models(hy_obj,config_dict):
         header_dict['wavelength'] = []
         header_dict['data ignore value'] = -9999
         header_dict['data type'] = 4
-        header_dict['trait unit'] = trait_model['units']
         header_dict['band names'] = ["%s_mean" % trait_model["name"],
                                      "%s_std" % trait_model["name"],
                                      'range_mask'] + [mask[0] for mask in config_dict['masks']]
@@ -96,20 +98,8 @@ def apply_trait_models(hy_obj,config_dict):
 
         writer = WriteENVI(output_name,header_dict)
 
-        if config_dict['file_type'] == 'envi' or config_dict['file_type'] == 'emit':
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (2,hy_obj.columns),
-                      corrections =  hy_obj.corrections,
-                      resample=resample)
-        elif config_dict['file_type'] == 'neon':
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (int(np.ceil(hy_obj.lines/32)),int(np.ceil(hy_obj.columns/32))),
-                      corrections =  hy_obj.corrections,
-                      resample=resample)
-
-        elif config_dict['file_type'] == 'ncav':
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (256,hy_obj.columns),
+        iterator = hy_obj.iterate(by = 'chunk',
+                      chunk_size = (100,100),
                       corrections =  hy_obj.corrections,
                       resample=resample)
 

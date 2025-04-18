@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 HyTools:  Hyperspectral image processing library
 Copyright (C) 2021 University of Wisconsin
@@ -24,11 +25,12 @@ import json
 import numpy as np
 import ray
 from .modminn import apply_modminn,calc_modminn_coeffs
-from .scsc import apply_scsc,calc_scsc_coeffs
+from .scsc import apply_scsc,calc_scsc_coeffs, calc_scsc_coeffs_group
 from .cosine import apply_cosine,calc_cosine_coeffs
-from .c import apply_c,calc_c_coeffs
+from .c import apply_c,calc_c_coeffs, calc_c_coeffs_group
 from .scs import apply_scs,calc_scs_coeffs
 from ..masks import mask_create
+from ..misc import set_topo
 
 def calc_cosine_i(solar_zn, solar_az, aspect ,slope):
     """Generate cosine i image. The cosine of the incidence angle (i) is
@@ -83,34 +85,99 @@ def load_topo_precomputed(hy_obj,topo_dict):
     with open(topo_dict['coeff_files'][hy_obj.file_name], 'r') as outfile:
         hy_obj.topo = json.load(outfile)
 
-def calc_topo_coeffs(actors,topo_dict):
+def get_topo_sample_mask(hy_obj,topo_dict):
 
+    sample_ratio = float(topo_dict["sample_perc"])
+
+    subsample_mask = np.copy(hy_obj.mask['calc_topo'])
+
+    idx = np.array(np.where(subsample_mask!=0)).T
+
+    if idx.shape[0]>5:
+        idxRand= idx[np.random.choice(range(len(idx)),int(len(idx)*(1-sample_ratio)), replace = False)].T
+        subsample_mask[idxRand[0],idxRand[1]] = 0
+
+    subsample_mask = subsample_mask.astype(np.int8)
+
+    hy_obj.ancillary['sample_mask']=subsample_mask
+
+def calc_topo_coeffs(actors,topo_dict,actor_group_list=None,group_tag_list=None):
+#def calc_topo_coeffs(actors,actor_group_list,topo_dict,group_tag_list):
     if topo_dict['type'] == 'precomputed':
         print("Using precomputed topographic coefficients.")
-        _ = ray.get([a.do.remote(load_topo_precomputed,topo_dict) for a in actors])
+        _ = ray.get([a.do.remote(load_topo_precomputed,topo_dict) for a in actors]) # actors
+
+        #_ = ray.get([a.do.remote(lambda x: x.corrections.append('topo')) for a in actors])
 
     else:
         print("Calculating topographic coefficients.")
 
+        _ = ray.get([a.do.remote(set_topo,topo_dict) for a in actors])
+
         _ = ray.get([a.gen_mask.remote(mask_create,'calc_topo',
                                        topo_dict['calc_mask']) for a in actors])
 
-        if topo_dict['type'] == 'scs+c':
-            _ = ray.get([a.do.remote(calc_scsc_coeffs,topo_dict) for a in actors])
+        if (actor_group_list is None) or (topo_dict['type'] in ['scs','mod_minneart','cosine']):
+        # no grouping
+            if topo_dict['type'] == 'scs+c':
+                _ = ray.get([a.do.remote(calc_scsc_coeffs,topo_dict) for a in actors])
 
-        elif topo_dict['type'] == 'scs':
-            _ = ray.get([a.do.remote(calc_scs_coeffs,topo_dict) for a in actors])
+            elif topo_dict['type'] == 'scs':
+                _ = ray.get([a.do.remote(calc_scs_coeffs,topo_dict) for a in actors])
 
-        elif topo_dict['type'] == 'mod_minneart':
-            _ = ray.get([a.do.remote(calc_modminn_coeffs,topo_dict) for a in actors])
+            elif topo_dict['type'] == 'mod_minneart':
+                _ = ray.get([a.do.remote(calc_modminn_coeffs,topo_dict) for a in actors])
 
-        elif topo_dict['type'] == 'cosine':
-            _ = ray.get([a.do.remote(calc_cosine_coeffs,topo_dict) for a in actors])
+            elif topo_dict['type'] == 'cosine':
+                _ = ray.get([a.do.remote(calc_cosine_coeffs,topo_dict) for a in actors])
 
-        elif topo_dict['type'] == 'c':
-            _ = ray.get([a.do.remote(calc_c_coeffs,topo_dict) for a in actors])
+            elif topo_dict['type'] == 'c':
+                _ = ray.get([a.do.remote(calc_c_coeffs,topo_dict) for a in actors])
+
+            #_ = ray.get([a.do.remote(lambda x: x.corrections.append('topo')) for a in actors])
+
+        else:
+
+            _ = ray.get([a.do.remote(get_topo_sample_mask,topo_dict) for a in actors])
+
+            for group_order, sub_actors in enumerate(actor_group_list):
+
+                #return 0
+
+                if topo_dict['type'] == 'scs+c':
+                    calc_scsc_coeffs_group(sub_actors,topo_dict,group_tag_list[group_order])
+
+                elif topo_dict['type'] == 'c':
+                    calc_c_coeffs_group(sub_actors,topo_dict,group_tag_list[group_order])
 
     _ = ray.get([a.do.remote(lambda x: x.corrections.append('topo')) for a in actors])
 
 
+def calc_topo_coeffs_single(hy_obj,topo_dict):
 
+    if topo_dict['type'] == 'precomputed':
+        print("Using precomputed topographic coefficients.")
+        load_topo_precomputed(hy_obj,topo_dict)
+
+    else:
+        print("Calculating topographic coefficients.")
+
+        hy_obj.gen_mask(mask_create,'calc_topo',topo_dict['calc_mask'])
+
+
+        if topo_dict['type'] == 'scs+c':
+            calc_scsc_coeffs(hy_obj,topo_dict)
+
+        elif topo_dict['type'] == 'scs':
+            calc_scs_coeffs(hy_obj,topo_dict)
+
+        elif topo_dict['type'] == 'mod_minneart':
+            calc_modminn_coeffs(hy_obj,topo_dict)
+
+        elif topo_dict['type'] == 'cosine':
+            calc_cosine_coeffs(hy_obj,topo_dict)
+
+        elif topo_dict['type'] == 'c':
+            calc_c_coeffs(hy_obj,topo_dict)
+
+    hy_obj.corrections.append('topo')

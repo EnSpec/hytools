@@ -17,7 +17,7 @@ from hytools.io.envi import WriteENVI
 
 def main():
     '''
-    This script exports PCA tranformed images. A single image or a group
+    This script exports PCA transformed images. A single image or a group
     of images can be provided as input. In the case of a group of images the PCA decomposition will be performed
     using sampled data pooled from all images. All images must be of the same format, either all ENVI or all NEON.
     Images can be optionally mosaicked to a GEOTIFF. Mosaicking is done using gdal_merge.py and therefore
@@ -29,7 +29,7 @@ def main():
     parser.add_argument("-comps", help="Number of components to export", type = int,required=False,default=10)
     parser.add_argument("-sample", help="Percent of data to subsample", type = float,required=False,default=0.1)
     parser.add_argument("-merge", help="Use gdal_merge.py to mosaic PCA images", required=False, action='store_true')
-    parser.add_argument("-inv", help="Apply inverse tranform", required=False, action='store_true')
+    parser.add_argument("-inv", help="Apply inverse transform", required=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -78,7 +78,7 @@ def main():
             print('Mosaicking flightlines')
             output_files = ["%s%s_pca" %(args.output_dir,image) for image in \
                             ray.get([a.do.remote(lambda x : x.base_name) for a in actors])]
-            string = ['gdal_merge.py','-o', '%stranform_mosaic.tif' % args.output_dir] + output_files
+            string = ['gdal_merge.py','-o', '%stransform_mosaic.tif' % args.output_dir] + output_files
             os.system(' '.join(string))
         else:
             print('gdal_merge.py not found, exiting.')

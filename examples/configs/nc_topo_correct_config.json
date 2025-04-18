@@ -1,0 +1,157 @@
+{
+   "bad_bands": [
+      [
+         300,
+         400
+      ],
+      [
+         1320,
+         1430
+      ],
+      [
+         1800,
+         1960
+      ],
+      [
+         2450,
+         2600
+      ]
+   ],
+   "file_type": "emit",
+   "input_files": [
+      "/data/EMIT/EMIT_L2A_RFL_001_20231101T024133_2330502_014.nc"
+   ],
+   "anc_files": {
+      "/data/EMIT/EMIT_L2A_RFL_001_20231101T024133_2330502_014.nc": {
+         "path_length": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            0
+         ],
+         "sensor_az": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            1
+         ],
+         "sensor_zn": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            2
+         ],
+         "solar_az": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            3
+         ],
+         "solar_zn": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            4
+         ],
+         "phase": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            5
+         ],
+         "slope": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014_nc_warp_v1.bsq",
+            0
+         ],
+         "aspect": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014_nc_warp_v1.bsq",
+            1
+         ],
+         "cosine_i": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014_nc_warp_v1.bsq",
+            2
+         ],
+         "utc_time": [
+            "/data/EMIT/EMIT_L1B_OBS_001_20231101T024133_2330502_014.nc",
+            9
+         ]
+      } 
+   },
+   "glt_files": {
+      "/data/EMIT/EMIT_L2A_RFL_001_20231101T024133_2330502_014.nc": { 
+         "glt_x": ["/data/EMIT/glt_xy_geocorr_rot_p2.bsq",1],
+         "glt_y": ["/data/EMIT/glt_xy_geocorr_rot_p2.bsq",0]
+      }
+   },
+   "export": {
+      "coeffs": true,
+      "image": true,
+      "use_glt":true,
+      "masks": false,
+      "subset_waves": [
+         440,
+         550,
+         660,
+         850,
+         976,
+         1650,
+         2217
+      ],
+      "output_dir": "/data/EMIT/out/",
+	  "image_format":"netcdf",
+      "suffix": "topo"
+   },
+   "corrections": [
+      "topo"
+   ],
+   "topo": {
+      "type": "scs+c",
+      "calc_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.05,
+               "max": 1.0
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "slope",
+               "min": 0.08726646259971647,
+               "max": "+inf"
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "cosine_i",
+               "min": 0.12,
+               "max": "+inf"
+            }
+         ]
+      ],
+      "apply_mask": [
+         [
+            "ndi",
+            {
+               "band_1": 850,
+               "band_2": 660,
+               "min": 0.05,
+               "max": 1.0
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "slope",
+               "min": 0.08726646259971647,
+               "max": "+inf"
+            }
+         ],
+         [
+            "ancillary",
+            {
+               "name": "cosine_i",
+               "min": 0.12,
+               "max": "+inf"
+            }
+         ]
+      ],
+      "c_fit_type": "nnls"
+   },
+   "brdf": { },
+   "resample": false,
+   "num_cpus": 1,
+   "outside_metadata":{"reflectance/ref-attr01":"dummy text","root_meta_tag":"dummy0"}
+}

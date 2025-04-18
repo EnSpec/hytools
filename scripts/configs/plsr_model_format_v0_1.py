@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 JSON format for PLSR trait models v0.1
 
-This version assumes that all transforms are applied using all model wavelenghts.
+This version assumes that all transforms are applied using all model wavelengths.
 
 TODO: Develop standard codes for spectrometer, both airborne/spaceborne and field.
 TODO: Allow for more options for specifying wavelength subsets

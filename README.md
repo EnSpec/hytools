@@ -1,6 +1,7 @@
 # HyTools
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5997756.svg)](https://doi.org/10.5281/zenodo.5997756)
+
+[![DOI](https://zenodo.org/badge/315419247.svg)](https://zenodo.org/badge/latestdoi/315419247)
 
 
 HyTools is a python library for processing airborne and spaceborne
@@ -15,7 +16,7 @@ transforms, masking and more. We have also created a series of command
 line tools which combine these functions and provide a streamlined
 workflow for processing images.
 
-For examples see the HyTools basics ipython notebook [here](https://github.com/EnSpec/hytools/blob/master/examples/hytools_basics_notebook.ipynb). For FlexBRDF correction see the tutorial [here](https://github.com/EnSpec/hytools/blob/master/examples/FlexBRDF_tutorial.md).
+For examples see the HyTools basics ipython notebook [here](./examples/hytools_basics_notebook.ipynb). For FlexBRDF correction see the tutorial [here](./examples/FlexBRDF_tutorial.md). An alternative of FlexBRDF correction without using Ray can be checked out [here](./examples/separated_flexbrdf.md). NetCDF (EMIT and AVIRIS-NG) and Geographic Lookup Table (GLT) support are added in the latest version [here](./examples/netcdf_glt.md).
 
 # Installation
 

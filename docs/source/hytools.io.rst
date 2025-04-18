@@ -20,6 +20,14 @@ hytools.io.neon module
    :undoc-members:
    :show-inheritance:
 
+hytools.io.netcdf module
+----------------------
+
+.. automodule:: hytools.io.netcdf
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

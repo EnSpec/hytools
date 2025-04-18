@@ -94,7 +94,7 @@ field_dict = {"acquisition time": "str",
 
 
 def open_envi(hy_obj,anc_path = {}, ext = False):
-    """Open ENVI formated image file and populate Hytools object.
+    """Open ENVI formatted image file and populate Hytools object.
 
 
     Args:
@@ -151,22 +151,22 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
     # If no_data value is not specified guess using image corners.
     if hy_obj.no_data is None:
         hy_obj.load_data()
+        band_ind = 5 if hy_obj.bands > 10 else 0
         if header_dict["interleave"] == 'bip':
-            up_l = hy_obj.data[0,0,0]
-            up_r = hy_obj.data[0,-1,0]
-            low_l = hy_obj.data[-1,0,0]
-            low_r = hy_obj.data[-1,-1,0]
+            up_l = hy_obj.data[0,0,band_ind]
+            up_r = hy_obj.data[0,-1,band_ind]
+            low_l = hy_obj.data[-1,0,band_ind]
+            low_r = hy_obj.data[-1,-1,band_ind]
         elif header_dict["interleave"] == 'bil':
-            up_l = hy_obj.data[0,0,0]
-            up_r = hy_obj.data[0,0,-1]
-            low_l = hy_obj.data[-1,0,0]
-            low_r = hy_obj.data[-1,0,-1]
+            up_l = hy_obj.data[0,band_ind,0]
+            up_r = hy_obj.data[0,band_ind,-1]
+            low_l = hy_obj.data[-1,band_ind,0]
+            low_r = hy_obj.data[-1,band_ind,-1]
         elif header_dict["interleave"] == 'bsq':
-            up_l = hy_obj.data[0,0,0]
-            up_r = hy_obj.data[0,0,-1]
-            low_l = hy_obj.data[0,-1,0]
-            low_r = hy_obj.data[0,-1,-1]
-
+            up_l = hy_obj.data[band_ind,0,0]
+            up_r = hy_obj.data[band_ind,0,-1]
+            low_l = hy_obj.data[band_ind,-1,0]
+            low_r = hy_obj.data[band_ind,-1,-1]
 
         if hy_obj.endianness != sys.byteorder:
             up_l = up_l.byteswap()
@@ -237,6 +237,38 @@ class WriteENVI:
         elif self.interleave == "bsq":
             self.data[:,index,:] = np.moveaxis(line,0,1)
 
+
+    def write_line_glt(self,arr,glt_indices_y,glt_indices_x):
+        """
+        Args:
+            line (numpy.ndarray): Line array (columns,bands).
+            index (int): Zero-based line index.
+
+        Returns:
+            None.
+
+        """
+        #print(glt_indices_y[:3])
+        #print(glt_indices_x[:3])
+
+        #ind=np.where(fill_mask[glt_indices_y,glt_indices_x]==1)
+        #print(arr.shape)
+        #tmp_arr=self.data[:,glt_indices_y,glt_indices_x]
+        #print(self.data.shape)
+        #print(glt_indices_y.shape)
+        
+        
+
+        if self.interleave == "bip":
+            self.data[glt_indices_y,glt_indices_x,:] = arr
+
+        elif self.interleave == "bil":
+            self.data[glt_indices_y,:,glt_indices_x] = arr #np.moveaxis(line,0,1)
+
+        elif self.interleave == "bsq":
+            self.data[:,glt_indices_y,glt_indices_x] = np.moveaxis(arr,0,1)
+
+
     def write_column(self,column,index):
         """
         Args:
@@ -272,6 +304,30 @@ class WriteENVI:
             self.data[:,index,:] = band
         elif self.interleave == "bsq":
             self.data[index,:,:]= band
+
+    def write_band_glt(self,band,index,glt_indices,fill_mask):
+        """
+        Args:
+            band (numpy.ndarray): Band array (lines,columns).
+            index (int): Zero-based band index.
+            glt_indices (numpy.ndarray,numpy.ndarray): Zero-based tuple indices.
+
+        Returns:
+            None.
+
+        """
+
+        if self.interleave == "bip":
+            self.data[:,:,index][fill_mask] = band[glt_indices]
+            self.data[:,:,index][~fill_mask] = self.header_dict['data ignore value']
+        elif self.interleave == "bil":
+            self.data[:,index,:][fill_mask] = band[glt_indices]
+            self.data[:,index,:][~fill_mask] = self.header_dict['data ignore value']
+        elif self.interleave == "bsq":
+            self.data[index,:,:][fill_mask] = band[glt_indices]
+            self.data[index,:,:][~fill_mask] = self.header_dict['data ignore value']
+
+
 
     def write_chunk(self,chunk,line_index,column_index):
         """
@@ -352,6 +408,47 @@ def envi_header_from_neon(hy_obj, interleave = 'bsq'):
     header_dict["wavelength"] =hy_obj.wavelengths
     return header_dict
 
+def envi_header_from_nc(hy_obj, interleave = 'bsq', warp_glt = False):
+    """Create an ENVI header dictionary from NetCDF metadata
+
+    Args:
+        hy_obj (Hytools object): Populated HyTools file object.
+        interleave (str, optional): Date interleave type. Defaults to 'bil'.
+
+    Returns:
+        dict: Populated ENVI header dictionary.
+
+    """
+
+    header_dict = {}
+    header_dict["ENVI description"] = "{}"
+    
+    if warp_glt == False:
+        header_dict["samples"] = hy_obj.columns
+        header_dict["lines"]   = hy_obj.lines
+        if hy_obj.file_type=='ncav':
+            header_dict["map info"] = hy_obj.map_info
+            header_dict["coordinate system string"] = hy_obj.projection
+    else:
+        header_dict["samples"] = hy_obj.columns_glt
+        header_dict["lines"]   = hy_obj.lines_glt
+        header_dict["map info"] = hy_obj.map_info
+        header_dict["coordinate system string"] = hy_obj.projection
+    
+    header_dict["bands"] = 2 #hy_obj.bands
+    header_dict["header offset"] = 0
+    header_dict["file type"] = "ENVI Standard"
+    header_dict["data type"] = 4
+    header_dict["interleave"] = interleave
+    header_dict["sensor type"] = ""
+    header_dict["byte order"] = 0
+    
+
+    header_dict["wavelength units"] = hy_obj.wavelength_units
+    header_dict["data ignore value"] = hy_obj.no_data
+    header_dict["wavelength"] = hy_obj.wavelengths
+    return header_dict
+
 
 def write_envi_header(output_name,header_dict,mode = 'w'):
     """Write ENVI header file to disk.
@@ -372,7 +469,7 @@ def write_envi_header(output_name,header_dict,mode = 'w'):
 
     for key in header_dict.keys():
         value = header_dict[key]
-        # Convert list to comma seperated strings
+        # Convert list to comma separated strings
         if isinstance(value,(list,np.ndarray)):
             value = "{%s}" % ",".join(map(str, value))
         else:
@@ -480,7 +577,7 @@ def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
         data (numpy.memmap): Numpy memory-map.
         col_start (int):  Zero-based left column index.
         col_end (int): Non-inclusive zero-based right column index.
-        line_start (int): Zero -ased top line index.
+        line_start (int): Zero-based top line index.
         line_end (int): Non-inclusive zero-based bottom line index.
         interleave (str): Data interleave type.
 
