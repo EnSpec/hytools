@@ -1,6 +1,7 @@
 # HyTools
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5997756.svg)](https://doi.org/10.5281/zenodo.5997756)
+
+[![DOI](https://zenodo.org/badge/315419247.svg)](https://zenodo.org/badge/latestdoi/{315419247})
 
 
 HyTools is a python library for processing airborne and spaceborne

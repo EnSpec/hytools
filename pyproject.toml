@@ -1,0 +1,41 @@
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hy-tools"
+version = "1.6.0"
+
+dependencies = [
+  "h5py",
+  "h5netcdf",
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "ray",
+  "scikit-learn",
+  "scipy"
+]
+requires-python = "> 3.9"
+authors = [
+  {name = "Adam Chlus", email = "adam.chlus@jpl.nasa.gov"},
+  {name = "Zhiwei Ye", email = "ye6@wisc.edu"},
+  {name = "Ting Zheng", email = "tzheng39@wisc.edu"},
+  {name = "Natalie Queally", email = "nqueally@ucla.edu"},
+  {name = "Evan Greenberg", email = "egreenberg@ucsb.edu"},
+  {name = "Philip Townsend", email = "ptownsend@wisc.edu"},
+]
+description = "HyTools: Hyperspectral image processing library"
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICEN[CS]E.*"]
+keywords = ["imaging spectroscopy", "hyperspectral", "remote sensing", "BRDF correction", "glint correction", "topographic correction", "brightness normalization"]
+classifiers = [
+  "Programming Language :: Python",
+]
+
+[project.urls]
+Homepage = "https://github.com/EnSpec/hytools"
+Documentation = "https://hytools.readthedocs.io/en/latest/"
+Repository = "https://github.com/EnSpec/hytools.git"
