@@ -24,6 +24,10 @@ To install with pip run:
 ```bash
 pip install hy-tools
 ```
+or 
+```bash
+python -m pip install git+https://github.com/EnSpec/hytools.git
+```
 or clone
 ```bash
 git clone https://github.com/EnSpec/hytools.git
