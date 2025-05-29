@@ -13,6 +13,7 @@ from hytools.io.envi import *
 from hytools.io.netcdf import *
 from hytools.topo import calc_topo_coeffs
 from hytools.brdf import calc_brdf_coeffs
+from hytools.glint import set_glint_parameters
 from hytools.masks import mask_create
 
 
@@ -94,6 +95,11 @@ def main():
             calc_brdf_coeffs(actors,config_dict)
             time_brdf_end = time.perf_counter()
             print("BRDF Time: {} sec.".format(time_brdf_end - time_brdf_start))
+        elif correction == 'glint':
+            time_glint_start = time.perf_counter() #.process_time_ns()
+            set_glint_parameters(actors,config_dict)
+            time_glint_end = time.perf_counter() #.process_time_ns()
+            print("Glint Time: {} sec.".format(time_glint_end - time_glint_start))
 
     if config_dict['export']['coeffs'] and len(config_dict["corrections"]) > 0:
         print("Exporting correction coefficients.")
