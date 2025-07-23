@@ -594,7 +594,20 @@ def envi_read_chunk(data,col_start,col_end,line_start,line_end,interleave):
         chunk = np.moveaxis(data[:,line_start:line_end,col_start:col_end],0,-1)
     return chunk
 
+def calc_geotransform(mapinfo):
+    if mapinfo[-1].startswith('rotation'):
+        rot_ang_rad = np.radians(float(mapinfo[-1].split('=')[1]))
+        pixel_size = float(mapinfo[5])
 
+        new_rot_mat = pixel_size * np.array([[np.cos(rot_ang_rad),-np.sin(rot_ang_rad)],[np.sin(rot_ang_rad),np.cos(rot_ang_rad)]])@np.array([[1,0],[0,-1]])
+        geotransform = (float(mapinfo[3]),new_rot_mat[0,0],new_rot_mat[0,1],
+                        float(mapinfo[4]),new_rot_mat[1,0],new_rot_mat[1,1])
+    else:
+    # same as 0 rotation
+        geotransform = (float(mapinfo[3]),float(mapinfo[5]),0,
+                        float(mapinfo[4]),0,-float(mapinfo[6]))
+
+    return geotransform
 
 def parse_envi_header(header_file):
     """

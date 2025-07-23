@@ -23,7 +23,7 @@ import os
 import h5py
 import h5netcdf
 import numpy as np
-from .envi import parse_envi_header, WriteENVI
+from .envi import parse_envi_header, WriteENVI, calc_geotransform
 
 unit_dict = {'nm':'nanometers'}
 utm_zone_dict = {'N':'North','S':'South'}
@@ -42,35 +42,54 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
     """
 
     nc4_obj = h5py.File(hy_obj.file_name,'r')
-    hy_obj.base_key = list(nc4_obj.keys())[0]
+
+    if "radiance" in list(nc4_obj.keys()):
+        data_var_name = "radiance"
+    else:
+    #elif "reflectance" in list(nc4_obj.keys()):
+        data_var_name = "reflectance"
+    hy_obj.base_key = data_var_name
+
+    if "geolocation_lookup_table" in list(nc4_obj.keys()):
+        glt_var_name = "geolocation_lookup_table"
+    elif "location" in list(nc4_obj.keys()):
+        glt_var_name = "location"
+    else:
+        glt_var_name = None
 
     metadata = nc4_obj.attrs
     if sensor=='AV':
-        data = nc4_obj["reflectance"]["reflectance"]
-        hy_obj.fwhm =  nc4_obj['reflectance']['fwhm'][()]
-        hy_obj.wavelengths = nc4_obj['reflectance']['wavelength'][()]
-        hy_obj.wavelength_units = unit_dict[nc4_obj['reflectance']['wavelength'].attrs['units'].decode("utf-8")]
+        data = nc4_obj[data_var_name][data_var_name]
+        hy_obj.fwhm =  nc4_obj[data_var_name]['fwhm'][()]
+        hy_obj.wavelengths = nc4_obj[data_var_name]['wavelength'][()]
+
+        if 'units' in nc4_obj[data_var_name]['wavelength'].attrs.keys():
+            hy_obj.wavelength_units = unit_dict[get_attr_string(nc4_obj[data_var_name]['wavelength'].attrs['units'])]
+        elif 'unit' in nc4_obj[data_var_name]['wavelength'].attrs.keys():
+            hy_obj.wavelength_units = get_attr_string(nc4_obj[data_var_name]['wavelength'].attrs['unit'])
 
         hy_obj.lines = data.shape[1]
         hy_obj.columns = data.shape[2]
         hy_obj.bands = data.shape[0]
 
     elif sensor == 'EMIT':
-        data = nc4_obj["reflectance"]
+        data = nc4_obj[data_var_name]
         hy_obj.fwhm =  nc4_obj['sensor_band_parameters']['fwhm'][()]
         hy_obj.wavelengths = nc4_obj['sensor_band_parameters']['wavelengths'][()]
-        hy_obj.wavelength_units = unit_dict[nc4_obj['sensor_band_parameters']['wavelengths'].attrs['units'].decode("utf-8")]
+        hy_obj.wavelength_units =  unit_dict[get_attr_string(nc4_obj['sensor_band_parameters']['wavelengths'].attrs['units'])]
         hy_obj.lines = data.shape[0]
         hy_obj.columns = data.shape[1]
         hy_obj.bands = data.shape[2]
 
         hy_obj.bad_bands =  np.array(1-nc4_obj['sensor_band_parameters']['good_wavelengths'][()]).astype(np.bool)
 
-    hy_obj.no_data = data.attrs['_FillValue'][0]
-
+    if isinstance(data.attrs['_FillValue'],np.ndarray):
+        hy_obj.no_data = data.attrs['_FillValue'][0]
+    else:
+        hy_obj.no_data = data.attrs['_FillValue']
     hy_obj.anc_path = anc_path
 
-    if bool(glt_path)==True:
+    if bool(glt_path):
         hy_obj.glt_path = glt_path
 
         glt_header_file = os.path.splitext(glt_path[list(glt_path.keys())[0]][0])[0] + ".hdr"
@@ -79,8 +98,7 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
         hy_obj.lines_glt = glt_header["lines"]
         hy_obj.columns_glt = glt_header["samples"]
 
-        hy_obj.transform = (float(glt_header["map info"][3]),float(glt_header["map info"][5]),0,
-                            float(glt_header["map info"][4]),0,-float(glt_header["map info"][6]))
+        hy_obj.transform = calc_geotransform(glt_header["map info"])
 
         if "coordinate system string" in glt_header:
             hy_obj.projection = glt_header["coordinate system string"]
@@ -92,7 +110,7 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
 
             hy_obj.glt_path = { "glt_x": ["location","glt_x"],
                                 "glt_y": ["location","glt_y"]}
-            hy_obj.projection = metadata['spatial_ref'].decode("utf-8")
+            hy_obj.projection = get_attr_string(metadata['spatial_ref'])
             geotransform = nc4_obj.attrs['geotransform'][()]
             hy_obj.map_info = ['Geographic Lat/Lon','1','1',
                                str(geotransform[0]),str(geotransform[3]),
@@ -105,8 +123,16 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
             hy_obj.columns_glt = glt_x.shape[1]
 
         elif sensor == 'AV':
-            hy_obj.projection = nc4_obj['transverse_mercator'].attrs['spatial_ref'].decode("utf-8")
-            geotransform = [ float(x) for x in nc4_obj['transverse_mercator'].attrs['GeoTransform'].decode("utf-8").split(' ')]
+            if "transverse_mercator" in nc4_obj.keys():
+                spatial_ref_name_tag = "transverse_mercator"
+            elif "projection" in nc4_obj.keys():
+                spatial_ref_name_tag = "projection"
+            else:
+                spatial_ref_name_tag = None
+
+            hy_obj.projection = get_attr_string(nc4_obj[spatial_ref_name_tag].attrs['spatial_ref'])
+            geotransform = [float(x) for x in get_attr_string(nc4_obj[spatial_ref_name_tag].attrs['GeoTransform']).split(' ')]
+
             utm_zone_tag=((hy_obj.projection).split('UTM zone ')[1]).split('",GEOGCS')[0]
             hy_obj.map_info = ['UTM','1','1',
                                str(geotransform[0]),str(geotransform[3]),
@@ -114,17 +140,29 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
                                utm_zone_tag[:-1],utm_zone_dict[utm_zone_tag[-1]],'WGS-84']
             hy_obj.transform = tuple(geotransform)
 
-            hy_obj.lines_glt = hy_obj.lines
-            hy_obj.columns_glt = hy_obj.columns
-            hy_obj.glt_path = { "glt_x": ["geolocation_lookup_table","sample"],
-                                "glt_y": ["geolocation_lookup_table","line"]}            
+            hy_obj.glt_path = { "glt_x": [glt_var_name,"sample"],  #["geolocation_lookup_table","sample"],
+                                "glt_y": [glt_var_name,"line"]}  #["geolocation_lookup_table","line"]} 
+
+            if glt_var_name is None:
+                hy_obj.lines_glt = hy_obj.lines
+                hy_obj.columns_glt = hy_obj.columns
+            else:
+                glt_x = nc4_obj[glt_var_name]['sample']
+                hy_obj.lines_glt = glt_x.shape[0]
+                hy_obj.columns_glt = glt_x.shape[1]
 
     return hy_obj
+
+def get_attr_string(attr):
+    if isinstance(attr, bytes):
+        return attr.decode("utf-8")
+    #else: #str
+    return attr
 
 def set_wavelength_meta(nc4_obj,header_dict,glt_bool):
     file_type = (header_dict['file_type']).lower()
 
-    if file_type=="ncav" or (file_type=="emit" and glt_bool==True):
+    if file_type=="ncav" or (file_type=="emit" and glt_bool is True):
         gp=nc4_obj.create_group("reflectance")
         wavelength_var=nc4_obj.create_variable("/reflectance/wavelength",("wavelength",),
                                                data=header_dict['wavelength'],
@@ -197,7 +235,7 @@ class WriteNetCDF(WriteENVI):
                                                              chunks=(256,256,2),
                                                              compression='gzip')
 
-            self.data.attrs["_FillValue"]=-9999.0
+            self.data.attrs["_FillValue"]=np.array([-9999.0],dtype=np.float32)
             self.external_nc_attrs(attr_dict)
         elif type_tag=="mask":  # for masks
             self.interleave = "bsq"
@@ -226,7 +264,7 @@ class WriteNetCDF(WriteENVI):
                                                              np.uint8,
                                                              chunks=(256,256),
                                                              compression='gzip')
-            self.data.attrs["_FillValue"]=255
+            self.data.attrs["_FillValue"]=np.array([255],dtype=np.uint8)
             self.external_nc_attrs(attr_dict)
         elif type_tag=="trait":
             self.interleave = "bsq"
@@ -261,8 +299,8 @@ class WriteNetCDF(WriteENVI):
                                                              chunks=(1,256,256),
                                                              compression='gzip')
 
-            self.data.attrs["band_names"] =  header_dict["band names"][:2]
-            self.data.attrs["_FillValue"]=-9999.0
+            self.data.attrs["band_names"] = header_dict["band names"][:2]
+            self.data.attrs["_FillValue"] = np.array([-9999.0],dtype=np.float32)
 
     def write_mask_band(self,band):
         self.data[:,:]  = band
@@ -290,8 +328,8 @@ class WriteNetCDF(WriteENVI):
         var_glt_x.attrs["grid_mapping"] =  "projection"
         var_glt_y.attrs["grid_mapping"] =  "projection"
 
-        var_glt_x.attrs["_FillValue"]=0
-        var_glt_y.attrs["_FillValue"]=0
+        var_glt_x.attrs["_FillValue"]=np.array([0],dtype=np.int32)
+        var_glt_y.attrs["_FillValue"]=np.array([0],dtype=np.int32)
 
 
     def write_netcdf_band_glt(self,band,index,glt_indices,fill_mask):
@@ -328,9 +366,9 @@ class WriteNetCDF(WriteENVI):
                 split_key.pop(0)
             if len(split_key)>1:
                 group_path = '/'+'/'.join(split_key[:-1])
-                self.nc4_obj[group_path].attrs[split_key[-1]]=str(attr_dict[key])
+                self.nc4_obj[group_path].attrs[split_key[-1]]=str(attr_dict[key]).encode("utf-8")
             else:
-                self.nc4_obj.attrs[key]=str(attr_dict[key])
+                self.nc4_obj.attrs[key]=str(attr_dict[key]).encode("utf-8")
 
 
     def close(self):
@@ -342,16 +380,16 @@ def write_netcdf_meta(nc4_obj,header_dict,glt_bool):
 
     file_type = (header_dict['file_type']).lower()
 
-    if file_type=="ncav" or (file_type=="emit" and glt_bool==True):
+    if file_type=="ncav" or (file_type=="emit" and glt_bool is True):
         transform=header_dict['transform']
 
         nc4_obj.dimensions["northing"]=header_dict['lines'] #dim0
         nc4_obj.dimensions["easting"]=header_dict['samples'] #dim1
 
         tm_var = nc4_obj.create_variable("/projection",data=np.array([0]),dtype=np.uint8)
-        tm_var.attrs["GeoTransform"]=' '.join([str(x) for x in header_dict['transform']])
-        tm_var.attrs["crs_wkt"]=header_dict['projection']
-        tm_var.attrs["spatial_ref"]=header_dict['projection']
+        tm_var.attrs["GeoTransform"]=' '.join([str(x) for x in header_dict['transform']]).encode("utf-8")
+        tm_var.attrs["crs_wkt"]=header_dict['projection'].encode("utf-8")
+        tm_var.attrs["spatial_ref"]=header_dict['projection'].encode("utf-8")
 
 
     elif file_type=="emit":
@@ -365,11 +403,11 @@ def write_netcdf_meta(nc4_obj,header_dict,glt_bool):
             nc4_obj.dimensions["ortho_y"]=header_dict['lines_glt']
             nc4_obj.dimensions["ortho_x"]=header_dict['samples_glt']
 
-            nc4_obj.attrs["geotransform"]=' '.join([str(x) for x in header_dict['transform']])
-            nc4_obj.attrs["spatial_ref"]=header_dict['projection']
+            nc4_obj.attrs["geotransform"]=' '.join([str(x) for x in header_dict['transform']]).encode("utf-8")
+            nc4_obj.attrs["spatial_ref"]=header_dict['projection'].encode("utf-8")
             nc4_obj.attrs["spatialResolution"]=np.sqrt(header_dict['transform'][1]**2+header_dict['transform'][2]**2)
 
             tm_var = nc4_obj.create_variable("/projection",data=np.array([0]),dtype=np.uint8)
-            tm_var.attrs["GeoTransform"]=' '.join([str(x) for x in header_dict['transform']])
-            tm_var.attrs["crs_wkt"]=header_dict['projection']
-            tm_var.attrs["spatial_ref"]=header_dict['projection']
+            tm_var.attrs["GeoTransform"]=' '.join([str(x) for x in header_dict['transform']]).encode("utf-8")
+            tm_var.attrs["crs_wkt"]=header_dict['projection'].encode("utf-8")
+            tm_var.attrs["spatial_ref"]=header_dict['projection'].encode("utf-8")

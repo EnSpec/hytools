@@ -106,9 +106,9 @@ class HyTools:
 
         # Create a no data mask
         if self.bands>11:
-          self.mask['no_data'] = self.get_wave(660) > 0.5*self.no_data
+            self.mask['no_data'] = self.get_wave(660) > 0.5*self.no_data
         else:
-          self.mask['no_data'] = self.get_band(0) > 0.5*self.no_data
+            self.mask['no_data'] = self.get_band(0) > 0.5*self.no_data
 
         #Match mask with ancillary mask
         if anc_path:
@@ -174,13 +174,17 @@ class HyTools:
             self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
         elif self.file_type  == "emit":
             self.nc4_obj = h5py.File(self.file_name,'r')
-            self.data = self.nc4_obj["reflectance"]
+            self.data = self.nc4_obj[self.base_key]
             self.glt_x = self.load_glt('glt_x')
             self.glt_y = self.load_glt('glt_y')
-            self.fill_mask = (self.glt_x>0)
+            self.fill_mask = self.glt_x>0
         elif self.file_type  == "ncav":
             self.nc4_obj = h5py.File(self.file_name,'r')
-            self.data = self.nc4_obj["reflectance"]["reflectance"]
+            self.data = self.nc4_obj[self.base_key][self.base_key]
+            self.glt_x = self.load_glt('glt_x')
+            self.glt_y = self.load_glt('glt_y')
+            if not self.glt_x is None:
+                self.fill_mask = self.glt_x>0
 
 
     def close_data(self):
@@ -460,7 +464,7 @@ class HyTools:
                 if ancillary.endianness != sys.byteorder:
                     anc_data = anc_data.byteswap()
                 ancillary.close_data()
-                
+
             else:
                 hdf_obj = h5py.File(self.file_name,'r')
 
@@ -478,10 +482,10 @@ class HyTools:
             if bool(self.anc_path)==False:
                 return None
 
-            else:    
+            else:
                 if (self.anc_path[anc][0]).endswith('nc'):
                     nc4_anc_obj = h5py.File(self.anc_path[anc][0],'r')
-                    
+
                     if self.file_type == "emit":
                         anc_data = nc4_anc_obj['obs'][()][:,:,self.anc_path[anc][1]]
                     elif self.file_type == "ncav":
@@ -492,7 +496,7 @@ class HyTools:
                         anc_data[obs_glt_x<=0] = nc4_anc_obj['observation_parameters'][self.anc_path[anc][1]].attrs['_FillValue'][0]  # -9999
                         data_mask_to_fill = (obs_glt_x>0)
                         anc_data[data_mask_to_fill] = anc_data_raw[obs_glt_y[data_mask_to_fill].astype(int)-1,obs_glt_x[data_mask_to_fill].astype(int)-1]
-                        
+
                     nc4_anc_obj.close()
                 else:
                     ancillary = HyTools()
@@ -518,8 +522,10 @@ class HyTools:
 
     def load_glt(self,glt):
         # check if GLT inside nc is used
-        if self.glt_path[glt][0]=='location':
+        if self.glt_path[glt][0] in ['location','geolocation_lookup_table']:
             glt_data = self.nc4_obj[self.glt_path[glt][0]][self.glt_path[glt][1]][()]
+        elif self.glt_path[glt][0] is None:
+            return None
         else:
             glt_img = HyTools()
             glt_img.read_file(self.glt_path[glt][0],'envi')
@@ -716,7 +722,7 @@ class Iterator:
             if self.current_line == self.hy_obj.lines-1:
                 self.complete = True
             valid_mask=self.hy_obj.fill_mask[self.current_line,:]
-            
+
             valid_subset = self.hy_obj.get_pixels(
                                             self.hy_obj.glt_y[self.current_line,valid_mask]-1,self.hy_obj.glt_x[self.current_line,valid_mask]-1,
                                             corrections = self.corrections,
