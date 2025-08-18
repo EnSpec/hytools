@@ -70,6 +70,9 @@ class HyTools:
         self.glt_path = {}
         self.glt_x = None
         self.glt_y = None
+        self.glt_projection = None
+        self.glt_map_info = None
+        self.glt_transform = None
         self.hdf_obj  = None
         self.interleave = None
         self.lines = None
@@ -80,6 +83,7 @@ class HyTools:
         self.no_data = None
         self.offset = 0
         self.projection = None
+        self.transform = None
         self.resampler = {'type': None}
         self.shape = None
         self.topo = {'type': None}
@@ -93,7 +97,7 @@ class HyTools:
         self.file_type = file_type
 
         if file_type == 'envi':
-            open_envi(self,anc_path,ext)
+            open_envi(self,anc_path,ext,glt_path)
         elif file_type == "neon":
             open_neon(self)
         elif file_type == "emit":
@@ -169,22 +173,34 @@ class HyTools:
         if self.file_type  == "envi":
             self.data = np.memmap(self.file_name,dtype = self.dtype, mode=mode,
                                   shape = self.shape,offset=self.offset)
+
+            if bool(self.glt_path):
+                self.glt_x = self.load_glt('glt_x')
+                self.glt_y = self.load_glt('glt_y')
+                if not self.glt_x is None:
+                    self.fill_mask = self.glt_x>0
+                    self.glt_x = self.glt_x.astype(np.int16)
+                    self.glt_y = self.glt_y.astype(np.int16)
+
         elif self.file_type  == "neon":
             self.hdf_obj = h5py.File(self.file_name,'r')
             self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
         elif self.file_type  == "emit":
             self.nc4_obj = h5py.File(self.file_name,'r')
             self.data = self.nc4_obj[self.base_key]
-            self.glt_x = self.load_glt('glt_x')
-            self.glt_y = self.load_glt('glt_y')
+            self.glt_x = self.load_glt('glt_x').astype(np.int16)
+            self.glt_y = self.load_glt('glt_y').astype(np.int16)
             self.fill_mask = self.glt_x>0
         elif self.file_type  == "ncav":
             self.nc4_obj = h5py.File(self.file_name,'r')
+
             self.data = self.nc4_obj[self.base_key][self.base_key]
             self.glt_x = self.load_glt('glt_x')
             self.glt_y = self.load_glt('glt_y')
             if not self.glt_x is None:
                 self.fill_mask = self.glt_x>0
+                self.glt_x = self.glt_x.astype(np.int16)
+                self.glt_y = self.glt_y.astype(np.int16)
 
 
     def close_data(self):
@@ -251,6 +267,7 @@ class HyTools:
         """
 
         self.load_data()
+
         if self.file_type == "neon":
             band =  self.data[:,:,index]
         elif self.file_type == "emit":
@@ -305,13 +322,16 @@ class HyTools:
         """
 
         self.load_data()
-        if self.file_type == "neon" or self.file_type == "emit":
+        if self.file_type in ["neon","emit"]:
             pixels = []
             for line,column in zip(lines,columns):
                 pixels.append(self.data[line,column,:])
             pixels = np.array(pixels)
         elif self.file_type == "ncav":
-            pixels = self.data[:,lines,columns]
+            pixels = []
+            for line,column in zip(lines,columns):
+                pixels.append(self.data[:,line,column])
+            pixels = np.array(pixels)
         elif self.file_type == "envi":
             pixels = envi_read_pixels(self.data,lines,columns,self.interleave)
             if self.endianness != sys.byteorder:
@@ -478,7 +498,7 @@ class HyTools:
             if anc in ['solar_zn','solar_az']:
                 anc_data = np.ones((self.lines, self.columns)) * anc_data
 
-        elif self.file_type == "emit" or self.file_type == "ncav":
+        elif self.file_type in ["emit","ncav"]:
             if bool(self.anc_path)==False:
                 return None
 
@@ -494,7 +514,7 @@ class HyTools:
                         obs_glt_y = np.abs(nc4_anc_obj['geolocation_lookup_table']['line'][()])
                         anc_data = np.zeros(obs_glt_x.shape)
                         anc_data[obs_glt_x<=0] = nc4_anc_obj['observation_parameters'][self.anc_path[anc][1]].attrs['_FillValue'][0]  # -9999
-                        data_mask_to_fill = (obs_glt_x>0)
+                        data_mask_to_fill = obs_glt_x>0
                         anc_data[data_mask_to_fill] = anc_data_raw[obs_glt_y[data_mask_to_fill].astype(int)-1,obs_glt_x[data_mask_to_fill].astype(int)-1]
 
                     nc4_anc_obj.close()
@@ -626,6 +646,17 @@ class HyTools:
             header_dict = envi_header_from_nc(self,warp_glt = warp_glt)    
         elif self.file_type == "envi":
             header_dict = parse_envi_header(self.header_file)
+            header_dict["projection"] = self.projection
+            if "coordinate system string" in header_dict.keys():
+                header_dict["projection"] = header_dict["coordinate system string"]
+            header_dict['transform'] = self.transform
+            if warp_glt:
+                header_dict["samples"] = self.columns_glt
+                header_dict["lines"]   = self.lines_glt
+                header_dict["map info"] = self.glt_map_info
+                header_dict["projection"] = self.glt_projection
+                header_dict['transform'] = self.glt_transform
+
         return header_dict
 
 
@@ -730,7 +761,6 @@ class Iterator:
 
             subset = np.full((self.hy_obj.columns_glt,valid_subset.shape[1]),-9999).astype(np.float32)
             subset[valid_mask,:] = valid_subset
-
         return subset
 
     def reset(self):

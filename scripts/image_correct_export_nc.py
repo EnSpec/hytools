@@ -65,21 +65,34 @@ def main():
     HyTools = ray.remote(ht.HyTools)
     actors = [HyTools.remote() for image in images]
 
-    if config_dict['file_type'] == 'envi':
+    if config_dict['file_type'] in ['envi','emit','ncav']:
         anc_files = config_dict["anc_files"]
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_files[image]) for a,image in zip(actors,images)])
+        if ('topo' in config_dict['corrections']) or ('brdf' in config_dict['corrections']):
+            if "glt_files" in config_dict:
+                if bool(config_dict["glt_files"]):
+                    glt_files = config_dict["glt_files"]
+                    _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                                anc_path=anc_files[image],glt_path=glt_files[image]) for a,image in zip(actors,images)])
+                else:
+                    _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                            anc_path=anc_files[image]) for a,image in zip(actors,images)])
+            else:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                        anc_path=anc_files[image]) for a,image in zip(actors,images)])
+
+        else:
+            if "glt_files" in config_dict:
+                if bool(config_dict["glt_files"]):
+                    glt_files = config_dict["glt_files"]
+                    _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                                glt_path=glt_files[image]) for a,image in zip(actors,images)])
+                else:
+                    _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+            else:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
-    elif config_dict['file_type'] == 'emit' or config_dict['file_type'] == 'ncav':
-        anc_files = config_dict["anc_files"]
-        if bool(config_dict["glt_files"]):
-            glt_files = config_dict["glt_files"]
-            _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_path=anc_files[image],glt_path=glt_files[image]) for a,image in zip(actors,images)])
-        else:
-            _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_path=anc_files[image]) for a,image in zip(actors,images)])
 
 
     _ = ray.get([a.create_bad_bands.remote(config_dict['bad_bands']) for a in actors])
@@ -153,13 +166,11 @@ def apply_corrections(hy_obj,config_dict):
 
     header_dict['data ignore value'] = hy_obj.no_data
     header_dict['data type'] = 4
-    header_dict['transform'] = hy_obj.transform
-    header_dict['projection'] = hy_obj.projection
 
     if 'image_format' in config_dict['export']:
         outformat = config_dict['export']['image_format'].lower()
         if not outformat in ["envi", "netcdf"]:
-            print("ooutput image format is neither 'ENVI' or 'NetCDF', default output format is set to 'ENVI'.")
+            print("Output image format is neither 'ENVI' nor 'NetCDF', default output format is set to 'ENVI'.")
             outformat="envi"
     else:
         outformat="envi"
@@ -191,7 +202,7 @@ def apply_corrections(hy_obj,config_dict):
         elif outformat=='netcdf':
             if hy_obj.file_type=='emit':
                 print("EMIT Full export is not supported yet.")
-                return 
+                return
             header_dict['lines_glt'] = hy_obj.lines_glt
             header_dict['samples_glt'] = hy_obj.columns_glt
             writer = WriteNetCDF(output_name,header_dict,
@@ -260,7 +271,6 @@ def apply_corrections(hy_obj,config_dict):
                 band = hy_obj.get_band(band_num,
                                     corrections = hy_obj.corrections)
                 writer.write_band(band, b)
-
             if outformat=='netcdf' and hy_obj.file_type=='emit':
                 writer.write_glt_dataset(hy_obj.glt_x,hy_obj.glt_y,dim_x_name="ortho_x",dim_y_name="ortho_y")
 
@@ -268,10 +278,9 @@ def apply_corrections(hy_obj,config_dict):
             for b,band_num in enumerate(bands):
                 band = hy_obj.get_band(band_num,
                                     corrections = hy_obj.corrections)
-
                 if outformat=='envi':
                     writer.write_band_glt(band,b, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
-                elif outformat=='netcdf' and hy_obj.file_type=='emit':
+                elif outformat=='netcdf':
                     writer.write_netcdf_band_glt(band,b, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
 
         writer.close()

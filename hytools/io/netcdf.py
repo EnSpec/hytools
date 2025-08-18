@@ -23,7 +23,7 @@ import os
 import h5py
 import h5netcdf
 import numpy as np
-from .envi import parse_envi_header, WriteENVI, calc_geotransform
+from .envi import parse_envi_header, WriteENVI, parse_glt_envi
 
 unit_dict = {'nm':'nanometers'}
 utm_zone_dict = {'N':'North','S':'South'}
@@ -90,20 +90,21 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
     hy_obj.anc_path = anc_path
 
     if bool(glt_path):
-        hy_obj.glt_path = glt_path
+        glt_meta_dict = parse_glt_envi(glt_path)
 
-        glt_header_file = os.path.splitext(glt_path[list(glt_path.keys())[0]][0])[0] + ".hdr"
-        glt_header=parse_envi_header(glt_header_file)
-        hy_obj.map_info = glt_header["map info"]
-        hy_obj.lines_glt = glt_header["lines"]
-        hy_obj.columns_glt = glt_header["samples"]
+        hy_obj.glt_path = glt_meta_dict["glt_path"]
+        hy_obj.glt_map_info = glt_meta_dict["map_info"]
+        hy_obj.lines_glt = glt_meta_dict["lines_glt"]
+        hy_obj.columns_glt = glt_meta_dict["columns_glt"]
+        hy_obj.glt_transform = glt_meta_dict["transform"]
+        hy_obj.glt_projection = glt_meta_dict["projection"]
+        del glt_meta_dict
 
-        hy_obj.transform = calc_geotransform(glt_header["map info"])
-
-        if "coordinate system string" in glt_header:
-            hy_obj.projection = glt_header["coordinate system string"]
-        else:
-            hy_obj.projection = ''
+        if sensor == "EMIT":
+        # EMIT can only has one set of geotransform / GLT, this one will override the built-in GLT
+            hy_obj.projection = hy_obj.glt_projection
+            hy_obj.map_info = hy_obj.glt_map_info
+            hy_obj.transform = hy_obj.glt_transform
 
     else:
         if sensor == 'EMIT':
@@ -121,6 +122,10 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
 
             hy_obj.lines_glt = glt_x.shape[0]
             hy_obj.columns_glt = glt_x.shape[1]
+
+            hy_obj.glt_projection = hy_obj.projection
+            hy_obj.glt_transform = hy_obj.transform
+            hy_obj.glt_map_info = hy_obj.map_info
 
         elif sensor == 'AV':
             if "transverse_mercator" in nc4_obj.keys():
@@ -151,18 +156,23 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
                 hy_obj.lines_glt = glt_x.shape[0]
                 hy_obj.columns_glt = glt_x.shape[1]
 
+            if hy_obj.base_key=="radiance":
+                hy_obj.glt_projection = hy_obj.projection
+                hy_obj.glt_transform = hy_obj.transform
+                hy_obj.glt_map_info = hy_obj.map_info
+
+
     return hy_obj
 
 def get_attr_string(attr):
     if isinstance(attr, bytes):
         return attr.decode("utf-8")
-    #else: #str
     return attr
 
 def set_wavelength_meta(nc4_obj,header_dict,glt_bool):
     file_type = (header_dict['file_type']).lower()
 
-    if file_type=="ncav" or (file_type=="emit" and glt_bool is True):
+    if file_type in ["envi","ncav"] or (file_type=="emit" and glt_bool is True):
         gp=nc4_obj.create_group("reflectance")
         wavelength_var=nc4_obj.create_variable("/reflectance/wavelength",("wavelength",),
                                                data=header_dict['wavelength'],
@@ -202,6 +212,9 @@ class WriteNetCDF(WriteENVI):
 
         """
 
+        dim1_chunk_size = 2**(min(int(np.log2(header_dict['lines'])),8))
+        dim2_chunk_size = 2**(min(int(np.log2(header_dict['samples'])),8))
+
         if type_tag=="reflectance": # for reflectance
             self.header_dict = header_dict
             self.output_name = output_name
@@ -215,7 +228,7 @@ class WriteNetCDF(WriteENVI):
                 self.data = self.nc4_obj.create_variable("/reflectance/reflectance",
                                                          ("wavelength","northing","easting"),
                                                          np.float32,
-                                                         chunks=(2,256,256),
+                                                         chunks=(2,dim1_chunk_size,dim2_chunk_size),
                                                          compression='gzip')
                 self.data.attrs["grid_mapping"] =  "projection"
             elif self.file_type == "emit":
@@ -224,7 +237,7 @@ class WriteNetCDF(WriteENVI):
                     self.data = self.nc4_obj.create_variable("/reflectance/reflectance",
                                                              ("wavelength","northing","easting"),
                                                              np.float32,
-                                                             chunks=(1,256,256),
+                                                             chunks=(1,dim1_chunk_size,dim2_chunk_size),
                                                              compression='gzip')
                     self.data.attrs["grid_mapping"] =  "projection"
                 else:
@@ -232,7 +245,7 @@ class WriteNetCDF(WriteENVI):
                     self.data = self.nc4_obj.create_variable("reflectance",
                                                              ("downtrack","crosstrack","bands"),
                                                              np.float32,
-                                                             chunks=(256,256,2),
+                                                             chunks=(dim1_chunk_size,dim2_chunk_size,2),
                                                              compression='gzip')
 
             self.data.attrs["_FillValue"]=np.array([-9999.0],dtype=np.float32)
@@ -247,7 +260,7 @@ class WriteNetCDF(WriteENVI):
                 self.data = self.nc4_obj.create_variable(f"/masks/{band_name}",
                                                          ("northing","easting"),
                                                          np.uint8,
-                                                         chunks=(256,256),
+                                                         chunks=(dim1_chunk_size,dim2_chunk_size),
                                                          compression='gzip')
                 self.data.attrs["grid_mapping"] =  "projection"
             elif self.file_type == "emit":
@@ -255,14 +268,14 @@ class WriteNetCDF(WriteENVI):
                     self.data = self.nc4_obj.create_variable(f"/masks/{band_name}",
                                                              ("northing","easting"),
                                                              np.uint8,
-                                                             chunks=(256,256),
+                                                             chunks=(dim1_chunk_size,dim2_chunk_size),
                                                              compression='gzip')
                     self.data.attrs["grid_mapping"] =  "projection"
                 else:
                     self.data = self.nc4_obj.create_variable(f"/masks/{band_name}",
                                                              ("downtrack","crosstrack"),
                                                              np.uint8,
-                                                             chunks=(256,256),
+                                                             chunks=(dim1_chunk_size,dim2_chunk_size),
                                                              compression='gzip')
             self.data.attrs["_FillValue"]=np.array([255],dtype=np.uint8)
             self.external_nc_attrs(attr_dict)
@@ -280,7 +293,7 @@ class WriteNetCDF(WriteENVI):
                 self.data = self.nc4_obj.create_variable(f"/{band_name}/stack",
                                                          ("bands","northing","easting"),
                                                          np.float32,
-                                                         chunks=(1,256,256),
+                                                         chunks=(1,dim1_chunk_size,dim2_chunk_size),
                                                          compression='gzip')
                 self.data.attrs["grid_mapping"] =  "projection"
 
@@ -289,14 +302,14 @@ class WriteNetCDF(WriteENVI):
                     self.data = self.nc4_obj.create_variable(f"/{band_name}/stack",
                                                              ("bands","northing","easting"),
                                                              np.float32,
-                                                             chunks=(1,256,256),
+                                                             chunks=(1,dim1_chunk_size,dim2_chunk_size),
                                                              compression='gzip')
                     self.data.attrs["grid_mapping"] =  "projection"
                 else:
                     self.data = self.nc4_obj.create_variable(f"/{band_name}/stack",
                                                              ("bands","downtrack","crosstrack"),
                                                              np.float32,
-                                                             chunks=(1,256,256),
+                                                             chunks=(1,dim1_chunk_size,dim2_chunk_size),
                                                              compression='gzip')
 
             self.data.attrs["band_names"] = header_dict["band names"][:2]
@@ -380,7 +393,8 @@ def write_netcdf_meta(nc4_obj,header_dict,glt_bool):
 
     file_type = (header_dict['file_type']).lower()
 
-    if file_type=="ncav" or (file_type=="emit" and glt_bool is True):
+    if file_type in ["envi","ncav"] or (file_type=="emit" and glt_bool is True):
+
         transform=header_dict['transform']
 
         nc4_obj.dimensions["northing"]=header_dict['lines'] #dim0
@@ -390,7 +404,6 @@ def write_netcdf_meta(nc4_obj,header_dict,glt_bool):
         tm_var.attrs["GeoTransform"]=' '.join([str(x) for x in header_dict['transform']]).encode("utf-8")
         tm_var.attrs["crs_wkt"]=header_dict['projection'].encode("utf-8")
         tm_var.attrs["spatial_ref"]=header_dict['projection'].encode("utf-8")
-
 
     elif file_type=="emit":
         if glt_bool: # handled in above codes

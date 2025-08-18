@@ -19,3 +19,5 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
 from .misc import *
+from .geog_utm import *
+from .point import *

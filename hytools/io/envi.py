@@ -93,7 +93,7 @@ field_dict = {"acquisition time": "str",
               "z plot titles": "str"}
 
 
-def open_envi(hy_obj,anc_path = {}, ext = False):
+def open_envi(hy_obj,anc_path = {}, ext = False, glt_path = None):
     """Open ENVI formatted image file and populate Hytools object.
 
 
@@ -130,6 +130,11 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
     hy_obj.byte_order = header_dict['byte order']
     hy_obj.anc_path = anc_path
     hy_obj.header_file = header_file
+    hy_obj.transform = calc_geotransform(header_dict['map info'])
+    if bool(header_dict['coordinate system string']):
+        hy_obj.projection = header_dict['coordinate system string']
+    else:
+        hy_obj.projection = ''
 
     if hy_obj.byte_order == 1:
         hy_obj.endianness = 'big'
@@ -177,6 +182,18 @@ def open_envi(hy_obj,anc_path = {}, ext = False):
         counts = {v: k for k, v in Counter([up_l,up_r,low_l,low_r]).items()}
         hy_obj.no_data = counts[max(counts.keys())]
         hy_obj.close_data()
+
+    if bool(glt_path):
+        glt_meta_dict = parse_glt_envi(glt_path)
+
+        hy_obj.glt_path = glt_meta_dict["glt_path"]
+        hy_obj.glt_map_info = glt_meta_dict["map_info"]
+        hy_obj.lines_glt = glt_meta_dict["lines_glt"]
+        hy_obj.columns_glt = glt_meta_dict["columns_glt"]
+        hy_obj.glt_transform = glt_meta_dict["transform"]
+        hy_obj.glt_projection = glt_meta_dict["projection"]
+
+        del glt_meta_dict
 
     del header_dict
     return hy_obj
@@ -248,16 +265,6 @@ class WriteENVI:
             None.
 
         """
-        #print(glt_indices_y[:3])
-        #print(glt_indices_x[:3])
-
-        #ind=np.where(fill_mask[glt_indices_y,glt_indices_x]==1)
-        #print(arr.shape)
-        #tmp_arr=self.data[:,glt_indices_y,glt_indices_x]
-        #print(self.data.shape)
-        #print(glt_indices_y.shape)
-        
-        
 
         if self.interleave == "bip":
             self.data[glt_indices_y,glt_indices_x,:] = arr
@@ -422,19 +429,23 @@ def envi_header_from_nc(hy_obj, interleave = 'bsq', warp_glt = False):
 
     header_dict = {}
     header_dict["ENVI description"] = "{}"
-    
+
     if warp_glt == False:
         header_dict["samples"] = hy_obj.columns
         header_dict["lines"]   = hy_obj.lines
-        if hy_obj.file_type=='ncav':
-            header_dict["map info"] = hy_obj.map_info
-            header_dict["coordinate system string"] = hy_obj.projection
+        header_dict["map info"] = hy_obj.map_info
+        header_dict["coordinate system string"] = hy_obj.projection
+        header_dict["projection"] = hy_obj.projection
+        header_dict["transform"] = hy_obj.transform
+
     else:
         header_dict["samples"] = hy_obj.columns_glt
         header_dict["lines"]   = hy_obj.lines_glt
-        header_dict["map info"] = hy_obj.map_info
-        header_dict["coordinate system string"] = hy_obj.projection
-    
+        header_dict["map info"] = hy_obj.glt_map_info
+        header_dict["coordinate system string"] = hy_obj.glt_projection
+        header_dict["projection"] = hy_obj.glt_projection
+        header_dict["transform"] = hy_obj.glt_transform
+
     header_dict["bands"] = 2 #hy_obj.bands
     header_dict["header offset"] = 0
     header_dict["file type"] = "ENVI Standard"
@@ -442,7 +453,7 @@ def envi_header_from_nc(hy_obj, interleave = 'bsq', warp_glt = False):
     header_dict["interleave"] = interleave
     header_dict["sensor type"] = ""
     header_dict["byte order"] = 0
-    
+
 
     header_dict["wavelength units"] = hy_obj.wavelength_units
     header_dict["data ignore value"] = hy_obj.no_data
@@ -606,8 +617,27 @@ def calc_geotransform(mapinfo):
     # same as 0 rotation
         geotransform = (float(mapinfo[3]),float(mapinfo[5]),0,
                         float(mapinfo[4]),0,-float(mapinfo[6]))
-
     return geotransform
+
+def parse_glt_envi(glt_path):
+    glt_meta_dict = {}
+    glt_meta_dict["glt_path"] = glt_path
+
+    glt_header_file = os.path.splitext(glt_path[list(glt_path.keys())[0]][0])[0] + ".hdr"
+    glt_header=parse_envi_header(glt_header_file)
+    glt_meta_dict["map_info"] = glt_header["map info"]
+    glt_meta_dict["lines_glt"] = glt_header["lines"]
+    glt_meta_dict["columns_glt"] = glt_header["samples"]
+
+    glt_meta_dict["transform"] = calc_geotransform(glt_header["map info"])
+
+    if "coordinate system string" in glt_header:
+        glt_meta_dict["projection"] = glt_header["coordinate system string"]
+    else:
+        glt_meta_dict["projection"] = ''
+
+    return glt_meta_dict
+
 
 def parse_envi_header(header_file):
     """
