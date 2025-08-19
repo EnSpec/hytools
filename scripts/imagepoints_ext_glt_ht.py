@@ -307,7 +307,7 @@ def main():
 
     if args.anc: #not args.anc is None
         anc_dict = {
-                 "path_length": [
+         "path_length": [
             args.anc,
             0
          ],
@@ -333,15 +333,15 @@ def main():
          ],
          "slope": [
             args.anc,
-            0
+            6
          ],
          "aspect": [
             args.anc,
-            1
+            7
          ],
          "cosine_i": [
             args.anc,
-            2
+            8
          ],
          "utc_time": [
             args.anc,
