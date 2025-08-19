@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hy-tools"
-version = "1.6.0"
+version = "1.6.1"
 
 dependencies = [
   "h5py",
