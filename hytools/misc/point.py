@@ -51,7 +51,7 @@ def get_neighbor(hyObj, point_coord_df, n_neighbor, uid, point_epsg_code,mapobj,
             xy_coord_array = point_coord_df[['img_x','img_y']].values-np.array([[ul_x,ul_y]])
 
 
-    img_loc_array = (xy_coord_array@(np.linalg.inv(transform_matrix).T)).astype(np.int16)   # zero-based
+    img_loc_array = (xy_coord_array@(np.linalg.inv(transform_matrix).T)).astype(np.int32)   # zero-based
 
     n_neighbor = max(0,n_neighbor)
     if n_neighbor>=0:
@@ -105,8 +105,8 @@ def get_neighbor(hyObj, point_coord_df, n_neighbor, uid, point_epsg_code,mapobj,
         img_loc_array_with_nb_row = offset_arr_row@np.vstack([img_loc_array[:,1],np.ones(img_loc_array.shape[0])])
         new_uid_list = uid_list+new_uid_list
 
-        img_loc_array_with_nb_col = img_loc_array_with_nb_col.T.ravel().astype(np.int16)
-        img_loc_array_with_nb_row = img_loc_array_with_nb_row.T.ravel().astype(np.int16) # zero-based
+        img_loc_array_with_nb_col = img_loc_array_with_nb_col.T.ravel().astype(np.int32)
+        img_loc_array_with_nb_row = img_loc_array_with_nb_row.T.ravel().astype(np.int32) # zero-based
 
         return_df = pd.DataFrame({'new_uid':new_uid_list,uid:uid_list,'img_col_glt':img_loc_array_with_nb_col,'img_row_glt':img_loc_array_with_nb_row})
 
@@ -123,8 +123,8 @@ def get_neighbor(hyObj, point_coord_df, n_neighbor, uid, point_epsg_code,mapobj,
         post_glt_col_ind = hyObj.glt_x[(img_loc_array_with_nb_row[valid_mask],img_loc_array_with_nb_col[valid_mask])]-1
         post_glt_row_ind = hyObj.glt_y[(img_loc_array_with_nb_row[valid_mask],img_loc_array_with_nb_col[valid_mask])]-1 # one-based to zero-based
 
-        return_df["img_col_raw"] = post_glt_col_ind.astype(np.int16)
-        return_df["img_row_raw"] = post_glt_row_ind.astype(np.int16) # zero-based
+        return_df["img_col_raw"] = post_glt_col_ind.astype(np.int32)
+        return_df["img_row_raw"] = post_glt_row_ind.astype(np.int32) # zero-based
     else:
         return_df["img_col_raw"] = return_df['img_col_glt']
         return_df["img_row_raw"] = return_df['img_row_glt']

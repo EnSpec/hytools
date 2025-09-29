@@ -1,6 +1,6 @@
 ## FlexBRDF without Ray
 
-In some distributed system like [High Throughput Computing system](https://chtc.cs.wisc.edu/), the workers are not sharing memory, or computation or storage resource are limited. In such situations, not enough computer cores can be assigned to the FlexBRDF process that matches the total number of flightlines in the same group. Ray cannot be run easily with limited umber of CPU cores.
+In some distributed system like [High Throughput Computing system](https://chtc.cs.wisc.edu/) (HTC), the workers are not sharing memory, or computation or storage resource are limited. In such situations, not enough computer cores can be assigned to the FlexBRDF process that matches the total number of flightlines in the same group. Ray cannot be run easily with limited number of CPU cores.
 
 To solve that in the FlexBRDF context, samples that needed for BRDF modeling from each flightline can be extracted and saved individually, and then transferred to the same storage location later for the final step of BRDF coefficient estimation. The extraction step can be either executed sequentially or parallelly, depending on the system.
 

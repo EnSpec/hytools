@@ -256,7 +256,7 @@ def local_polygon2spec(hyObj, poly_shp, uid, use_band_list=False, band_list=[],u
         new_band_name = ['B{:d}'.format(x+1) for x in range(hyObj.bands)]
 
     if hyObj.file_type in ['ncav']:
-        spec_df = pd.DataFrame(spec_data.T, columns=new_band_name)
+        spec_df = pd.DataFrame(spec_data, columns=new_band_name) #spec_df = pd.DataFrame(spec_data.T, columns=new_band_name)
     else:
         spec_df = pd.DataFrame(spec_data, columns=new_band_name)
 
