@@ -47,7 +47,7 @@ def calc_cosine_coeffs(hy_obj,topo_dict):
     cos_i = hy_obj.cosine_i()
     cos_solar_zn = np.cos(hy_obj.get_anc('solar_zn'))
 
-    c_factor =  cos_solar_zn/cos_i
+    c_factor =  cos_i/cos_solar_zn
     c_factor[~hy_obj.mask['no_data']] = 1.
     hy_obj.ancillary['cosine_factor'] =c_factor
 
