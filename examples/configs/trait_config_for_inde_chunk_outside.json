@@ -1,0 +1,57 @@
+{
+    "file_type": "envi",
+    "output_dir": "/home/neon_test/2020_NIWO/",
+    "bad_bands": [
+        [
+            300,
+            400
+        ],
+        [
+            1320,
+            1450
+        ],
+        [
+            1800,
+            2000
+        ],
+        [
+            2350,
+            2600
+        ]
+    ],
+    "input_files": [
+        "/home/neon_test/2020_NIWO/NEON_D13_NIWO_DP1_20200801_154719_reflectance_bsq",
+        "/home/neon_test/2020_NIWO/NEON_D13_NIWO_DP1_20200801_154719_reflectance_bip",
+        "/home/neon_test/2020_NIWO/NEON_D13_NIWO_DP1_20200801_154719_reflectance_bil"
+    ],
+    "anc_files": {},
+    "use_glt": false,
+    "glt_files": {},
+    "export_type": "netcdf",
+    "num_cpus": 1,
+    "chunk_size":[8,"col"],
+    "corrections": [],
+    "resampling": {
+        "type": "nearest"
+    },
+    "masks": [
+        [
+            "ndi",
+            {
+                "band_1": 850,
+                "band_2": 660,
+                "min": 0.6,
+                "max": 1.0
+            }
+        ],
+        [
+            "neon_edge",
+            {
+                "radius": 30
+            }
+        ]
+    ],
+    "trait_models": [
+        "/home/plsr_lai_pred_model.json"
+    ]
+}

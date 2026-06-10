@@ -9,6 +9,7 @@ import hytools as ht
 from hytools.io.envi import *
 from hytools.io.netcdf import *
 from hytools.masks import mask_dict
+from hytools.glint import set_glint_parameters_single
 
 warnings.filterwarnings("ignore")
 
@@ -36,6 +37,10 @@ def main():
 
     images= config_dict["input_files"]
 
+    pass_bool, anc_required_bool = check_anc_requirement(config_dict)
+    if not pass_bool:
+        return
+
     if ray.is_initialized():
         ray.shutdown()
     print("Using %s CPUs." % config_dict['num_cpus'])
@@ -46,20 +51,43 @@ def main():
 
     # Load data
     if config_dict['file_type'] == 'envi':
-        anc_files = config_dict["anc_files"]
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_files[image]) for a,image in zip(actors,images)])
+        if bool(config_dict["glt_files"]):
+            glt_files = config_dict["glt_files"]
+            if anc_required_bool:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                        anc_path=anc_files[image],
+                                        glt_path=glt_files[image]) for a,image in zip(actors,images)])
+            else:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                        glt_path=glt_files[image]) for a,image in zip(actors,images)])
+        else:
+            if anc_required_bool:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                        anc_path=anc_files[image]) for a,image in zip(actors,images)])
+            else:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
     elif config_dict['file_type'] == 'emit' or config_dict['file_type'] == 'ncav':
         anc_files = config_dict["anc_files"]
         if bool(config_dict["glt_files"]):
             glt_files = config_dict["glt_files"]
-            _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_path=anc_files[image],glt_path=glt_files[image]) for a,image in zip(actors,images)])
+            if anc_required_bool:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                        anc_path=anc_files[image],
+                                        glt_path=glt_files[image]) for a,image in zip(actors,images)])
+            else:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                        glt_path=glt_files[image]) for a,image in zip(actors,images)])
+
         else:
-            _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+            if anc_required_bool:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
                                         anc_path=anc_files[image]) for a,image in zip(actors,images)])
+            else:
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+
     else:
         print("Image file type is not recognized.")
         return
@@ -76,7 +104,7 @@ def main():
     if not "use_glt" in config_dict:
         config_dict["use_glt"]=False
 
-    print("Estimating %s traits:" % len( config_dict['trait_models']))
+    print(f"Estimating {len( config_dict['trait_models'])} traits:")
     for trait in config_dict['trait_models']:
         with open(trait, 'r') as json_file:
             trait_model = json.load(json_file)
@@ -84,6 +112,30 @@ def main():
 
     _ = ray.get([a.do.remote(apply_trait_models,config_dict) for a in actors])
     ray.shutdown()
+
+def check_anc_requirement(config_dict):
+    '''Check if ANC files are required and provided in the config file, if they are required.
+    '''
+    anc_files = config_dict["anc_files"]
+    pass_bool=False
+    if ('topo' in config_dict['corrections']) or ('brdf' in config_dict['corrections']):
+        anc_required_bool=True
+        if config_dict['file_type'] in ['envi','emit','ncav']:
+            if bool(anc_files):
+                pass_bool=True
+            else:
+                print("'anc' files are required for correction, but they are not provided.")
+                #pass_bool=False # default
+        elif config_dict['file_type'] in ['neon']:
+            pass_bool=True
+        else:
+            # not accepted image format
+            pass # do not pass, pass_bool is still False
+    else:
+        anc_required_bool=False
+        pass_bool=True
+
+    return pass_bool, anc_required_bool
 
 def apply_trait_models(hy_obj,config_dict):
     '''Apply trait model(s) to image and export to file.
@@ -98,6 +150,9 @@ def apply_trait_models(hy_obj,config_dict):
 
     if 'brdf' in hy_obj.corrections:
         hy_obj.load_coeffs(config_dict['brdf'][hy_obj.file_name],'brdf')
+
+    if 'glint' in hy_obj.corrections:
+        set_glint_parameters_single(hy_obj, config_dict)
 
     hy_obj.resampler['type'] = config_dict["resampling"]['type']
 
@@ -232,36 +287,47 @@ def apply_trait_models(hy_obj,config_dict):
             x_start = iterator.current_column
             x_end = iterator.current_column + trait_est.shape[1]
             y_start = iterator.current_line
-            y_end = iterator.current_line + trait_est.shape[0]            
+            y_end = iterator.current_line + trait_est.shape[0]
             out_stack[:,y_start:y_end,x_start:x_end] = np.moveaxis(trait_est,-1,0)
 
         if use_glt_output_bool:
-            for iband in range(2):
-                writer.write_netcdf_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
-            writer.close()
-
-
-            for iband in range(len(header_dict['band names'][2:])):
-                writer = WriteNetCDF(output_name,header_dict,
-                                     attr_dict=config_dict["outside_metadata"],
-                                     glt_bool=use_glt_output_bool,
-                                     type_tag="mask",
-                                     band_name=header_dict['band names'][2:][iband])
-                writer.write_mask_band_glt(out_stack[2+iband,:,:], (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
+            if config_dict["export_type"]=="envi":
+                for iband in range(out_stack.shape[0]):
+                    writer.write_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
                 writer.close()
+
+            else:
+                for iband in range(2):
+                    writer.write_netcdf_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
+                writer.close()
+
+
+                for iband in range(len(header_dict['band names'][2:])):
+                    writer = WriteNetCDF(output_name,header_dict,
+                                         attr_dict=config_dict["outside_metadata"],
+                                         glt_bool=use_glt_output_bool,
+                                         type_tag="mask",
+                                         band_name=header_dict['band names'][2:][iband])
+                    writer.write_mask_band_glt(out_stack[2+iband,:,:], (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
+                    writer.close()
         else:
-            for iband in range(2):
-                writer.write_band(out_stack[iband,:,:],iband)
-            writer.close()
-
-            for iband in range(len(header_dict['band names'][2:])):
-                writer = WriteNetCDF(output_name,header_dict,
-                                     attr_dict=config_dict["outside_metadata"],
-                                     glt_bool=use_glt_output_bool,
-                                     type_tag="mask",
-                                     band_name=header_dict['band names'][2:][iband])
-                writer.write_mask_band(out_stack[2+iband,:,:])
+            if config_dict["export_type"]=="envi":
+                for iband in range(out_stack.shape[0]):
+                    writer.write_band(out_stack[iband,:,:],iband)
                 writer.close()
+            else:
+                for iband in range(2):
+                    writer.write_band(out_stack[iband,:,:],iband)
+                writer.close()
+
+                for iband in range(len(header_dict['band names'][2:])):
+                    writer = WriteNetCDF(output_name,header_dict,
+                                         attr_dict=config_dict["outside_metadata"],
+                                         glt_bool=use_glt_output_bool,
+                                         type_tag="mask",
+                                         band_name=header_dict['band names'][2:][iband])
+                    writer.write_mask_band(out_stack[2+iband,:,:])
+                    writer.close()
 
 
 if __name__== "__main__":
