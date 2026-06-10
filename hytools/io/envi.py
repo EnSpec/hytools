@@ -130,7 +130,10 @@ def open_envi(hy_obj,anc_path = {}, ext = False, glt_path = None):
     hy_obj.byte_order = header_dict['byte order']
     hy_obj.anc_path = anc_path
     hy_obj.header_file = header_file
-    hy_obj.transform = calc_geotransform(header_dict['map info'])
+
+    if bool(header_dict['map info']):
+        hy_obj.transform = calc_geotransform(header_dict['map info'])
+
     if bool(header_dict['coordinate system string']):
         hy_obj.projection = header_dict['coordinate system string']
     else:

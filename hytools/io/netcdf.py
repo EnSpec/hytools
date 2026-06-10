@@ -45,8 +45,7 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
 
     if "radiance" in list(nc4_obj.keys()):
         data_var_name = "radiance"
-    else:
-    #elif "reflectance" in list(nc4_obj.keys()):
+    elif "reflectance" in list(nc4_obj.keys()):
         data_var_name = "reflectance"
     hy_obj.base_key = data_var_name
 
@@ -161,13 +160,13 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
                 hy_obj.glt_transform = hy_obj.transform
                 hy_obj.glt_map_info = hy_obj.map_info
 
-
     return hy_obj
 
 def get_attr_string(attr):
     if isinstance(attr, bytes):
         return attr.decode("utf-8")
-    return attr
+    else: #str
+        return attr
 
 def set_wavelength_meta(nc4_obj,header_dict,glt_bool):
     file_type = (header_dict['file_type']).lower()
@@ -314,6 +313,43 @@ class WriteNetCDF(WriteENVI):
 
             self.data.attrs["band_names"] = header_dict["band names"][:2]
             self.data.attrs["_FillValue"] = np.array([-9999.0],dtype=np.float32)
+        elif type_tag=="variables":
+            self.interleave = "bsq"
+            self.file_type = header_dict['file_type'].lower()
+            self.nc4_obj = h5netcdf.File(output_name, "w")
+
+            self.nc4_obj.dimensions["bands"]=header_dict['bands']
+
+            self.interleave = "bsq"
+
+            write_netcdf_meta(self.nc4_obj,header_dict,glt_bool)
+            if self.file_type in ["ncav","envi"]:
+                self.data = self.nc4_obj.create_variable(f"/{band_name}/stack",
+                                                         ("bands","northing","easting"),
+                                                         np.float32,
+                                                         chunks=(1,dim1_chunk_size,dim2_chunk_size),
+                                                         compression='gzip')
+                self.data.attrs["grid_mapping"] =  "projection"
+
+            elif self.file_type == "emit":
+                if glt_bool:
+                    self.data = self.nc4_obj.create_variable(f"/{band_name}/stack",
+                                                             ("bands","northing","easting"),
+                                                             np.float32,
+                                                             chunks=(1,dim1_chunk_size,dim2_chunk_size),
+                                                             compression='gzip')
+                    self.data.attrs["grid_mapping"] =  "projection"
+                else:
+                    self.data = self.nc4_obj.create_variable(f"/{band_name}/stack",
+                                                             ("bands","downtrack","crosstrack"),
+                                                             np.float32,
+                                                             chunks=(1,dim1_chunk_size,dim2_chunk_size),
+                                                             compression='gzip')
+
+            self.data.attrs["band_names"] = np.array(header_dict["band names"], dtype='<S15')
+            self.data.attrs["_FillValue"] = np.array([-9999.0],dtype=np.float32)
+
+
 
     def write_mask_band(self,band):
         self.data[:,:]  = band

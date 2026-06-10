@@ -69,9 +69,13 @@ def get_topo_var_samples_pre(hy_obj):
     '''
     slope = hy_obj.get_anc('slope')
     cosine_i = hy_obj.cosine_i()
+
+    sensor_azimuth = hy_obj.get_anc('sensor_az')
+    sensor_zenith = hy_obj.get_anc('sensor_zn')    
+
     sample_ind = (hy_obj.ancillary['ndvi_classes'] !=0)
 
-    return slope[sample_ind], cosine_i[sample_ind]
+    return slope[sample_ind], cosine_i[sample_ind], sensor_zenith[sample_ind], sensor_azimuth[sample_ind]
 
 def calc_flex_single_post(combine_data_dict,brdf_dict,load_reflectance_mode):
 
@@ -154,9 +158,9 @@ def calc_flex_single_pre(hy_obj,brdf_dict):
 
     refl_samples = np.concatenate(refl_samples_list,axis=1)
 
-    slope_samples, cos_i_samples = get_topo_var_samples_pre(hy_obj)  # slope and cosine_i
+    slope_samples, cos_i_samples, sensor_zenith_samples, sensor_azimuth_samples = get_topo_var_samples_pre(hy_obj)
 
-    return kernel_samples[:,:2], refl_samples, used_band, slope_samples, cos_i_samples
+    return kernel_samples[:,:2], refl_samples, used_band, slope_samples, cos_i_samples, sensor_zenith_samples, sensor_azimuth_samples
 
 
 def calc_brdf_coeffs(actors,config_dict):
@@ -220,7 +224,7 @@ def calc_brdf_coeffs_pre(hy_obj,config_dict):
         # Create masks used for calculating coefficients
         hy_obj.gen_mask(mask_create,'calc_brdf',brdf_dict['calc_mask'])
 
-        kernel_samples, reflectance_samples, used_band, slope_samples, cos_i_samples = calc_flex_single_pre(hy_obj,brdf_dict)
+        kernel_samples, reflectance_samples, used_band, slope_samples, cos_i_samples, sensor_zenith_samples, sensor_azimuth_samples = calc_flex_single_pre(hy_obj,brdf_dict)
 
     hy_obj.corrections.append('brdf')
 
@@ -232,14 +236,7 @@ def calc_brdf_coeffs_pre(hy_obj,config_dict):
         "used_band":used_band,
         "slope_samples":slope_samples,
         "cos_i_samples":cos_i_samples,
+        "sensor_zenith_samples":sensor_zenith_samples,
+        "sensor_azimuth_samples":sensor_azimuth_samples,
     }
-
-
-
-
-
-
-
-
-
 
