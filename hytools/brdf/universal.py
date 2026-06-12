@@ -61,8 +61,9 @@ def subsample_mask(hy_obj):
     '''Subsample and update calculation mask
     '''
     if hy_obj.brdf['sample_perc'] < 1:
+        rng = np.random.default_rng(seed = 123)
         idx = np.array(np.where(hy_obj.mask['calc_brdf'])).T
-        idx_rand= idx[np.random.choice(range(len(idx)),
+        idx_rand= idx[rng.choice(range(len(idx)),
                                       int(len(idx)*(1- hy_obj.brdf['sample_perc'])),
                                       replace = False)].T
         hy_obj.mask['calc_brdf'][idx_rand[0],idx_rand[1]] = False

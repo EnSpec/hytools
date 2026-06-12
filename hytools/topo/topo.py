@@ -91,10 +91,12 @@ def get_topo_sample_mask(hy_obj,topo_dict):
 
     subsample_mask = np.copy(hy_obj.mask['calc_topo'])
 
+    rng = np.random.default_rng(seed= 123)
+
     idx = np.array(np.where(subsample_mask!=0)).T
 
     if idx.shape[0]>5:
-        idxRand= idx[np.random.choice(range(len(idx)),int(len(idx)*(1-sample_ratio)), replace = False)].T
+        idxRand= idx[rng.choice(range(len(idx)),int(len(idx)*(1-sample_ratio)), replace = False)].T
         subsample_mask[idxRand[0],idxRand[1]] = 0
 
     subsample_mask = subsample_mask.astype(np.int8)

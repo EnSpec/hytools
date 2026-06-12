@@ -60,8 +60,9 @@ def ndvi_stratify(hy_obj):
     class_mask[~hy_obj.mask['calc_brdf']] = 0
 
     #Subsample data
+    rng = np.random.default_rng(seed= 123)
     idx = np.array(np.where(class_mask!=0)).T
-    idxRand= idx[np.random.choice(range(len(idx)),int(len(idx)*(1-hy_obj.brdf['sample_perc'])), replace = False)].T
+    idxRand= idx[rng.choice(range(len(idx)),int(len(idx)*(1-hy_obj.brdf['sample_perc'])), replace = False)].T
     class_mask[idxRand[0],idxRand[1]] = 0
     class_mask = class_mask.astype(np.int8)
     hy_obj.ancillary['ndvi_classes'] = class_mask
