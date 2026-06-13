@@ -30,6 +30,7 @@ from scipy.optimize import minimize
 from .kernels import calc_volume_kernel,calc_geom_kernel
 from ..misc import progbar
 from ..misc import update_brdf
+from ..misc import regular_grid_sampling_class_mask
 from ..masks import mask_create
 from ..plotting import universal_diagno_plot
 
@@ -63,9 +64,12 @@ def subsample_mask(hy_obj):
     if hy_obj.brdf['sample_perc'] < 1:
         rng = np.random.default_rng(seed = 123)
         idx = np.array(np.where(hy_obj.mask['calc_brdf'])).T
-        idx_rand= idx[rng.choice(range(len(idx)),
-                                      int(len(idx)*(1- hy_obj.brdf['sample_perc'])),
-                                      replace = False)].T
+        # idx_rand= idx[rng.choice(range(len(idx)),
+        #                               int(len(idx)*(1- hy_obj.brdf['sample_perc'])),
+        #                               replace = False)].T
+
+        idx_rand = regular_grid_sampling_class_mask(idx, hy_obj.brdf['sample_perc'], csv_path = None)
+       
         hy_obj.mask['calc_brdf'][idx_rand[0],idx_rand[1]] = False
 
 def calc_universal_single(hy_obj):

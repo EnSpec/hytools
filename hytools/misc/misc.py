@@ -19,6 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
 from itertools import tee
+import numpy as np
+import pandas as pd
+
 
 def progbar(curr, total, full_progbar = 100):
     '''Display progress bar.
@@ -84,3 +87,92 @@ def update_topo_group(subgroup_dict_in):
         update_name_list+=[subgroup_dict[group_tag]]
 
     return update_name_list,group_tag_list
+
+# subsample non-zero pixels in a class mask using regular grid sampling 
+# and keep sampling locations to a CSV file
+def regular_grid_sampling_class_mask(class_mask, sample_perc, csv_path = None):
+
+    # safety check
+    if not(0 < sample_perc <=1):
+        raise ValueError("sample_perc must be in the range of (0, 1]. ")
+    
+    # create the np.ndarray to store the output mask
+    class_mask_out = class_mask.copy()
+
+    #  calcalate the number of valid pixels
+    valid_mask = class_mask_out != 0
+    n_valid = np.sum(valid_mask)
+
+    if n_valid == 0: 
+        if csv_path is not None: 
+            pd.DataFrame(columns = ["rowID", "colID", "class_value"]).to_csv(
+                csv_path, index = False
+            )
+            return class_mask_out.astype(np.int8)
+        
+    if sample_perc == 1:
+        keep_mask = valid_mask
+        grid_step = 1
+
+    else: 
+        # calculate the number of pixels to sample
+        n_target = int(n_valid * sample_perc)
+
+        row_grid, col_grid = np.indices(class_mask_out.shape)
+
+        max_grid_step = max(class_mask_out.shape)
+
+        best_keep_mask = None
+        best_grid_step = None
+        best_diff = np.inf
+        keep_n_step = None
+
+        for candidate_step in range(1, max_grid_step + 1):
+            
+                keep_mask_candidate = (
+                    valid_mask
+                    & ((row_grid) % grid_step == 0)
+                    & ((col_grid) % grid_step == 0)
+                )
+
+                n_keep = np.sum(keep_mask_candidate)
+                diff = abs(n_keep - n_target)
+                
+                # print out the grid_step, n_keep, and diff number
+                
+
+                if diff < best_diff:
+                    best_diff = diff
+                    best_keep_mask = keep_mask_candidate
+                    best_grid_step = candidate_step
+                    keep_n_step = n_keep
+
+                # Exact match, no need to keep seraching
+                if diff == 0: 
+                    break
+
+        keep_mask = best_keep_mask
+        grid_step = best_grid_step
+
+    if csv_path is not None: 
+        keep_rows, keep_cols = np.where(keep_mask)
+
+        sampling_df = pd.DataFrame({
+            "rowID": keep_rows,
+            "colID": keep_cols,
+            "class_value": class_mask_out[keep_rows, keep_cols],
+            "grid_Step": grid_step
+        })
+
+        sampling_df.to_csv(csv_path, index=False)
+
+    # this is equivalent to sampling (1-sample_perc) pixels and setting them to 0
+    class_mask_out[valid_mask & (~keep_mask)] = 0
+
+    return class_mask_out.astype(np.int8)
+
+
+
+
+
+

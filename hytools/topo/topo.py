@@ -91,6 +91,7 @@ def get_topo_sample_mask(hy_obj,topo_dict):
 
     subsample_mask = np.copy(hy_obj.mask['calc_topo'])
 
+    # extract pixels for fitting
     rng = np.random.default_rng(seed= 123)
 
     idx = np.array(np.where(subsample_mask!=0)).T
