@@ -10,7 +10,7 @@ HyTools and its dependencies are properly [installed](https://github.com/EnSpec/
 
 ## 2. Configuration
 
-All settings and file paths are specified in a JSON file, which is foremost in the execution of the full procedure. They are supposed to be setup before the actual execution. Some configuration templates can be found [here](https://github.com/EnSpec/hytools/tree/master/examples/configs). 
+All settings and file paths are specified in a JSON file, which is foremost in the execution of the full procedure. They are supposed to be setup before the actual execution. Some configuration templates can be found [here](https://github.com/EnSpec/hytools/tree/master/examples/configs).
 
 
 To change the settings for specific purposes, user can either directly edit the sample configuration json file, or run the script below to generate a new configuration json file with modified settings.
@@ -23,7 +23,7 @@ A new json file will be generated according to the setting.
 Default and recommended settings are described in [this example configuration file](https://github.com/EnSpec/hytools/blob/master/examples/configs/topo_brdf_glint_correct_config.json). The keys settings are introduced in the coming parts.
 
 #### Choose what to export in the correction outputs
-The *export* part in the configuration determines whether the BRDF model estimation part or the BRDF model application part is to be executed or not. These two parts can be done separately in order or done together on the fly.
+The *```export```* part in the configuration determines whether the BRDF model estimation part or the BRDF model application part is to be executed or not. These two parts can be done separately in order or done together on the fly.
 ```json
 "export": {
       "coeffs": false,
@@ -34,13 +34,13 @@ The *export* part in the configuration determines whether the BRDF model estimat
       "suffix": "topo_brdf_glint"
 },
 ```
-  * The main results of the whole correction procedure are the images and the correct coefficients. At least one of their exportations should be enabled (set to *true*). *coeffs* can be *true* so that they can be saved for future use, called '*precomputed*' coefficients. 
-  * Mask layers produced during the procedure can also be saved if both *image* and *masks* are *true*.
-  * *subset_waves* is the list denoting which band to export. They are specified by closest wavelengths in nanometers, e.g. ```[440,550,660]``` for a 3-band exportation in the visible range. Empty list ```[]``` means exporting the full image cube.
-  * *output_dir* and *suffix* are the about the final location and suffix of the outputs.
+  * The main results of the whole correction procedure are the images and the correct coefficients. At least one of their exportations should be enabled (set to *```true```*). *```coeffs```* can be *```true```* so that they can be saved for future use, called '*precomputed*' coefficients. 
+  * Mask layers produced during the procedure can also be saved if both *```image```* and *```masks```* are *```true```*.
+  * *```subset_waves```* is the list denoting which band to export. They are specified by closest wavelengths in nanometers, e.g. [*```440,550,660```*] for a 3-band exportation in the visible range. Empty list ```[]``` means exporting the full image cube.
+  * *```output_dir```* and *```suffix```* are the final location and suffix of the outputs.
 
 #### Choose how to correct the images
-Currently, there are three corrections ([TOPO](#TOPO), [BRDF](#BRDF), [Glint](#glint)) user can choose from in HyTools. They can all be enabled.
+Currently, there are three corrections ([TOPO](#TOPO), [BRDF](#BRDF), [Sunglint](#Sunglint)) user can choose from in HyTools. They can all be enabled.
 ```json
 "corrections": [
       "topo",
@@ -54,12 +54,13 @@ Order matters in the correction. Some common settings are shown as below.
 |[ ]|Empty, no correction|
 |['topo']|Topographic correction only|
 |['brdf']|BRDF correction only, for flat regions|
+|['glint']|Sunglint correction only, for water pixels|
 |['topo','brdf']|TOPO correction, then BRDF correction|
-|['brdf','glint']|BRDF first, then Glint correction|
+|['brdf','glint']|BRDF first, then Sunglint correction|
 |['topo','brdf','glint']|Three corrections in order|
 
 #### TOPO
- Options for topographic methods are ['scs','scs+c','c','cosine','mod_minneart'], corresponding to sun-canopy-sensor method[[2](#Reference)], sun-canopy-sensor+C method[[2](#Reference)], C method[[3](#Reference)], cosine method [[3](#Reference)], and modified Minnaert method [[3](#Reference)], respectively. The recommended method for topographic correction is "scs+c".
+ Options for topographic methods are [*```'scs','scs+c','c','cosine','mod_minneart'```*], corresponding to sun-canopy-sensor method[[2](#Reference)], sun-canopy-sensor+C method[[2](#Reference)], C method[[3](#Reference)], cosine method [[3](#Reference)], and modified Minnaert method [[3](#Reference)], respectively. The recommended method for topographic correction is "*```scs+c```*".
 ```json
 "topo": {
       "type": "scs+c",
@@ -71,10 +72,10 @@ Order matters in the correction. Some common settings are shown as below.
 
 #### BRDF
 
-Options for BRDF correction methods are ['flex','universal'], corresponding to FlexBRDF method [[1](#Reference)] and universal method.
+Options for BRDF correction methods are [*```'flex','universal'```*], corresponding to FlexBRDF method [[1](#Reference)] and universal method.
 
-Geometric kernel can be selected from ['li_sparse','li_dense','li_dense_r','li_dense_r','roujean'].
-Volumetric kernel can be selected from['ross_thin','ross_thick','hotspot','roujean'].
+Geometric kernel can be selected from [*```'li_sparse','li_dense','li_dense_r','li_dense_r','roujean'```*].
+Volumetric kernel can be selected from [*```'ross_thin','ross_thick','hotspot','roujean'```*].
 
 ```json
 "brdf": {
@@ -93,9 +94,9 @@ Volumetric kernel can be selected from['ross_thin','ross_thick','hotspot','rouje
     "solar_zn_type": "scene"
 },   
 ```
-Although each flight line can be BRDF-corrected independently, it is recommended in FlexBRDF to put all lines in the same day and at close geographical location in the same group, and estimate the shared BRDF correction coefficients.
+Although each flight line can be BRDF-corrected independently (*```"solar_zn_type": "line"```*), it is recommended in FlexBRDF to put all lines in the same day and at close geographical location in the same group, and estimate the shared BRDF correction coefficients (*```"solar_zn_type": "scene"```*).
 
-FlexBRDF uses NDVI to discriminate various land cover type. It dynamically use N bins of NDVI within an NDVI range. By default, pixels in the flight group will be binned into 18 subgroups based on NDVI percentiles. BRDF coefficients are estimated within each subgroup. Pixels outside [*ndvi_bin_min*, *ndvi_bin_max*] are not included for statistics.
+FlexBRDF uses NDVI to discriminate various land cover type. It dynamically use N bins of NDVI within an NDVI range. By default, pixels in the flight group will be binned into *```18```* subgroups based on NDVI percentiles. BRDF coefficients are estimated within each subgroup. Pixels outside [*```ndvi_bin_min```*, *```ndvi_bin_max```*] are not included for statistics.
 
 Under the setting of BRDF correction, all pixels in the same BRDF flightline group will ultimately be normalized to the illumination condition at the average solar zenith angle of the whole 'scene'.
 
@@ -103,12 +104,12 @@ Under the setting of BRDF correction, all pixels in the same BRDF flightline gro
 ```json
 "num_cpus":2,
 ```
-If there are more than one flightline in the group for the purpose of BRDF correction, reflectance image should pair with its ancillary file in the configuration json file. This also means the order of the file list ("*input_files*" and "*anc_files*") in the configuration should match with each other. Basically, the number of CPU assigned to RAY should also match the total number of flightlines. In the example, there are two flightlines.
+If there are more than one flightline in the group for the purpose of BRDF correction, reflectance image should pair with its ancillary file in the configuration json file. This also means the order of the file list ("*```input_files```*" and "*```anc_files```*") in the configuration should match with each other. Basically, the number of CPU assigned to RAY should also match the total number of flightlines. In the example, there are two flightlines.
 
 
-#### Glint
+#### Sunglint
 
-Options for glint correction include ['hochberg','gao','hedley'], corresponding to the method Hochberg et al., 2003[[4](#Reference)], Gao et al., 2021[[5](#Reference)], and Hedley et al. 2005[[6](#Reference)].
+Options for sunglint correction include [*```'hochberg','gao','hedley'```*], corresponding to the method Hochberg et al., 2003[[4](#Reference)], Gao and Li, 2021[[5](#Reference)], and Hedley et al. 2005[[6](#Reference)]. More comparison of strategies on sunglint correction can be found at [[7](#Reference)].
 
 #### A simplified GUI for generating config file
 This [python-based GUI](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate_gui.py) only provides the least options for generating image correction configuration file. It has the most of the functions of [image_correct_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate.py), but it assumes files of the same group are exclusively in the same directory. It does not provide all the options, and it is rather an example of how the configuration is generated.
@@ -126,11 +127,11 @@ python ./scripts/image_correct.py path/to/the/configuration/json/file
 
 Depending on the configuration settings, various outputs are got in this step.
 
-If image export is enabled, a full image cube ( ```"subset_waves": []```), or a band-subset of image cube (```subset_waves": [wavelength1,wavelength2,wavelength3,...] ```). 
+If image export is enabled, a full image cube ( *```"subset_waves": []```*), or a band-subset of image cube (*```"subset_waves": [wavelength1,wavelength2,wavelength3,...] ```*). 
 
-A separated mask file will be generated if both *image* and *mask* is set to *true* in the *export* part of the configuration.
+A separated mask file will be generated if both *```image```* and *```mask```* is set to *```true```* in the *```export```* part of the configuration.
 
-All resultant images are in ENVI format. 
+All default resultant images are in ENVI format, unless *```"image_format":"netcdf"```* is specified in *```export```* for [NetCDF image output](./examples/netcdf_glt.md). 
 
 If TOPO/BRDF model coefficients export is enabled, they will be stored in JSON format, and can be used as precomputed coefficients in other hytools scripts ([image_correct_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/image_correct_json_generate.py) or [trait_estimate_json_generate.py](https://github.com/EnSpec/hytools/blob/master/scripts/configs/trait_estimate_json_generate.py)) or [programs](https://github.com/EnSpec/hytools/blob/master/examples/hytools_basics_notebook.ipynb) in a more customized way. Each image should has its own TOPO/BRDF coefficients JSON file, although BRDF JSON in the same FlexBRDF group share the same set of coefficients.
 
@@ -145,7 +146,7 @@ In some special cases, data are provided in tiles not in lines. That means there
 
 Some new items are added to the configuration file ([topogroup_brdf_correct_config.json](../examples/configs/topogroup_brdf_correct_config.json)) to fulfil this task. A new script is adjusted for it as well ([image_correct_topogroup.py](../scripts/image_correct_topogroup.py)).
 
-All new items are added in the *'topo'* section. ```subgrouped``` has to be enabled. ```sample_perc``` is the sampling percentage that are used for extracting random samples for estimating topo correction coefficients. In ```subgroup```, group tag in the configuration json attached to each can be any string, as long as lines in the same subgroup share the same group tag.
+All new items are added in the *```topo```* section. *```subgrouped```* has to be enabled. *```sample_perc```* is the sampling percentage that are used for extracting random samples for estimating topo correction coefficients. In *```subgroup```*, group tag in the configuration json attached to each can be any string, as long as lines in the same subgroup share the same group tag.
 
 ```json
 "topo": {
@@ -164,12 +165,10 @@ All new items are added in the *'topo'* section. ```subgrouped``` has to be enab
 
 ## Reference
 [1] Queally, N., Ye, Z., Zheng, T., Chlus, A., Schneider, F., Pavlick, R. P., & Townsend, P. A. (2022). 
-FlexBRDF: A flexible BRDF correction for grouped processing of airborne imaging spectroscopy flightlines. *Journal of Geophysical Research: Biogeosciences*, *127*(1), e2021JG006622. 
-https://doi.org/10.1029/2021JG006622
+FlexBRDF: A flexible BRDF correction for grouped processing of airborne imaging spectroscopy flightlines. *Journal of Geophysical Research: Biogeosciences*, *127*(1), e2021JG006622. https://doi.org/10.1029/2021JG006622
 
 [2] Scott A. Soenen, Derek R. Peddle,  & Craig A. Coburn (2005).
-SCS+C: A Modified Sun-Canopy-Sensor Topographic Correction in Forested Terrain. *IEEE Transactions on Geoscience and Remote Sensing*, *43*(9), 2148-2159.
-https://doi.org/10.1109/TGRS.2005.852480
+SCS+C: A Modified Sun-Canopy-Sensor Topographic Correction in Forested Terrain. *IEEE Transactions on Geoscience and Remote Sensing*, *43*(9), 2148-2159. https://doi.org/10.1109/TGRS.2005.852480
 
 
 [3] Richter, R., Kellenberger, T., & Kaufmann, H. (2009).
@@ -177,10 +176,11 @@ Comparison of topographic correction methods. *Remote Sensing*, *1*(3), 184-196.
 https://doi.org/10.3390/rs1030184
 
 
-[4] Hochberg, E. J., Andréfouët, S., & Tyler, M. R. (2003). Sea surface correction of high spatial resolution Ikonos images to improve bottom mapping in near-shore environments. *IEEE transactions on geoscience and remote sensing*, *41*(7), 1724-1729. 
-https://doi.org/10.1109/TGRS.2003.815408
+[4] Hochberg, E. J., Andréfouët, S., & Tyler, M. R. (2003). Sea surface correction of high spatial resolution Ikonos images to improve bottom mapping in near-shore environments. *IEEE transactions on geoscience and remote sensing*, *41*(7), 1724-1729. https://doi.org/10.1109/TGRS.2003.815408
 
 [5] Gao, B. C., & Li, R. R. (2021). Correction of sunglint effects in high spatial resolution hyperspectral imagery using SWIR or NIR bands and taking account of spectral variation of refractive index of water. *Advances in Environmental and Engineering Research*, *2*(3), 1-15. https://doi.org/10.21926/aeer.2103017
 
 
 [6] Hedley, J. D., Harborne, A. R., & Mumby, P. J. (2005). Simple and robust removal of sun glint for mapping shallow‐water benthos. *International Journal of Remote Sensing*, *26*(10), 2107-2112. https://doi.org/10.1080/01431160500034086
+
+[7] Greenberg, E., Thompson, D.R., Jensen, D., Townsend, P.A., Queally, N., Chlus, A., Fichot, C.G., Harringmeyer, J.P., & Simard, M. (2022). An Improved Scheme for Correcting Remote Spectral Surface Reflectance Simultaneously for Terrestrial BRDF and Water‐Surface Sunglint in Coastal Environments. *Journal of Geophysical Research: Biogeosciences*, *127*(1), e2021JG006712. https://doi.org/10.1029/2021JG006712
