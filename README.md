@@ -132,6 +132,7 @@ python image_correct.py image_correct_config.json
 ```
 
 If only the *Correction Model Coefficients* ("coeffs") is checked, no image will be exported, but the correction model coefficients will be saved and they can be reused in other workflow runs. TOPO and BRDF JSON coefficients files will be saved in the case below, which can be applied in different downstream workflows.
+
 <img src="./examples/img/gui_corr_coeff_only.jpg">
 <p align="center">
   <picture align="center">
@@ -175,7 +176,7 @@ python trait_estimate.py map_trait_config.json
 
 Please visit this [page](./examples/FlexBRDF_tutorial.md) for more details about the image brightness adjustment workflow and the trait mapping workflow for large amount of images. For a solution for processing images in a more distributed way, please visit this [page](./examples/separated_flexbrdf.md). For I/O support on imaging spectroscopy imagery with different formats and geocoding, please visit this [page](./examples/netcdf_glt.md).
 
-## Related Publication
+## Related Publications
 [1] Queally, N., Ye, Z., Zheng, T., Chlus, A., Schneider, F., Pavlick, R. P., & Townsend, P. A. (2022). FlexBRDF: A flexible BRDF correction for grouped processing of airborne imaging spectroscopy flightlines. *Journal of Geophysical Research: Biogeosciences*, *127*(1), e2021JG006622. 
 https://doi.org/10.1029/2021JG006622
 
