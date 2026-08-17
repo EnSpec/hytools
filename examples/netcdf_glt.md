@@ -101,7 +101,7 @@ External GLT can be specified in the configuration file, it should have at least
 
 
 
-To use GLT to warp image or not is controlled by *```use_glt```* in *```export```*.
+To use GLT to warp image or not is controlled by ```use_glt``` in ```export```.
 ```json
    "export": {
       ...
@@ -119,7 +119,7 @@ Export warped image with GLT
 
 ![RGB with GLT](./img/emit_001_20231101T024133_2330502_014_rgb_warp.jpg "warp")
 
-To export NetCDF image or not is controlled by *```image_format```* in *```export```*. *```"envi"```* is the default output format, if *```image_format```* is not set. If *```"netcdf"```* is selected, information from *```"outside_metadata"```* will be written in the output. Information can either be in a dictionary in the config file or a json file. 
+To export NetCDF image or not is controlled by ```image_format``` in ```export```. ```"envi"``` is the default output format, if ```image_format``` is not set. If ```"netcdf"``` is selected, information from ```"outside_metadata"``` will be written in the output. Information can either be in a dictionary in the config file or a json file. 
 ```json
    "export": {
       ...
@@ -144,7 +144,7 @@ Alternatively, it can be
 
 ##  Trait Prediction
 
-Output format of trait prediction image file can also be *```"netcdf"```*, which is *```"envi"```* by default.
+Output format of trait prediction image file can also be ```"netcdf"```, which is ```"envi"``` by default.
 
 There is a sample trait export script for nc files and GLT ( [trait_estimate_nc.py](../scripts/trait_estimate_nc.py)).
 
