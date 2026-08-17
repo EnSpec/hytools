@@ -45,6 +45,9 @@ BRDF correction
 
 Topographic correction
 ~~~~~~~~~~~~~~~~~~~~~~
-.. image:: topo_correct.gif	   
+.. image:: topo_correct.gif   
 
-	   
+Sunglint correction
+~~~~~~~~~~~~~~~~~~~
+
+.. image:: glint_correct.jpg 

@@ -11,7 +11,13 @@ Dependencies
    * numpy
    * h5py
    * ray
-     
+   * scipy
+   * h5netcdf
+   * matplotlib
+   * pandas
+   * scikit-learn
+
+
 Installing HyTools
 ==================
 To download to hytools simply clone the github repository
@@ -26,4 +32,18 @@ and run the following command inside the hytools folder to install
 .. code-block:: shell
      
    $ python setup.py install
+
+or 
+
+Install with pip run:
+
+.. code-block:: shell
+  $ pip install hy-tools
+
+or 
+
+.. code-block:: shell
+  $ python -m pip install git+https://github.com/EnSpec/hytools.git
+
+
 
