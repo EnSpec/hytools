@@ -37,7 +37,10 @@ TODO: Rationale/ examples for using different fitting algorithms
 
 import numpy as np
 from scipy.optimize import nnls
-from ..io.envi import WriteENVI
+#from ..io.envi import WriteENVI
+import ray
+from ..misc import update_topo
+from ..misc import progbar
 
 def calc_c(data,cosine_i,fit_type = 'ols'):
     """Calculate the topographic correction coefficient (c) for the input data.

@@ -1,6 +1,8 @@
 
+import numpy as np
 import pandas as pd
-from .geog_utm import *
+#from .geog_utm import *
+from .geog_utm import BasicMapObj
 
 def local_transform_all_point(mapobj, point_df, uid, xcoord, ycoord,point_epsg_code):
     ''' Create a dataframe with image georeferenced coordinates of all points of interest
@@ -49,18 +51,13 @@ def get_neighbor(hyObj, point_coord_df, n_neighbor, uid, point_epsg_code,mapobj,
             xy_coord_array = np.stack((x_coord, y_coord)).T -np.array([[ul_x,ul_y]])
         else:
             xy_coord_array = point_coord_df[['img_x','img_y']].values-np.array([[ul_x,ul_y]])
-
+    else:
+        xy_coord_array = point_coord_df[['img_x','img_y']].values-np.array([[ul_x,ul_y]])
 
     img_loc_array = (xy_coord_array@(np.linalg.inv(transform_matrix).T)).astype(np.int32)   # zero-based
 
     n_neighbor = max(0,n_neighbor)
     if n_neighbor>=0:
-
-        if n_neighbor==0:
-            offset_arr_col = np.array([[1,0]])
-            offset_arr_row = np.array([[1,0]])    
-            uid_list = np.repeat(point_coord_df[uid].values,1)
-            new_uid_list = np.tile([f'_{x}' for x in range(1)],img_loc_array.shape[0])                    
 
         if n_neighbor== 4:
 
@@ -78,7 +75,7 @@ def get_neighbor(hyObj, point_coord_df, n_neighbor, uid, point_epsg_code,mapobj,
             uid_list = np.repeat(point_coord_df[uid].values,5)
             new_uid_list = np.tile([f'_{x}' for x in range(5)],img_loc_array.shape[0])
 
-        if n_neighbor== 8:
+        elif n_neighbor== 8:
             offset_arr_col = np.array([[1,0],
                                         [1,0],
                                         [1,-1],
@@ -100,6 +97,12 @@ def get_neighbor(hyObj, point_coord_df, n_neighbor, uid, point_epsg_code,mapobj,
 
             uid_list = np.repeat(point_coord_df[uid].values,9)
             new_uid_list = np.tile([f'_{x}' for x in range(9)],img_loc_array.shape[0])          
+
+        else:  # n_neighbor==0:
+            offset_arr_col = np.array([[1,0]])
+            offset_arr_row = np.array([[1,0]])
+            uid_list = np.repeat(point_coord_df[uid].values,1)
+            new_uid_list = np.tile([f'_{x}' for x in range(1)],img_loc_array.shape[0])
 
         img_loc_array_with_nb_col = offset_arr_col@np.vstack([img_loc_array[:,0],np.ones(img_loc_array.shape[0])])
         img_loc_array_with_nb_row = offset_arr_row@np.vstack([img_loc_array[:,1],np.ones(img_loc_array.shape[0])])
@@ -161,22 +164,19 @@ def add_df_lat_lon(point_coord_neighbor_df, hyObj, mapobj, offset=0.5, use_glt_b
 def subset_band_list(hyObj,spec_df,use_band_list, band_list):
 
     # do not subset bands, do nothing
-    if use_band_list==False:
+    if use_band_list is False:
         return spec_df
 
     # subset bands
-    else:
-        # user does not provide band list, use bad band list as default
-        if len(band_list)==0:
-            # no bad band list in the file, do nothing
-            if not isinstance(hyObj.bad_bands,np.ndarray):
-                return spec_df
-            # use bad band list
-            else:
-                return spec_df.iloc[:,hyObj.bad_bands]
-        # user provides band list
-        else:
-            return spec_df.iloc[:, band_list]
+    # user does not provide band list, use bad band list as default
+    if len(band_list)==0:
+        # no bad band list in the file, do nothing
+        if not isinstance(hyObj.bad_bands,np.ndarray):
+            return spec_df
+        # use bad band list
+        return spec_df.iloc[:,hyObj.bad_bands]
+    # user provides band list
+    return spec_df.iloc[:, band_list]
 
 def local_point2spec(hyObj, point_csv, uid, xcoord, ycoord, point_epsg_code, n_neighbor=4, use_band_list=True, band_list=[],use_glt_bool=False):
     """Extract spectra with points in a CSV from the hyperspectral image
@@ -233,26 +233,26 @@ def local_point2spec(hyObj, point_csv, uid, xcoord, ycoord, point_epsg_code, n_n
     if point_coord_neighbor_df.shape[0]==0:
         print("0 point within boundary!\n\n")
         return None
+
+    # add LAT LON of the points in the dataframe
+    add_df_lat_lon(point_coord_neighbor_df, hyObj,parameter_obj,use_glt_bool=use_glt_bool)
+
+    spec_data = hyObj.get_pixels(point_coord_neighbor_df['img_row_raw'].values,point_coord_neighbor_df['img_col_raw'].values) # zero-based
+
+    # determine the column names of the spectra dataframe based on wavelengths
+    if hyObj.wavelength_units.lower()[:4]=='micr':
+        new_band_name = ['B{:0.3f}'.format(x) for x in hyObj.wavelengths]
+    elif hyObj.wavelength_units.lower()[:4]=='nano' :
+        new_band_name = ['B{:04d}'.format(int(x)) for x in hyObj.wavelengths]
     else:
-        # add LAT LON of the points in the dataframe
-        add_df_lat_lon(point_coord_neighbor_df, hyObj,parameter_obj,use_glt_bool=use_glt_bool)
+        new_band_name = ['B{:d}'.format(x+1) for x in range(hyObj.bands)]
 
-        spec_data = hyObj.get_pixels(point_coord_neighbor_df['img_row_raw'].values,point_coord_neighbor_df['img_col_raw'].values) # zero-based
+    spec_df = pd.DataFrame(spec_data, columns=new_band_name)
 
-        # determine the column names of the spectra dataframe based on wavelengths
-        if hyObj.wavelength_units.lower()[:4]=='micr':
-            new_band_name = ['B{:0.3f}'.format(x) for x in hyObj.wavelengths]
-        elif hyObj.wavelength_units.lower()[:4]=='nano' :
-            new_band_name = ['B{:04d}'.format(int(x)) for x in hyObj.wavelengths]
-        else:
-            new_band_name = ['B{:d}'.format(x+1) for x in range(hyObj.bands)]
+    # perform the subsetting of the columns in the dataframe according to the band_list or hyObj.bad_bands
+    spec_df = subset_band_list(hyObj,spec_df,use_band_list, band_list)
 
-        spec_df = pd.DataFrame(spec_data, columns=new_band_name)
+    point_coord_neighbor_df=point_coord_neighbor_df.reset_index(drop=True)
+    point_coord_neighbor_df = pd.concat([point_coord_neighbor_df,spec_df], axis=1, join='inner')
 
-        # perform the subsetting of the columns in the dataframe according to the band_list or hyObj.bad_bands
-        spec_df = subset_band_list(hyObj,spec_df,use_band_list, band_list)
-
-        point_coord_neighbor_df=point_coord_neighbor_df.reset_index(drop=True)
-        point_coord_neighbor_df = pd.concat([point_coord_neighbor_df,spec_df], axis=1, join='inner')
-
-        return point_coord_neighbor_df
+    return point_coord_neighbor_df

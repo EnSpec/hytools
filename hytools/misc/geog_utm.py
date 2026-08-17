@@ -14,6 +14,7 @@ NAD83_WGS84_dict = {
 NAD83_WGS84_obj = SimpleNamespace(**NAD83_WGS84_dict)
 
 class BasicMapObj:
+    """For UTM and Geog coordinates transformation"""
 
     def __init__(self,ellipsoid=NAD83_WGS84_obj,zone=None):
 
