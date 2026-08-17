@@ -38,11 +38,13 @@ or
 Install with pip run:
 
 .. code-block:: shell
+
   $ pip install hy-tools
 
 or 
 
 .. code-block:: shell
+   
   $ python -m pip install git+https://github.com/EnSpec/hytools.git
 
 
