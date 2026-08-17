@@ -59,6 +59,9 @@ Order matters in the correction. Some common settings are shown as below.
 |['topo','brdf','glint']|Three corrections in order|
 
 #### TOPO
+
+![TOPO correction](./img/topo_correct.gif "TOPO")
+
  Options for topographic methods are ['scs','scs+c','c','cosine','mod_minneart'], corresponding to sun-canopy-sensor method[[2](#Reference)], sun-canopy-sensor+C method[[2](#Reference)], C method[[3](#Reference)], cosine method [[3](#Reference)], and modified Minnaert method [[3](#Reference)], respectively. The recommended method for topographic correction is "scs+c".
 ```json
 "topo": {
@@ -70,6 +73,8 @@ Order matters in the correction. Some common settings are shown as below.
 
 
 #### BRDF
+
+![BRDF correction](./img/brdf_before_after.png "BRDF")
 
 Options for BRDF correction methods are ['flex','universal'], corresponding to FlexBRDF method [[1](#Reference)] and universal method.
 
@@ -106,7 +111,9 @@ Under the setting of BRDF correction, all pixels in the same BRDF flightline gro
 If there are more than one flightline in the group for the purpose of BRDF correction, reflectance image should pair with its ancillary file in the configuration json file. This also means the order of the file list ("*input_files*" and "*anc_files*") in the configuration should match with each other. Basically, the number of CPU assigned to RAY should also match the total number of flightlines. In the example, there are two flightlines.
 
 
-#### Glint
+#### Sunglint
+
+![Sunglint correction](./img/glint_correct.jpg "Glint")
 
 Options for glint correction include ['hochberg','gao','hedley'], corresponding to the method Hochberg et al., 2003[[4](#Reference)], Gao et al., 2021[[5](#Reference)], and Hedley et al. 2005[[6](#Reference)].
 
