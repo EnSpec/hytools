@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
 from itertools import tee
+import re
 
 def progbar(curr, total, full_progbar = 100):
     '''Display progress bar.
@@ -84,3 +85,64 @@ def update_topo_group(subgroup_dict_in):
         update_name_list+=[subgroup_dict[group_tag]]
 
     return update_name_list,group_tag_list
+
+def wkt_parse_update(wkt_string):
+    '''Parse and update wkt string for map projection, in case "unnamed" projection is provided.
+
+    Args:
+        wkt_string (string): wkt string.
+
+    Returns:
+        new_wkt_string (string): updated wkt string.
+        zone_tag (string): zone id and N/S
+    '''
+
+    # 1. Extract Projection / CRS Name (First quoted string in PROJCS, GEOGCS
+    proj_name_match = re.search(
+        r'(?:PROJCS|GEOGCS|COMPOUNDCRS|PROJCRS)\s*\[\s*"([^"]+)"', wkt_string
+    )
+    projection_name = proj_name_match.group(1) if proj_name_match else None
+
+    # 2. Extract PROJECTION and value pair
+    proj_type = re.findall(
+        r'PROJECTION\s*\[\s*"([^"]+)"\s*\]', wkt_string
+    )
+
+    # 3. Extract all PARAMETER name and value pairs
+    parameters = re.findall(
+        r'PARAMETER\s*\[\s*"([^"]+)"\s*,\s*([-\d.]+)\s*\]', wkt_string
+    )
+    param_dict = {param[0]: float(param[1]) for param in parameters}
+
+    # 4. Extract EPSG Code (Looks for AUTHORITY["EPSG", "XXXX"] or ID["EPSG", "XXXX"])
+    epsg_matches = re.findall(
+        r'(?:AUTHORITY|ID)\s*\[\s*"EPSG"\s*,\s*"(\d+)"\s*\]',
+        wkt_string,
+        re.IGNORECASE,
+    )
+    # The main EPSG code of the CRS is typically the last AUTHORITY block in a WKT string
+    main_epsg = epsg_matches[-1] if epsg_matches else None
+
+    if "Transverse_Mercator" == proj_type[0]:
+        if "utm zone" in projection_name.lower():
+
+            return wkt_string, projection_name.split('UTM zone ')[1]  # do not update
+
+        # else: # 'unnamed' or something else
+        zone_id = int((param_dict["central_meridian"]-3 +180)/6)+1
+        new_wkt_string = wkt_string
+        if param_dict["false_northing"]==1e7:
+            zone_tag = str(zone_id) + 'S'
+            main_epsg = 32700 + zone_id
+        elif param_dict["false_northing"]==0.0:
+            zone_tag = str(zone_id) + 'N'
+            main_epsg = 32600 + zone_id
+        else:
+            return wkt_string, None # do not update
+
+        # Rename projection_name and append EPSG code
+        new_wkt_string = new_wkt_string.replace(projection_name, f"WGS 84 / UTM zone {zone_id}", 1)
+        new_wkt_string = f'AXIS["Northing",NORTH],AUTHORITY["EPSG","{main_epsg}"]'.join(new_wkt_string.rsplit('AXIS["Northing",NORTH]', 1))
+        return new_wkt_string, zone_tag
+    #else:
+    return wkt_string, None  # do not update

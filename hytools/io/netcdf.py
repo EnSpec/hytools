@@ -24,6 +24,7 @@ import h5py
 import h5netcdf
 import numpy as np
 from .envi import parse_envi_header, WriteENVI, parse_glt_envi
+from ..misc.misc import wkt_parse_update
 
 unit_dict = {'nm':'nanometers'}
 utm_zone_dict = {'N':'North','S':'South'}
@@ -134,14 +135,19 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
             else:
                 spatial_ref_name_tag = None
 
-            hy_obj.projection = get_attr_string(nc4_obj[spatial_ref_name_tag].attrs['spatial_ref'])
+            new_wkt_string, utm_zone_tag = wkt_parse_update(get_attr_string(nc4_obj[spatial_ref_name_tag].attrs['spatial_ref']))
+            hy_obj.projection = new_wkt_string
+
             geotransform = [float(x) for x in get_attr_string(nc4_obj[spatial_ref_name_tag].attrs['GeoTransform']).split(' ')]
 
-            utm_zone_tag=((hy_obj.projection).split('UTM zone ')[1]).split('",GEOGCS')[0]
-            hy_obj.map_info = ['UTM','1','1',
-                               str(geotransform[0]),str(geotransform[3]),
-                               str(geotransform[1]),str(-geotransform[5]),
-                               utm_zone_tag[:-1],utm_zone_dict[utm_zone_tag[-1]],'WGS-84']
+            #utm_zone_tag=((hy_obj.projection).split('UTM zone ')[1]).split('",GEOGCS')[0]
+
+            if utm_zone_tag is not None:
+                hy_obj.map_info = ['UTM','1','1',
+                                str(geotransform[0]),str(geotransform[3]),
+                                str(geotransform[1]),str(-geotransform[5]),
+                                utm_zone_tag[:-1],utm_zone_dict[utm_zone_tag[-1]],'WGS-84']
+
             hy_obj.transform = tuple(geotransform)
 
             hy_obj.glt_path = { "glt_x": [glt_var_name,"sample"],  #["geolocation_lookup_table","sample"],
