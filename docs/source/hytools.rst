@@ -7,10 +7,14 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   hytools.correction
+   hytools.brdf
+   hytools.topo
+   hytools.glint
    hytools.io
+   hytools.masks
    hytools.misc
    hytools.transform
+   hytools.plotting
 
 Submodules
 ----------

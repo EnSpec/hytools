@@ -52,9 +52,9 @@ def set_glint_parameters_single(hy_obj, config_dict):
 def apply_glint_correct(hy_obj, data, dimension, index):
     ''' Corrects glint based on the specified algorithm in the config.
         Options include:
-            Hochberg et al., 2003: hochberg
-            Gao et al., 2021: gao
-            Hedley et al. 2005: hedley
+            - Hochberg et al., 2003: hochberg
+            - Gao et al., 2021: gao
+            - Hedley et al. 2005: hedley
             ...
     '''
 

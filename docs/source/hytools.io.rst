@@ -21,7 +21,7 @@ hytools.io.neon module
    :show-inheritance:
 
 hytools.io.netcdf module
-----------------------
+------------------------
 
 .. automodule:: hytools.io.netcdf
    :members:

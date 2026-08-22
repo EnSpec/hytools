@@ -68,6 +68,19 @@ def set_glint(hy_obj,glint_dict):
     hy_obj.glint = glint_dict
 
 def update_topo_group(subgroup_dict_in):
+    """Re-organize subgroup dictionary.
+        Input dictionary use group name as key,
+        and the return is two lists of paired image names and group names.  
+
+    Args:
+        subgroup_dict_in (dictionary): subgroup info 
+
+    Returns:
+        tuple: A tuple containing:
+            - update_name_list (list): name_list.
+            - group_tag_list (list): group_tag_list.
+
+    """
 
     subgroup_dict = {}
     group_tag_list=[]

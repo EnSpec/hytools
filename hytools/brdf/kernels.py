@@ -65,12 +65,12 @@ import numpy as np
 
 def calc_geom_kernel(solar_az,solar_zn,sensor_az,sensor_zn,kernel,b_r=1.,h_b =2.):
     """Calculate geometric scattering kernel.
-       Constants b_r (b/r) and h_b (h/b) from Colgan et al. RS 2012
-       Alternatives include MODIS specification:
-           b/r : sparse: 1, dense: 2.5
-           h/b : sparse, dense : 2
+        Constants b_r (b/r) and h_b (h/b) from Colgan et al. RS 2012
+        Alternatives include MODIS specification:
+            - b/r : sparse: 1, dense: 2.5
+            - h/b : sparse, dense : 2
 
-       All input geometry units must be in radians.
+        All input geometry units must be in radians.
 
     Args:
         solar_az (numpy.ndarray): Solar azimuth angle.

@@ -45,7 +45,7 @@ def calc_cosine_i(solar_zn, solar_az, aspect ,slope):
         slope (numpy.ndarray): Ground slope.
 
     Returns:
-        cnumpy.ndarray: Cosine i image.
+        numpy.ndarray: Cosine i image.
 
     """
 
@@ -86,7 +86,7 @@ def load_topo_precomputed(hy_obj,topo_dict):
         hy_obj.topo = json.load(outfile)
 
 def get_topo_sample_mask(hy_obj,topo_dict):
-
+    
     sample_ratio = float(topo_dict["sample_perc"])
 
     subsample_mask = np.copy(hy_obj.mask['calc_topo'])
@@ -154,6 +154,13 @@ def calc_topo_coeffs(actors,topo_dict,actor_group_list=None,group_tag_list=None)
 
 
 def calc_topo_coeffs_single(hy_obj,topo_dict):
+    """_summary_
+
+    Args:
+        hy_obj (_type_): _description_
+        topo_dict (_type_): _description_
+        
+    """
 
     if topo_dict['type'] == 'precomputed':
         print("Using precomputed topographic coefficients.")

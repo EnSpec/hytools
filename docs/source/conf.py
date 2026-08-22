@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'HyTools'
-copyright = '2020, Adam Chlus, Zhiwei Ye, Philip Townsend'
+copyright = '2026, Adam Chlus, Zhiwei Ye, Philip Townsend'
 author = 'Adam Chlus'
 
 # The full version, including alpha/beta/rc tags
@@ -47,7 +47,13 @@ extensions = ['sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.coverage',
     'sphinx_rtd_theme',
-    'sphinx.ext.todo'
+    'sphinx.ext.todo',
+    'myst_parser',
+]
+
+myst_enable_extensions = [
+    "html_image",
+    "attrs_inline",
 ]
 
 todo_include_todos=True
@@ -72,3 +78,9 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# Optional: Tell Sphinx to handle both .rst and .md files
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
