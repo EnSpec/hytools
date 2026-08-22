@@ -18,7 +18,7 @@ At its core it consists of functions for
 
 * Spectral resampling, topographic, BRDF (e.g. [FlexBRDF](https://doi.org/10.1029/2021JG006622)) and [sunglint](https://doi.org/10.1029/2021JG006712) correction, spectral transforms, masking and more;
 * A series of command line tools which combine these functions and provide a streamlined workflow for processing images ([tutorial](./examples/FlexBRDF_tutorial.md));
-* Utilizing [Ray](https://github.com/ray-project/ray) to speed up group image processing, and [an alternative of FlexBRDF correction](./examples/separated_flexbrdf.md) without Ray,
+* Utilizing [Ray](https://github.com/ray-project/ray) to speed up group image processing, and [an alternative of FlexBRDF correction](./examples/separated_flexbrdf.md) without Ray;
 * Reading ENVI formatted images, NEON AOP HDF files, NetCDF (EMIT and AVIRIS) images with Geographic Lookup Table (GLT) [support](./examples/netcdf_glt.md);
 * Writing ENVI and NetCDF images.
 
@@ -26,22 +26,39 @@ For examples see the HyTools basics ipython notebook [here](./examples/hytools_b
 
 ## Installation
 
+### Git not installed
 To install with pip run:
 ```bash
 pip install hy-tools
 ```
+
+or install with the ZIP file of the github repository
+```bash
+pip install https://github.com/EnSpec/hytools/archive/refs/heads/master.zip
+```
+
+or download source code and run the following command inside the hytools folder to install with uv
+```bash
+uv pip install .
+```
+
+### Git installed
 or 
 ```bash
 python -m pip install git+https://github.com/EnSpec/hytools.git
 ```
-or clone
+
+or simply clone the github repository, and run the following command inside the hytools folder to install
 ```bash
 git clone https://github.com/EnSpec/hytools.git
+pip install .
 ```
-and install with setuptools
+
+or 
 ```bash
-python setup.py install
+uv pip install git+https://github.com/EnSpec/hytools.git
 ```
+
 
 ## Features
 
