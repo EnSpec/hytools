@@ -1,0 +1,72 @@
+
+
+name: Run Tests with external image and Save Output
+
+on: [pull_request]
+  #[push, pull_request]
+  #workflow_dispatch: # Enables the manual trigger button
+
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10'] #'3.9','3.11','3.12','3.13','3.14'
+        os: [ubuntu-latest] #[ubuntu-latest,macos-latest]
+
+    steps:
+    # 1. Fetch your code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    # 2. Set up the Python environment
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    # 3. Install your test dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build pytest
+
+    - name: Build package artifacts
+      run: python -m build
+
+    - name: Install built wheel
+      # Installs the generated .whl file from the dist/ folder
+      run: python -m pip install dist/*.whl
+
+
+    # 4. Run tests and pipe the terminal output to a file
+    # The 'if: always()' ensures the log saves even if tests fail    
+    - name: Run tests against installed package
+      if: always()
+      # Moving to a temporary directory forces Python to import the 
+      # globally installed package instead of the local source files.
+      # download image from the web and export test_plot.png
+      run: |
+          mkdir test_env
+          cd test_env
+          uname -v >> ../test_report.txt 2>&1
+          curl -R -L -k -O https://popo.jpl.nasa.gov/avcl/y13_data/f130410t01p00r09_refl.tar.gz
+          curl -R -L -k -O https://popo.jpl.nasa.gov/avcl/y13_data/f130410t01p00r09.tar.gz
+          python3  ../tests/untar_ball.py f130410t01p00r09 ./ ./ 
+          ls -ld "$PWD"/* >> ../test_report.txt 2>&1
+          python3  ../tests/exec_ht.py ./f130410t01p00r09rdn_refl_img_corr ./f130410t01p00r09rdn_e_obs_ort  ../ >> ../test_report.txt 2>&1
+
+
+    # 5. Upload the file to GitHub so you can download it
+    - name: Upload test results file
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-test-output
+        path: |
+            test_report.txt
+            ci_test_plot.png
