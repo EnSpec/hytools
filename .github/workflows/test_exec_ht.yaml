@@ -2,7 +2,7 @@
 
 name: Run Tests with external image and Save Output
 
-on: [push, pull_request]
+on: [pull_request]
   #[push, pull_request]
   #workflow_dispatch: # Enables the manual trigger button
 
