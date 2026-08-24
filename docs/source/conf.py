@@ -14,6 +14,7 @@
 import os
 import sys
 import sphinx_rtd_theme
+from importlib.metadata import version as get_version
 sys.path.insert(0, os.path.abspath('..'))
 
 
@@ -24,7 +25,13 @@ copyright = '2026, Adam Chlus, Zhiwei Ye, Philip Townsend'
 author = 'Adam Chlus'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+try:
+    release = get_version("hy-tools")
+    version = ".".join(release.split(".")[:3])
+    #print(f"Inside conf.py release {release}, version {version}")
+except Exception:
+    release = "0.0.0"
+    version = "0.0"
 
 html_static_path = ['_static']
 
@@ -84,3 +91,8 @@ source_suffix = {
     '.rst': 'restructuredtext',
     '.md': 'markdown',
 }
+
+html_theme_options = {
+    'display_version': True,
+}
+

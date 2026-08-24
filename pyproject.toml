@@ -1,11 +1,10 @@
 
 [build-system]
-requires = ["setuptools >= 77.0.3"]
+requires = ["setuptools >= 77.0.3","setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "hy-tools"
-version = "1.6.1"
 
 dependencies = [
   "h5py",
@@ -34,8 +33,16 @@ keywords = ["imaging spectroscopy", "hyperspectral", "remote sensing", "BRDF cor
 classifiers = [
   "Programming Language :: Python",
 ]
+dynamic = ["version"]
+
+[tool.setuptools_scm]
+# This enables the plugin and writes the version out to a file
+write_to = "src/hytools/_version.py"
 
 [project.urls]
 Homepage = "https://github.com/EnSpec/hytools"
 Documentation = "https://hytools.readthedocs.io/en/latest/"
 Repository = "https://github.com/EnSpec/hytools.git"
+
+[tool.setuptools.packages.find]
+where = ["src"]
