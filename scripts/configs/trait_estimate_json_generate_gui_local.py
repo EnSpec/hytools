@@ -424,7 +424,7 @@ class App(tk.Tk):
         ttk.Radiobutton(col1, text="NEON AOP HDF5 (*.h5)", variable=self.var_datatype, value="neon").pack(anchor="w")
         ttk.Radiobutton(col1, text="AVIRIS NetCDF (*.nc)", variable=self.var_datatype, value="ncav").pack(anchor="w")
         ttk.Radiobutton(col1, text="EMIT NetCDF (*.nc)", variable=self.var_datatype, value="emit").pack(anchor="w")
-        #ttk.Radiobutton(col1, text="Tanager HDF5 (*.h5)", variable=self.var_datatype, value="tanager").pack(anchor="w", pady=(0, 10))
+        ttk.Radiobutton(col1, text="Tanager HDF5 (*.h5)", variable=self.var_datatype, value="tanager").pack(anchor="w", pady=(0, 10))
 
         self.var_datatype_export = tk.StringVar(value="envi")
         ttk.Label(col1, text="Data Type for Output Reflectance Images", font=("", 9, "bold")).pack(anchor="w")

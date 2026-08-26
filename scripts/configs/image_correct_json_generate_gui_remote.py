@@ -212,7 +212,7 @@ def generate_config_v2(setting_dict):
 
     config_dict["glint"]  = {}
     config_dict['glint']['type'] = setting_dict["processing_pipeline"]["glint_method"]
-    config_dict['glint']['correction_wave'] = setting_dict["processing_pipeline"]["glint_ref_wave"]
+    config_dict['glint']['correction_wave'] = float(setting_dict["processing_pipeline"]["glint_ref_wave"])
     config_dict["glint"]['apply_mask'] = [["ndi", {'band_1': 550,'band_2': 2150,
                                                 'min': 0, 'max': 1}],
                                           ["ndi", {'band_1': 850,'band_2': 660,
@@ -564,7 +564,7 @@ HTML_TEMPLATE = r"""
         <label for="topo_combo"><strong>1. Select TOPO method</strong></label>
         <select id="topo_combo" style="width: 100%; margin-top: 6px;">
           <option value="cosine">Cosine Correction</option>
-          <option value="c">C-Correction)</option>
+          <option value="c">C-Correction</option>
           <option value="scs">Sun-Canopy-Sensor (SCS)</option>
           <option value="scs+c" selected>Sun-Canopy-Sensor with C (SCS+C)</option>
           <option value="mod_minneart">Modified Minnaert</option>
@@ -1203,4 +1203,5 @@ if __name__ == '__main__':
         port_user = int(sys.argv[1])
     elif len(sys.argv)==1:
         port_user = 5005
-    app.run(host='127.0.0.1', port=port_user, debug=True)
+    #app.run(host='127.0.0.1', port=port_user, debug=True)
+    app.run(host='0.0.0.0', port=port_user, debug=True)
