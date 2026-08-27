@@ -418,6 +418,38 @@ def envi_header_from_neon(hy_obj, interleave = 'bsq'):
     header_dict["wavelength"] =hy_obj.wavelengths
     return header_dict
 
+def envi_header_from_tanager(hy_obj, interleave = 'bsq'):
+    """Create an ENVI header dictionary from Tanager metadata
+
+    Args:
+        hy_obj (Hytools object): Populated HyTools file object.
+        interleave (str, optional): Date interleave type. Defaults to 'bil'.
+
+    Returns:
+        dict: Populated ENVI header dictionary.
+
+    """
+
+    header_dict = {}
+    header_dict["ENVI description"] = "{}"
+    header_dict["samples"] = hy_obj.columns
+    header_dict["lines"]   = hy_obj.lines
+    header_dict["bands"]   = hy_obj.bands
+    header_dict["header offset"] = 0
+    header_dict["file type"] = "ENVI Standard"
+    header_dict["data type"] = 4
+    header_dict["interleave"] = interleave
+    header_dict["sensor type"] = ""
+    header_dict["byte order"] = 0
+    header_dict["map info"] = hy_obj.map_info
+    #header_dict["coordinate system string"] = hy_obj.projection
+    header_dict["wavelength units"] = hy_obj.wavelength_units
+    header_dict["data ignore value"] =hy_obj.no_data
+    header_dict["wavelength"] = hy_obj.wavelengths
+    header_dict["fwhm"] = hy_obj.fwhm
+    return header_dict
+
+
 def envi_header_from_nc(hy_obj, interleave = 'bsq', warp_glt = False):
     """Create an ENVI header dictionary from NetCDF metadata
 

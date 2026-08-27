@@ -55,7 +55,7 @@ def generate_config(setting_dict):
 
     elif config_dict["file_type"] =="neon":
         pass
-    elif config_dict["file_type"] =="ncav":
+    elif config_dict["file_type"] in ["ncav","tanager"]:
 
         ncav_anc_names = ['path_length','to_sensor_azimuth','to_sensor_zenith',
                         'to_sun_azimuth', 'to_sun_zenith','solar_phase','slope',
@@ -83,13 +83,14 @@ def generate_config(setting_dict):
     config_dict['export_type'] = setting_dict["processing_pipeline"]["export_type"]
     config_dict["use_glt"] = setting_dict["input_datasets"]["use_glt"]
 
+    config_dict["glt_files"] = {}
     if config_dict["use_glt"]:
 
         if ascii_loader_bool: # do not sort, use ascii order
             glt_files = setting_dict["input_datasets"]["glt_files"]
         else:
             glt_files =  sorted(setting_dict["input_datasets"]["glt_files"])
-        config_dict["glt_files"] = {}
+
         if not len(images)==len(glt_files):
             feedback_message+=['// Reflectance images and GLT files do not match.']
         elif len(glt_files)==0:

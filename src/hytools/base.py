@@ -30,9 +30,10 @@ import warnings
 import sys
 from .io.envi import envi_read_band,envi_read_pixels
 from .io.envi import envi_read_line,envi_read_column,envi_read_chunk
-from .io.envi import open_envi,parse_envi_header,envi_header_from_neon,envi_header_from_nc
+from .io.envi import open_envi,parse_envi_header,envi_header_from_neon,envi_header_from_nc,envi_header_from_tanager
 from .io.neon import open_neon
 from .io.netcdf import open_netcdf
+from .io.tanager import open_tanager
 from .brdf import apply_brdf_correct
 from .glint import apply_glint_correct
 from .brdf.kernels import calc_volume_kernel,calc_geom_kernel
@@ -104,7 +105,8 @@ class HyTools:
             open_netcdf(self,'EMIT',anc_path,glt_path)
         elif file_type == "ncav":
             open_netcdf(self,'AV',anc_path,glt_path)
-
+        elif file_type == "tanager":
+            open_tanager(self,anc_path)
         else:
             print("Unrecognized file type.")
 
@@ -125,7 +127,7 @@ class HyTools:
                     self.mask['no_data'] &= ancillary.mask['no_data']
                 ancillary.close_data()
                 del ancillary
-            elif file_type == 'emit' and not self.anc_path['slope'][0].endswith('.nc'):
+            elif file_type in ['emit','tanager'] and not self.anc_path['slope'][0].endswith('.nc'):
                 ancillary = HyTools()
                 ancillary.read_file(self.anc_path['slope'][0],'envi')
                 if not np.array_equal(self.mask['no_data'],ancillary.mask['no_data']):
@@ -185,6 +187,9 @@ class HyTools:
         elif self.file_type  == "neon":
             self.hdf_obj = h5py.File(self.file_name,'r')
             self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
+        elif self.file_type  == "tanager":
+            self.hdf_obj = h5py.File(self.file_name,'r')
+            self.data = self.hdf_obj["HDFEOS"]["GRIDS"]["HYP"]["Data Fields"]["surface_reflectance"]
         elif self.file_type  == "emit":
             self.nc4_obj = h5py.File(self.file_name,'r')
             self.data = self.nc4_obj[self.base_key]
@@ -215,6 +220,9 @@ class HyTools:
         elif self.file_type  == "emit" or self.file_type == "ncav":
             self.nc4_obj.close()
             self.nc4_obj = None
+        #elif self.file_type  == "tanager":
+        #    self.hdf_obj.close()
+        #    self.hdf_obj = None
         self.data = None
 
 
@@ -278,6 +286,8 @@ class HyTools:
             band = envi_read_band(self.data,index,self.interleave)
             if self.endianness != sys.byteorder:
                 band = band.byteswap()
+        elif self.file_type == "tanager":
+            band =  self.data[index,:,:]
         self.close_data()
 
         band = self.correct(band,'band',index,corrections)
@@ -327,7 +337,7 @@ class HyTools:
             for line,column in zip(lines,columns):
                 pixels.append(self.data[line,column,:])
             pixels = np.array(pixels)
-        elif self.file_type == "ncav":
+        elif self.file_type in ["ncav","tanager"]:
             pixels = []
             for line,column in zip(lines,columns):
                 pixels.append(self.data[:,line,column])
@@ -360,7 +370,7 @@ class HyTools:
         self.load_data()
         if self.file_type == "neon" or self.file_type == "emit":
             line = self.data[index,:,:]
-        elif self.file_type == "ncav":
+        elif self.file_type == "ncav" or self.file_type == "tanager":
             line = np.moveaxis(self.data[:,index,:],0,1)
         elif self.file_type == "envi":
             line = envi_read_line(self.data,index,self.interleave)
@@ -389,7 +399,7 @@ class HyTools:
         self.load_data()
         if self.file_type == "neon" or self.file_type == "emit":
             column = self.data[:,index,:]
-        elif self.file_type == "ncav":
+        elif self.file_type == "ncav" or self.file_type == "tanager":
             column = np.moveaxis(self.data[:,:,index],0,1)
         elif self.file_type == "envi":
             column = envi_read_column(self.data,index,self.interleave)
@@ -424,7 +434,7 @@ class HyTools:
         self.load_data()
         if self.file_type == "neon" or self.file_type == "emit":
             chunk = self.data[line_start:line_end,col_start:col_end,:]
-        elif self.file_type == "ncav":
+        elif self.file_type == "ncav" or self.file_type == "tanager":
             chunk = np.moveaxis(self.data[:,line_start:line_end,col_start:col_end],0,-1)
         elif self.file_type == "envi":
             chunk =  envi_read_chunk(self.data,col_start,col_end,
@@ -526,6 +536,30 @@ class HyTools:
                     if ancillary.endianness != sys.byteorder:
                         anc_data = anc_data.byteswap()
                     ancillary.close_data()
+
+        elif self.file_type == "tanager":
+            #print('neon external_mask in anc_path:','external_mask' in self.anc_path)
+            keys = self.anc_path[anc]
+
+            if len(keys)==2 and isinstance(keys[-1],int):
+                #print(keys)
+                ancillary = HyTools()
+                ancillary.read_file(self.anc_path[anc][0],'envi')
+                ancillary.load_data()
+                anc_data = np.copy(ancillary.get_band(self.anc_path[anc][1]))
+                if ancillary.endianness != sys.byteorder:
+                    anc_data = anc_data.byteswap()
+                ancillary.close_data()
+
+            else:
+                hdf_obj = h5py.File(self.file_name,'r')
+
+                metadata = hdf_obj["HDFEOS"]["GRIDS"]["HYP"]["Data Fields"]
+                #keys = self.anc_path[anc]
+                for key in keys:
+                    metadata = metadata[key]
+                anc_data = metadata[()]
+                hdf_obj.close()
 
         if radians and (anc in angular_anc):
             anc_data= np.radians(anc_data)
@@ -643,7 +677,7 @@ class HyTools:
         if self.file_type == "neon":
             header_dict = envi_header_from_neon(self)
         elif self.file_type == "emit" or self.file_type == "ncav":
-            header_dict = envi_header_from_nc(self,warp_glt = warp_glt)    
+            header_dict = envi_header_from_nc(self,warp_glt = warp_glt)
         elif self.file_type == "envi":
             header_dict = parse_envi_header(self.header_file)
             header_dict["projection"] = self.projection
@@ -656,7 +690,8 @@ class HyTools:
                 header_dict["map info"] = self.glt_map_info
                 header_dict["projection"] = self.glt_projection
                 header_dict['transform'] = self.glt_transform
-
+        elif self.file_type == "tanager":
+            header_dict = envi_header_from_tanager(self)
         return header_dict
 
 

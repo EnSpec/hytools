@@ -47,7 +47,7 @@ def main():
 
     images= config_dict["input_files"]
 
-    if not config_dict['file_type'].lower() in ['envi','emit','ncav','neon']:
+    if not config_dict['file_type'].lower() in ['envi','emit','ncav','neon','tanager']:
         print("Image type is not recognized.")
         return
     if 'image_format' in config_dict['export']:
@@ -65,7 +65,7 @@ def main():
     HyTools = ray.remote(ht.HyTools)
     actors = [HyTools.remote() for image in images]
 
-    if config_dict['file_type'] in ['envi','emit','ncav']:
+    if config_dict['file_type'] in ['envi','emit','ncav','tanager']:
         anc_files = config_dict["anc_files"]
         if ('topo' in config_dict['corrections']) or ('brdf' in config_dict['corrections']):
             if "glt_files" in config_dict:

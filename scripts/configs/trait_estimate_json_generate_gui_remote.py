@@ -55,7 +55,7 @@ def generate_config(setting_dict):
 
     elif config_dict["file_type"] == "neon":
         pass
-    elif config_dict["file_type"] == "ncav":
+    elif config_dict["file_type"] in ["ncav","tanager"]:
         ncav_anc_names = ['path_length','to_sensor_azimuth','to_sensor_zenith',
                         'to_sun_azimuth', 'to_sun_zenith','solar_phase','slope',
                         'aspect', 'cosine_i','utc_time']
@@ -81,12 +81,13 @@ def generate_config(setting_dict):
     config_dict['export_type'] = setting_dict["processing_pipeline"]["export_type"]
     config_dict["use_glt"] = setting_dict["input_datasets"]["use_glt"]
 
+    config_dict["glt_files"] = {}
     if config_dict["use_glt"]:
         if ascii_loader_bool:
             glt_files = setting_dict["input_datasets"]["glt_files"]
         else:
             glt_files = sorted(setting_dict["input_datasets"]["glt_files"])
-        config_dict["glt_files"] = {}
+        #config_dict["glt_files"] = {}
         if not len(images) == len(glt_files):
             feedback_message += ['// Reflectance images and GLT files do not match.']
         elif len(glt_files) == 0:
@@ -483,13 +484,16 @@ HTML_TEMPLATE = """
             // Directories
             dirs.forEach(d => {
                 const div = document.createElement('div');
-                div.className = "p-2 hover:bg-gray-200 cursor-pointer flex items-center";
+                //div.className = "p-2 hover:bg-gray-200 cursor-pointer flex items-center";
+                div.className = "p-2 hover:bg-gray-200 cursor-pointer flex items-center select-none"; // added select-none to prevent text highlight
                 div.innerHTML = `<span class="mr-2 text-yellow-500">📁</span> ${d.name}`;
-                div.onclick = () => {
+                div.onclick = (e) => {
+                //div.onclick = () => {
                     if (fsMode === 'dir') {
                         if(selectedItems.has(d.path)) {
                             selectedItems.delete(d.path);
-                            div.classList.remove('bg-blue-100');
+                            //div.classList.remove('bg-blue-100');
+                            div.classList.remove('bg-blue-100', 'font-bold');
                         } else {
                             selectedItems.clear(); // only one dir selected
                             selectedItems.add(d.path);
@@ -499,6 +503,16 @@ HTML_TEMPLATE = """
                         loadFs(d.path); // navigate
                     }
                 };
+
+                // DOUBLE CLICK logic
+                div.ondblclick = (e) => {
+                    if (fsMode === 'dir') {
+                        // Double click opens the directory explicitly when in folder selection mode
+                        selectedItems.clear();
+                        loadFs(d.path);
+                     }
+                 };
+
                 if(fsMode === 'dir' && selectedItems.has(d.path)) div.classList.add('bg-blue-100', 'font-bold');
                 list.appendChild(div);
             });

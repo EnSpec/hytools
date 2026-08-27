@@ -69,7 +69,7 @@ def main():
 
     elif config_dict['file_type'] == 'neon':
         _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
-    elif config_dict['file_type'] == 'emit' or config_dict['file_type'] == 'ncav':
+    elif config_dict['file_type'] in ['emit','ncav','tanager']:
         anc_files = config_dict["anc_files"]
         if bool(config_dict["glt_files"]):
             glt_files = config_dict["glt_files"]
@@ -128,6 +128,14 @@ def check_anc_requirement(config_dict):
                 #pass_bool=False # default
         elif config_dict['file_type'] in ['neon']:
             pass_bool=True
+        elif config_dict['file_type'] in ['tanager']:
+            if 'topo' in config_dict['corrections']:
+                if bool(anc_files):
+                    pass_bool=True
+                else:
+                    print("External 'anc' files with slope and aspect are required for TOPO correction, but they are not provided.")
+            else:
+                pass_bool=True
         else:
             # not accepted image format
             pass # do not pass, pass_bool is still False
@@ -235,6 +243,12 @@ def apply_trait_models(hy_obj,config_dict):
 
             iterator = hy_obj.iterate(by = 'chunk',
                       chunk_size = (256,hy_obj.columns),
+                      corrections =  hy_obj.corrections,
+                      resample=resample)
+
+        elif config_dict['file_type'] == 'tanager':
+            iterator = hy_obj.iterate(by = 'chunk',
+                      chunk_size= (int(np.ceil(hy_obj.lines/16)),int(np.ceil(hy_obj.columns/16))),
                       corrections =  hy_obj.corrections,
                       resample=resample)
 
