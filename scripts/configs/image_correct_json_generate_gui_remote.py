@@ -80,6 +80,27 @@ def generate_config_v2(setting_dict):
                     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
                                                                 [[anc_files[i],ncav_anc_names[a]] for a in range(len(aviris_anc_names))]))
 
+    elif config_dict["file_type"] in ["tanager"]:
+
+        external_anc_names = ['slope',
+                        'aspect']
+
+        config_dict["anc_files"] = {}
+        if ascii_loader_bool: # do not sort, use ascii order
+            anc_files = setting_dict["input_datasets"]["anc_files"]
+        else:
+            anc_files = sorted(setting_dict["input_datasets"]["anc_files"])
+
+        if 'topo' in corr_list or 'brdf' in corr_list:
+            if not len(images)==len(anc_files):
+                feedback_message+=['// Reflectance images and ancillary images do not match in number.']
+            elif len(anc_files)==0:
+                feedback_message+=['// Ancillary images required for TOPO or BRDF correction, but none is provided.']
+            else:
+                for i,image in enumerate(images):
+                    config_dict["anc_files"][image] = dict(zip(external_anc_names,
+                                                          [[anc_files[i],a] for a in range(len(external_anc_names))]))
+
     config_dict['export'] = {}
     config_dict['export']['coeffs'] = 'coeffs' in setting_dict["processing_pipeline"]["tasks_to_execute"]
     config_dict['export']['image'] = 'image' in setting_dict["processing_pipeline"]["tasks_to_execute"]

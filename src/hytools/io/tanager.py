@@ -23,7 +23,7 @@ import h5py
 import numpy as np
 
 unit_dict = {'nm':'nanometers'}
-utm_zone_dict = {'N':'North','S':'South'}
+utm_south_dict = {False:'North',True:'South'}
 
 def open_tanager(hy_obj, anc_path = {}, no_data = -9999,):
     """Load and parse NEON formated HDF image into a HyTools file object.
@@ -46,7 +46,7 @@ def open_tanager(hy_obj, anc_path = {}, no_data = -9999,):
     hy_obj.lines = data.shape[1]
     hy_obj.columns = data.shape[2]
     hy_obj.bands = data.shape[0]
-    print(hy_obj.lines,hy_obj.columns,hy_obj.bands)
+    #print(hy_obj.lines,hy_obj.columns,hy_obj.bands)
 
     ulc=[i for i in list_metadata if "UpperLeftPointMtrs" in i][0]
     ulx = float(ulc.split('=(')[-1].replace(')','').split(',')[0])
@@ -57,16 +57,19 @@ def open_tanager(hy_obj, anc_path = {}, no_data = -9999,):
 
     utm_zone_tag = [i for i in list_metadata if "ZoneCode" in i][0]
     utm_zone_code = int(utm_zone_tag.split('=')[-1])
+    bool_south = utm_zone_code < 0
 
     #assuming no rotation
     xRes = (lrx - ulx) / hy_obj.columns
     yRes = (uly - lry) / hy_obj.lines
 
     hy_obj.transform = (ulx,xRes,0,uly,0,-yRes)
-    hy_obj.map_info = ['UTM','1','1',
+    hy_obj.map_info = ['UTM','1.0','1.0',
                                str(ulx),str(uly),
                                str(xRes),str(yRes),
-                               str(np.abs(utm_zone_code)),'North','WGS-84']
+                               str(np.abs(utm_zone_code)),utm_south_dict[bool_south],
+                               'WGS-84',
+                               'units=Meters']
 
     hy_obj.fwhm =  data.attrs['fwhm'][()]
     hy_obj.wavelengths = data.attrs['wavelengths'][()]
@@ -78,7 +81,6 @@ def open_tanager(hy_obj, anc_path = {}, no_data = -9999,):
                         'sensor_az': ['sensor_azimuth'],
                         'sensor_zn': ['sensor_zenith'],
                         'solar_az': ['sun_azimuth'],
-                        'solar_zn': ['sun_zenith'],
                         'solar_zn': ['sun_zenith'],
                         'aod': ['aerosol_optical_depth'],
                         'beta_cirrus_mask': ['beta_cirrus_mask'],

@@ -55,7 +55,7 @@ def generate_config(setting_dict):
 
     elif config_dict["file_type"] =="neon":
         pass
-    elif config_dict["file_type"] in ["ncav","tanager"]:
+    elif config_dict["file_type"] in ["ncav"]:
 
         ncav_anc_names = ['path_length','to_sensor_azimuth','to_sensor_zenith',
                         'to_sun_azimuth', 'to_sun_zenith','solar_phase','slope',
@@ -65,7 +65,7 @@ def generate_config(setting_dict):
 
         if ascii_loader_bool: # do not sort, use ascii order
             anc_files = setting_dict["input_datasets"]["anc_files"]
-        else:    
+        else:
             anc_files = sorted(setting_dict["input_datasets"]["anc_files"])
 
         if 'topo' in corr_list or 'brdf' in corr_list:
@@ -77,6 +77,27 @@ def generate_config(setting_dict):
                 for i,image in enumerate(images):
                     config_dict["anc_files"][image] = dict(zip(aviris_anc_names,
                                                                 [[anc_files[i],ncav_anc_names[a]] for a in range(len(aviris_anc_names))]))
+
+    elif config_dict["file_type"] in ["tanager"]:
+
+        external_anc_names = ['slope',
+                        'aspect']
+
+        config_dict["anc_files"] = {}
+        if ascii_loader_bool: # do not sort, use ascii order
+            anc_files = setting_dict["input_datasets"]["anc_files"]
+        else:
+            anc_files = sorted(setting_dict["input_datasets"]["anc_files"])
+
+        if 'topo' in corr_list or 'brdf' in corr_list:
+            if not len(images)==len(anc_files):
+                feedback_message+=['// Reflectance images and ancillary images do not match in number.']
+            elif len(anc_files)==0:
+                feedback_message+=['// Ancillary images required for TOPO or BRDF correction, but none is provided.']
+            else:
+                for i,image in enumerate(images):
+                    config_dict["anc_files"][image] = dict(zip(external_anc_names,
+                                                          [[anc_files[i],a] for a in range(len(external_anc_names))]))
 
 
     config_dict['output_dir'] = setting_dict["export_settings"]["target_export_directory"]+"/"
