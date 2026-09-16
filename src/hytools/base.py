@@ -92,10 +92,34 @@ class HyTools:
         self.uly = None
         self.wavelength_units = None
         self.wavelengths = []
+        self.keep_open = False
+        self.chunk_cache_bytes = 0
 
-    def read_file(self,file_name,file_type = 'envi',anc_path = None, ext = False, glt_path = None):
+    def read_file(self,file_name,file_type = 'envi',anc_path = None, ext = False, glt_path = None,
+                  keep_open = False, chunk_cache_bytes = 0):
+        """Read file metadata and prepare the object for data access.
+
+        Args:
+            file_name (str): Path to the image.
+            file_type (str, optional): 'envi', 'neon', 'emit', 'ncav' or 'tanager'.
+            anc_path (dict, optional): Ancillary datasets (ENVI, EMIT, AVIRIS NetCDF).
+            ext (bool, optional): Passed to the ENVI opener.
+            glt_path (dict, optional): Geographic lookup table datasets.
+            keep_open (bool, optional): Keep the data file open between reads
+                instead of opening and closing it around every get_band/get_line/
+                get_chunk call. For HDF5-backed formats this also keeps the HDF5
+                chunk cache alive, so consecutive band reads that share compressed
+                chunks (e.g. NEON AOP files, chunked 27 bands deep) do not
+                decompress the same chunks again. Call close_data(force=True)
+                when done. Defaults to False (previous behaviour).
+            chunk_cache_bytes (int, optional): Size of the HDF5 raw data chunk
+                cache (h5py rdcc_nbytes) used when opening HDF5/NetCDF files.
+                0 keeps the h5py default (1 MB). Only useful with keep_open=True.
+        """
         self.file_name = file_name
         self.file_type = file_type
+        self.keep_open = keep_open
+        self.chunk_cache_bytes = int(chunk_cache_bytes)
 
         if file_type == 'envi':
             open_envi(self,anc_path,ext,glt_path)
@@ -138,6 +162,9 @@ class HyTools:
 
         self.base_name = os.path.basename(os.path.splitext(self.file_name)[0])
 
+        if self.keep_open:
+            self.load_data()
+
     def create_bad_bands(self,bad_regions):
         """Create bad bands mask, Good: True, bad : False.
 
@@ -172,6 +199,10 @@ class HyTools:
 
         """
 
+        # With keep_open the file is opened once and reused by every read.
+        if self.keep_open and self.data is not None:
+            return
+
         if self.file_type  == "envi":
             self.data = np.memmap(self.file_name,dtype = self.dtype, mode=mode,
                                   shape = self.shape,offset=self.offset)
@@ -185,19 +216,19 @@ class HyTools:
                     self.glt_y = self.glt_y.astype(np.int16)
 
         elif self.file_type  == "neon":
-            self.hdf_obj = h5py.File(self.file_name,'r')
+            self.hdf_obj = self._open_hdf()
             self.data = self.hdf_obj[self.base_key]["Reflectance"]["Reflectance_Data"]
         elif self.file_type  == "tanager":
-            self.hdf_obj = h5py.File(self.file_name,'r')
+            self.hdf_obj = self._open_hdf()
             self.data = self.hdf_obj["HDFEOS"]["GRIDS"]["HYP"]["Data Fields"]["surface_reflectance"]
         elif self.file_type  == "emit":
-            self.nc4_obj = h5py.File(self.file_name,'r')
+            self.nc4_obj = self._open_hdf()
             self.data = self.nc4_obj[self.base_key]
             self.glt_x = self.load_glt('glt_x').astype(np.int16)
             self.glt_y = self.load_glt('glt_y').astype(np.int16)
             self.fill_mask = self.glt_x>0
         elif self.file_type  == "ncav":
-            self.nc4_obj = h5py.File(self.file_name,'r')
+            self.nc4_obj = self._open_hdf()
 
             self.data = self.nc4_obj[self.base_key][self.base_key]
             self.glt_x = self.load_glt('glt_x')
@@ -208,17 +239,34 @@ class HyTools:
                 self.glt_y = self.glt_y.astype(np.int16)
 
 
-    def close_data(self):
+    def _open_hdf(self):
+        """Open the HDF5/NetCDF file, with a larger chunk cache when requested."""
+        if self.chunk_cache_bytes > 0:
+            # nslots should be a prime well above the number of cached chunks.
+            return h5py.File(self.file_name, 'r', rdcc_nbytes=self.chunk_cache_bytes,
+                             rdcc_nslots=200003, rdcc_w0=0.75)
+        return h5py.File(self.file_name, 'r')
+
+    def close_data(self, force = False):
         """Close data object.
 
+        Args:
+            force (bool, optional): Close even when the object was opened with
+                keep_open=True. Defaults to False.
+
         """
+        if self.keep_open and not force:
+            return
+
         if self.file_type  == "envi":
             del self.data
         elif self.file_type  == "neon":
-            self.hdf_obj.close()
+            if self.hdf_obj is not None:
+                self.hdf_obj.close()
             self.hdf_obj = None
         elif self.file_type  == "emit" or self.file_type == "ncav":
-            self.nc4_obj.close()
+            if self.nc4_obj is not None:
+                self.nc4_obj.close()
             self.nc4_obj = None
         #elif self.file_type  == "tanager":
         #    self.hdf_obj.close()
