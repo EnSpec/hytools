@@ -185,6 +185,7 @@ config_dict["brdf"]['volume'] = 'ross_thick'
 config_dict["brdf"]["b/r"] = 2.5
 config_dict["brdf"]["h/b"] = 2
 config_dict["brdf"]['sample_perc'] = 0.1
+config_dict["brdf"]['random_seed'] = 42
 config_dict["brdf"]['interp_kind'] = 'linear'
 config_dict["brdf"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                               'min': 0.1,'max': 1.0}],

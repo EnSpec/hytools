@@ -62,9 +62,18 @@ def subsample_mask(hy_obj):
     '''
     if hy_obj.brdf['sample_perc'] < 1:
         idx = np.array(np.where(hy_obj.mask['calc_brdf'])).T
-        idx_rand= idx[np.random.choice(range(len(idx)),
-                                      int(len(idx)*(1- hy_obj.brdf['sample_perc'])),
-                                      replace = False)].T
+
+        if 'random_seed' in hy_obj.brdf:
+            rnd_seed = int(hy_obj.brdf['random_seed'])
+            rng = np.random.default_rng(rnd_seed)
+            idxRand= idx[rng.choice(range(len(idx)),
+                                    int(len(idx)*(1-hy_obj.brdf['sample_perc'])), 
+                                    replace = False)].T
+        else:
+            idxRand= idx[np.random.choice(range(len(idx)),
+                                          int(len(idx)*(1-hy_obj.brdf['sample_perc'])),
+                                          replace = False)].T
+
         hy_obj.mask['calc_brdf'][idx_rand[0],idx_rand[1]] = False
 
 def calc_universal_single(hy_obj):
