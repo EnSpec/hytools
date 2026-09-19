@@ -37,11 +37,11 @@ def main():
         Ht_Obj.read_file(image,config_dict['file_type'],anc_files[image])
 
     elif config_dict['file_type'] == 'neon':
-        Ht_Obj.read_file(image,config_dict['file_type'])
+        Ht_Obj.read_file(image,config_dict['file_type'],keep_open=True,chunk_cache_bytes=2**31)
 
     elif config_dict['file_type'] == 'ncav' or config_dict['file_type'] == 'emit':
         anc_files = config_dict["anc_files"]
-        Ht_Obj.read_file(image,config_dict['file_type'],anc_files[image])
+        Ht_Obj.read_file(image,config_dict['file_type'],anc_files[image],keep_open=True,chunk_cache_bytes=2**31)
 
     Ht_Obj.create_bad_bands(config_dict['bad_bands'])
 
