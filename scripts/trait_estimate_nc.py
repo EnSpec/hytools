@@ -147,6 +147,16 @@ def check_anc_requirement(config_dict):
 
 def apply_trait_models(hy_obj,config_dict):
     '''Apply trait model(s) to image and export to file.
+
+    Models that share a wavelength set are applied in a single pass over the image
+    (one read, correction and resampling of the image instead of one per model), and
+    models that also share a spectrum transform chain are stacked into one coefficient
+    matrix, so each chunk is transformed once and multiplied once. The output files and
+    values are unchanged: one ENVI or NetCDF file per model.
+
+    Every model of a pass keeps its own output stack (bands x lines x samples, float32)
+    in memory until the pass ends; the optional config key "models_per_pass" caps how
+    many models share a pass when that does not fit (default: all).
     '''
 
     hy_obj.create_bad_bands(config_dict['bad_bands'])
@@ -164,184 +174,227 @@ def apply_trait_models(hy_obj,config_dict):
 
     hy_obj.resampler['type'] = config_dict["resampling"]['type']
 
+    #Generate masks once, they do not depend on the model
+    for mask,args in config_dict['masks']:
+        mask_function = mask_dict[mask]
+        hy_obj.gen_mask(mask_function,mask,args)
+
+    # Load the models and group them by wavelength set: one image pass per group
+    groups = {}
     for trait in config_dict['trait_models']:
         with open(trait, 'r') as json_file:
             trait_model = json.load(json_file)
-            coeffs = np.array(trait_model['model']['coefficients'])
-            intercept = np.array(trait_model['model']['intercepts'])
-            model_waves = np.array(trait_model['wavelengths'])
+        key = (tuple(trait_model['wavelengths']),tuple(trait_model['fwhm']))
+        groups.setdefault(key,[]).append(trait_model)
 
-        #Check if wavelengths match
-        resample = not all(x in hy_obj.wavelengths for x in model_waves)
-
-        if resample:
-            hy_obj.resampler['out_waves'] = model_waves
-            hy_obj.resampler['out_fwhm'] = trait_model['fwhm']
+    models_per_pass = config_dict.get("models_per_pass",0)
+    for (model_waves,model_fwhm),trait_models in groups.items():
+        if models_per_pass and models_per_pass > 0:
+            batches = [trait_models[i:i+models_per_pass] for i in range(0,len(trait_models),models_per_pass)]
         else:
-            wave_mask = [np.argwhere(x==hy_obj.wavelengths)[0][0] for x in model_waves]
+            batches = [trait_models]
+        for batch in batches:
+            apply_model_group(hy_obj,config_dict,np.array(model_waves),list(model_fwhm),batch)
 
+def apply_model_group(hy_obj,config_dict,model_waves,model_fwhm,trait_models):
+    '''Apply every model in trait_models (all on model_waves) in one pass over the image.
+    '''
 
-        use_glt_output_bool=False
-        if 'use_glt' in config_dict:
-            use_glt_output_bool = config_dict['use_glt']
-            if use_glt_output_bool==True:
-                header_dict = hy_obj.get_header(warp_glt=True)
-            else:
-                header_dict = hy_obj.get_header()
+    #Check if wavelengths match
+    resample = not all(x in hy_obj.wavelengths for x in model_waves)
+
+    if resample:
+        hy_obj.resampler['out_waves'] = model_waves
+        hy_obj.resampler['out_fwhm'] = model_fwhm
+    else:
+        wave_mask = [np.argwhere(x==hy_obj.wavelengths)[0][0] for x in model_waves]
+
+    use_glt_output_bool=False
+    if 'use_glt' in config_dict:
+        use_glt_output_bool = config_dict['use_glt']
+        if use_glt_output_bool==True:
+            base_header = hy_obj.get_header(warp_glt=True)
         else:
-            header_dict = hy_obj.get_header()
+            base_header = hy_obj.get_header()
+    else:
+        base_header = hy_obj.get_header()
 
-        # Build trait image file
-        header_dict['wavelength'] = []
-        header_dict['data ignore value'] = -9999
-        header_dict['data type'] = 4
+    # Build trait image headers, one per model
+    base_header['wavelength'] = []
+    base_header['data ignore value'] = -9999
+    base_header['data type'] = 4
+    base_header['file_type'] = config_dict['file_type']
+    base_header['transform'] = hy_obj.transform
+    base_header['projection'] = hy_obj.projection
+    n_bands = 3 + len(config_dict['masks'])
+
+    headers = {}
+    for trait_model in trait_models:
+        header_dict = dict(base_header)
         header_dict['trait unit'] = trait_model['units']
         header_dict['band names'] = ["%s_mean" % trait_model["name"],
                                      "%s_std" % trait_model["name"],
                                      'range_mask'] + [mask[0] for mask in config_dict['masks']]
-        header_dict['bands'] = len(header_dict['band names'] ) 
+        header_dict['bands'] = n_bands
+        headers[trait_model["name"]] = header_dict
 
-        header_dict['file_type'] = config_dict['file_type']
-        header_dict['transform'] = hy_obj.transform
-        header_dict['projection'] = hy_obj.projection
+    # Models with the same transform chain share the transformed chunk and one
+    # matrix product: their coefficients are stacked along the iteration axis.
+    stacks = {}
+    for trait_model in trait_models:
+        stacks.setdefault(tuple(trait_model['model']['transform']),[]).append(trait_model)
+    stacked = []
+    for transforms,members in stacks.items():
+        coeffs = np.concatenate([np.array(m['model']['coefficients']) for m in members])
+        intercept = np.concatenate([np.array(m['model']['intercepts']) for m in members])
+        sizes = [len(m['model']['intercepts']) for m in members]
+        offsets = np.cumsum([0] + sizes)
+        stacked.append((transforms,members,coeffs,intercept,offsets))
 
-        #Generate masks
-        for mask,args in config_dict['masks']:
-            mask_function = mask_dict[mask]
-            hy_obj.gen_mask(mask_function,mask,args)
+    if config_dict['file_type'] == 'envi' or config_dict['file_type'] == 'emit':
+        iterator = hy_obj.iterate(by = 'chunk',
+                  chunk_size = (2,hy_obj.columns),
+                  corrections =  hy_obj.corrections,
+                  resample=resample)
+    elif config_dict['file_type'] == 'neon':
+        iterator = hy_obj.iterate(by = 'chunk',
+                  chunk_size = (int(np.ceil(hy_obj.lines/32)),int(np.ceil(hy_obj.columns/32))),
+                  corrections =  hy_obj.corrections,
+                  resample=resample)
 
-        output_name = config_dict['output_dir']
+    elif config_dict['file_type'] == 'ncav':
 
-        if config_dict["export_type"]=="envi":
-            output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0] + "_%s" % trait_model["name"]
-            writer = WriteENVI(output_name,header_dict)
-        else:
-            output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0] + "_%s.nc" % trait_model["name"]
-            header_dict['lines_glt'] = hy_obj.lines_glt
-            header_dict['samples_glt'] = hy_obj.columns_glt
-            writer = WriteNetCDF(output_name,header_dict,
-                                 attr_dict=None,
-                                 glt_bool=use_glt_output_bool,
-                                 type_tag="trait",
-                                 band_name=trait_model["name"])
+        iterator = hy_obj.iterate(by = 'chunk',
+                  chunk_size = (256,hy_obj.columns),
+                  corrections =  hy_obj.corrections,
+                  resample=resample)
 
-            if (not use_glt_output_bool) and config_dict['file_type'] == 'emit':
-                writer.write_glt_dataset(hy_obj.glt_x,hy_obj.glt_y,dim_x_name="ortho_x",dim_y_name="ortho_y")
+    elif config_dict['file_type'] == 'tanager':
+        iterator = hy_obj.iterate(by = 'chunk',
+                  chunk_size= (int(np.ceil(hy_obj.lines/16)),int(np.ceil(hy_obj.columns/16))),
+                  corrections =  hy_obj.corrections,
+                  resample=resample)
 
-        if config_dict['file_type'] == 'envi' or config_dict['file_type'] == 'emit':
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (2,hy_obj.columns),
-                      corrections =  hy_obj.corrections,
-                      resample=resample)
-        elif config_dict['file_type'] == 'neon':
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (int(np.ceil(hy_obj.lines/32)),int(np.ceil(hy_obj.columns/32))),
-                      corrections =  hy_obj.corrections,
-                      resample=resample)
+    out_stacks = {}
+    for trait_model in trait_models:
+        out_stacks[trait_model["name"]] = np.zeros((n_bands,base_header['lines'],base_header['samples'])).astype(np.float32)
 
-        elif config_dict['file_type'] == 'ncav':
+    while not iterator.complete:
+        chunk = iterator.read_next()
+        if not resample:
+            chunk = chunk[:,:,wave_mask]
+        lines = chunk.shape[0]
+        columns = chunk.shape[1]
 
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size = (256,hy_obj.columns),
-                      corrections =  hy_obj.corrections,
-                      resample=resample)
+        # Mask bands and the no-data mask are the same for every model
+        mask_bands = np.zeros((lines,columns,len(config_dict['masks'])))
+        for i,(mask,args) in enumerate(config_dict['masks']):
+            mask_bands[:,:,i] = hy_obj.mask[mask][iterator.current_line:iterator.current_line+lines,
+                                                  iterator.current_column:iterator.current_column+columns]
+        nd_mask = hy_obj.mask['no_data'][iterator.current_line:iterator.current_line+lines,
+                                         iterator.current_column:iterator.current_column+columns]
 
-        elif config_dict['file_type'] == 'tanager':
-            iterator = hy_obj.iterate(by = 'chunk',
-                      chunk_size= (int(np.ceil(hy_obj.lines/16)),int(np.ceil(hy_obj.columns/16))),
-                      corrections =  hy_obj.corrections,
-                      resample=resample)
+        x_start = iterator.current_column
+        x_end = iterator.current_column + columns
+        y_start = iterator.current_line
+        y_end = iterator.current_line + lines
 
-        out_stack = np.zeros((header_dict['bands'],header_dict['lines'],header_dict['samples'])).astype(np.float32)
-
-        while not iterator.complete:
-            chunk = iterator.read_next()
-            if not resample:
-                chunk = chunk[:,:,wave_mask]
-
-            trait_est = np.zeros((chunk.shape[0],
-                                    chunk.shape[1],
-                                    header_dict['bands']))
-
+        for transforms,members,coeffs,intercept,offsets in stacked:
             # Apply spectrum transforms
-            for transform in  trait_model['model']["transform"]:
+            transformed = chunk
+            for transform in transforms:
                 if  transform== "vector":
-                    norm = np.linalg.norm(chunk,axis=2)
-                    chunk = chunk/norm[:,:,np.newaxis]
+                    norm = np.linalg.norm(transformed,axis=2)
+                    transformed = transformed/norm[:,:,np.newaxis]
                 if transform == "absorb":
-                    chunk = np.log(1/chunk)
+                    transformed = np.log(1/transformed)
                 if transform == "mean":
-                    mean = chunk.mean(axis=2)
-                    chunk = chunk/mean[:,:,np.newaxis]
+                    mean = transformed.mean(axis=2)
+                    transformed = transformed/mean[:,:,np.newaxis]
 
-            trait_pred = np.einsum('jkl,ml->jkm',chunk,coeffs, optimize='optimal')
+            # One product for every iteration of every model in the stack
+            trait_pred = np.einsum('jkl,ml->jkm',transformed,coeffs, optimize='optimal')
             trait_pred = trait_pred + intercept
-            trait_est[:,:,0] = trait_pred.mean(axis=2)
-            trait_est[:,:,1] = trait_pred.std(ddof=1,axis=2)
 
-            range_mask = (trait_est[:,:,0] > trait_model["model_diagnostics"]['min']) & \
-                         (trait_est[:,:,0] < trait_model["model_diagnostics"]['max'])
-            trait_est[:,:,2] = range_mask.astype(int)
+            for trait_model,start,stop in zip(members,offsets[:-1],offsets[1:]):
+                pred = trait_pred[:,:,start:stop]
+                trait_est = np.zeros((lines,columns,n_bands))
+                trait_est[:,:,0] = pred.mean(axis=2)
+                trait_est[:,:,1] = pred.std(ddof=1,axis=2)
 
+                range_mask = (trait_est[:,:,0] > trait_model["model_diagnostics"]['min']) & \
+                             (trait_est[:,:,0] < trait_model["model_diagnostics"]['max'])
+                trait_est[:,:,2] = range_mask.astype(int)
+                trait_est[:,:,3:] = mask_bands
 
-            # Subset and assign custom masks
-            for i,(mask,args) in enumerate(config_dict['masks']):
-                mask = hy_obj.mask[mask][iterator.current_line:iterator.current_line+chunk.shape[0],
-                                              iterator.current_column:iterator.current_column+chunk.shape[1]]
+                trait_est[~nd_mask,:2] = -9999
+                trait_est[~nd_mask,2:] = 255
 
-                trait_est[:,:,3+i] = mask.astype(int)
+                out_stacks[trait_model["name"]][:,y_start:y_end,x_start:x_end] = np.moveaxis(trait_est,-1,0)
 
+    for trait_model in trait_models:
+        export_trait(hy_obj,config_dict,trait_model,headers[trait_model["name"]],
+                     out_stacks.pop(trait_model["name"]),use_glt_output_bool)
 
-            nd_mask = hy_obj.mask['no_data'][iterator.current_line:iterator.current_line+chunk.shape[0],
-                                             iterator.current_column:iterator.current_column+chunk.shape[1]]
+def export_trait(hy_obj,config_dict,trait_model,header_dict,out_stack,use_glt_output_bool):
+    '''Write one model's output stack as an ENVI or NetCDF file.
+    '''
+    output_name = config_dict['output_dir']
 
-            trait_est[~nd_mask,:2] = -9999
-            trait_est[~nd_mask,2:] = 255
+    if config_dict["export_type"]=="envi":
+        output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0] + "_%s" % trait_model["name"]
+        writer = WriteENVI(output_name,header_dict)
+    else:
+        output_name += os.path.splitext(os.path.basename(hy_obj.file_name))[0] + "_%s.nc" % trait_model["name"]
+        header_dict['lines_glt'] = hy_obj.lines_glt
+        header_dict['samples_glt'] = hy_obj.columns_glt
+        writer = WriteNetCDF(output_name,header_dict,
+                             attr_dict=None,
+                             glt_bool=use_glt_output_bool,
+                             type_tag="trait",
+                             band_name=trait_model["name"])
 
-            x_start = iterator.current_column
-            x_end = iterator.current_column + trait_est.shape[1]
-            y_start = iterator.current_line
-            y_end = iterator.current_line + trait_est.shape[0]
-            out_stack[:,y_start:y_end,x_start:x_end] = np.moveaxis(trait_est,-1,0)
+        if (not use_glt_output_bool) and config_dict['file_type'] == 'emit':
+            writer.write_glt_dataset(hy_obj.glt_x,hy_obj.glt_y,dim_x_name="ortho_x",dim_y_name="ortho_y")
 
-        if use_glt_output_bool:
-            if config_dict["export_type"]=="envi":
-                for iband in range(out_stack.shape[0]):
-                    writer.write_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
-                writer.close()
+    if use_glt_output_bool:
+        if config_dict["export_type"]=="envi":
+            for iband in range(out_stack.shape[0]):
+                writer.write_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
+            writer.close()
 
-            else:
-                for iband in range(2):
-                    writer.write_netcdf_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
-                writer.close()
-
-
-                for iband in range(len(header_dict['band names'][2:])):
-                    writer = WriteNetCDF(output_name,header_dict,
-                                         attr_dict=config_dict["outside_metadata"],
-                                         glt_bool=use_glt_output_bool,
-                                         type_tag="mask",
-                                         band_name=header_dict['band names'][2:][iband])
-                    writer.write_mask_band_glt(out_stack[2+iband,:,:], (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
-                    writer.close()
         else:
-            if config_dict["export_type"]=="envi":
-                for iband in range(out_stack.shape[0]):
-                    writer.write_band(out_stack[iband,:,:],iband)
-                writer.close()
-            else:
-                for iband in range(2):
-                    writer.write_band(out_stack[iband,:,:],iband)
-                writer.close()
+            for iband in range(2):
+                writer.write_netcdf_band_glt(out_stack[iband,:,:],iband, (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
+            writer.close()
 
-                for iband in range(len(header_dict['band names'][2:])):
-                    writer = WriteNetCDF(output_name,header_dict,
-                                         attr_dict=config_dict["outside_metadata"],
-                                         glt_bool=use_glt_output_bool,
-                                         type_tag="mask",
-                                         band_name=header_dict['band names'][2:][iband])
-                    writer.write_mask_band(out_stack[2+iband,:,:])
-                    writer.close()
+
+            for iband in range(len(header_dict['band names'][2:])):
+                writer = WriteNetCDF(output_name,header_dict,
+                                     attr_dict=config_dict["outside_metadata"],
+                                     glt_bool=use_glt_output_bool,
+                                     type_tag="mask",
+                                     band_name=header_dict['band names'][2:][iband])
+                writer.write_mask_band_glt(out_stack[2+iband,:,:], (hy_obj.glt_y[hy_obj.fill_mask]-1,hy_obj.glt_x[hy_obj.fill_mask]-1),hy_obj.fill_mask)
+                writer.close()
+    else:
+        if config_dict["export_type"]=="envi":
+            for iband in range(out_stack.shape[0]):
+                writer.write_band(out_stack[iband,:,:],iband)
+            writer.close()
+        else:
+            for iband in range(2):
+                writer.write_band(out_stack[iband,:,:],iband)
+            writer.close()
+
+            for iband in range(len(header_dict['band names'][2:])):
+                writer = WriteNetCDF(output_name,header_dict,
+                                     attr_dict=config_dict["outside_metadata"],
+                                     glt_bool=use_glt_output_bool,
+                                     type_tag="mask",
+                                     band_name=header_dict['band names'][2:][iband])
+                writer.write_mask_band(out_stack[2+iband,:,:])
+                writer.close()
 
 
 if __name__== "__main__":
