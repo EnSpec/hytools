@@ -34,7 +34,7 @@ def main():
 
     hytool = ray.remote(ht.HyTools)
     actors = [hytool.remote() for image in args.images]
-    _ = ray.get([a.read_file.remote(image,'tanager') for a,image in zip(actors,args.images)])
+    _ = ray.get([a.read_file.remote(image,'tanager',keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,args.images)])
 
     def tanager_to_envi(hy_obj):
         basemame = os.path.basename(os.path.splitext(hy_obj.file_name)[0])

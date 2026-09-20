@@ -95,6 +95,12 @@ hy_obj = ht.HyTools()
 #Read and load ENVI file metadata
 hy_obj.read_file('./envi_file')
 
+#For HDF5-backed formats (NEON, EMIT, AVIRIS NetCDF) that will be read band by
+#band, keep the file open between reads and give HDF5 a larger chunk cache; NEON
+#files are chunked 27 bands deep, so this avoids decompressing the same chunks
+#once per band. Close with hy_obj.close_data(force=True) when done.
+#hy_obj.read_file('./neon_file.h5', 'neon', keep_open=True, chunk_cache_bytes=2**31)
+
 #Calculate NDVI, retrieves closest wavelength to input wavelength
 ir = hy_obj.get_wave(900)
 red = hy_obj.get_wave(660)

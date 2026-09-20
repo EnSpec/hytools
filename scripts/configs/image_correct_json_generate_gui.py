@@ -93,6 +93,7 @@ def fill_config(images, anc_files,out_coef_dir,img_file_type,corr_list, flag_pre
     config_dict["brdf"]["b/r"] = 2.5
     config_dict["brdf"]["h/b"] = 2
     config_dict["brdf"]['sample_perc'] = 0.1
+    config_dict["brdf"]['random_seed'] = 42
     config_dict["brdf"]['interp_kind'] = 'linear'
     config_dict["brdf"]['calc_mask'] = [["ndi", {'band_1': 850,'band_2': 660,
                                                  'min': 0.05,'max': 1.0}],

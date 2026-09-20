@@ -72,27 +72,34 @@ def main():
                 if bool(config_dict["glt_files"]):
                     glt_files = config_dict["glt_files"]
                     _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                                anc_path=anc_files[image],glt_path=glt_files[image]) for a,image in zip(actors,images)])
+                                                anc_path=anc_files[image],glt_path=glt_files[image],
+                                                keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
                 else:
                     _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                            anc_path=anc_files[image]) for a,image in zip(actors,images)])
+                                            anc_path=anc_files[image],
+                                            keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
             else:
                 _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                        anc_path=anc_files[image]) for a,image in zip(actors,images)])
+                                        anc_path=anc_files[image],
+                                        keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
 
         else:
             if "glt_files" in config_dict:
                 if bool(config_dict["glt_files"]):
                     glt_files = config_dict["glt_files"]
                     _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
-                                                glt_path=glt_files[image]) for a,image in zip(actors,images)])
+                                                glt_path=glt_files[image],
+                                                keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
                 else:
-                    _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+                    _ = ray.get([a.read_file.remote(image,config_dict['file_type'],
+                                                    keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
             else:
-                _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+                _ = ray.get([a.read_file.remote(image,config_dict['file_type'],keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
 
     elif config_dict['file_type'] == 'neon':
-        _ = ray.get([a.read_file.remote(image,config_dict['file_type']) for a,image in zip(actors,images)])
+        _ = ray.get([a.read_file.remote(image,
+                                        config_dict['file_type'],
+                                        keep_open=True,chunk_cache_bytes=2**31) for a,image in zip(actors,images)])
 
 
     _ = ray.get([a.create_bad_bands.remote(config_dict['bad_bands']) for a in actors])
