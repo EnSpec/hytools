@@ -55,6 +55,7 @@ class HyTools:
         self.base_key = None
         self.base_name = None
         self.brdf = {'type': None}
+        self.chunks = []
         self.glint= {'type': None}
         self.byte_order = None
         self.columns = None

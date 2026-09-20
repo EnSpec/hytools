@@ -77,6 +77,8 @@ def open_tanager(hy_obj, anc_path = {}, no_data = -9999,):
     hy_obj.bad_bands = data.attrs['good_wavelengths'][()]
 
     hy_obj.no_data = no_data
+    hy_obj.chunks = list(data.chunks)
+
     hy_obj.anc_path = {'path_length': ['sensor_to_ground_path_length'],
                         'sensor_az': ['sensor_azimuth'],
                         'sensor_zn': ['sensor_zenith'],

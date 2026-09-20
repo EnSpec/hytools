@@ -74,14 +74,29 @@ def main():
         out_header['wavelength'] = out_header['wavelength'][~hy_obj.bad_bands]
         writer = WriteENVI(output_name,out_header)
 
-        used_i_band=0
-        for i_band in range(hy_obj.bands):
-            if hy_obj.bad_bands[i_band]:
-                continue
+        if hy_obj.chunks[2]==1:
+            # band base chunking
+            used_i_band=0
+            for i_band in range(hy_obj.bands):
+                if hy_obj.bad_bands[i_band]:
+                    continue
 
-            band_data = hy_obj.get_band(i_band)
-            writer.write_band(band_data,used_i_band)
-            used_i_band+=1
+                band_data = hy_obj.get_band(i_band)
+                writer.write_band(band_data,used_i_band)
+                used_i_band+=1
+
+        else:
+            # block base chunking
+            iterator = hy_obj.iterate(by = 'chunk',chunk_size= (hy_obj.chunks[0],hy_obj.chunks[1]))
+            pixels_processed = 0
+            while not iterator.complete:
+                chunk = iterator.read_next()
+                pixels_processed += chunk.shape[0]*chunk.shape[1]
+                writer.write_chunk(chunk,iterator.current_line,iterator.current_column)
+                if iterator.complete:
+                    writer.close()
+
+
 
     def export_anc(hy_obj):
         anc_header = hy_obj.get_header()

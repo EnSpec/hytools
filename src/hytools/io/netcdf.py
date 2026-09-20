@@ -71,6 +71,7 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
         hy_obj.lines = data.shape[1]
         hy_obj.columns = data.shape[2]
         hy_obj.bands = data.shape[0]
+        hy_obj.chunks = list(data.chunks)
 
     elif sensor == 'EMIT':
         data = nc4_obj[data_var_name]
@@ -80,6 +81,7 @@ def open_netcdf(hy_obj, sensor,anc_path = {}, glt_path = {}):
         hy_obj.lines = data.shape[0]
         hy_obj.columns = data.shape[1]
         hy_obj.bands = data.shape[2]
+        hy_obj.chunks = list(data.chunks)
 
         hy_obj.bad_bands =  np.array(1-nc4_obj['sensor_band_parameters']['good_wavelengths'][()]).astype(np.bool)
 

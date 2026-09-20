@@ -51,6 +51,7 @@ def open_neon(hy_obj, no_data = -9999):
     hy_obj.bands = data.shape[2]
     hy_obj.bad_bands = np.array([False for band in range(hy_obj.bands)])
     hy_obj.no_data = no_data
+    hy_obj.chunks = list(data.chunks)
     hy_obj.anc_path = {'path_length': ['Ancillary_Imagery','Path_Length'],
                         'sensor_az': ['to-sensor_Azimuth_Angle'],
                         'sensor_zn': ['to-sensor_Zenith_Angle'],
