@@ -139,6 +139,7 @@ brdf_dict = {
       "b/r": 2.5,
       "h/b": 2,
       "sample_perc": 0.5,
+      "random_seed": 2026,
       "interp_kind": "linear",
       "calc_mask": [
          [
