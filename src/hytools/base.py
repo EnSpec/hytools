@@ -323,6 +323,9 @@ class HyTools:
 
         """
 
+        if not isinstance(index, (int, np.int16, np.int32, np.int64)):
+            raise TypeError(f"Only integer is allowed for index, but got a {type(index).__name__}. Please provide a valid integer.")
+
         self.load_data()
 
         if self.file_type == "neon":
@@ -380,6 +383,11 @@ class HyTools:
 
         """
 
+        if not (isinstance(lines, list) and isinstance(columns, list)):
+            raise TypeError("Only lists is allowed for lines and columns, " \
+                            f"but got {type(lines).__name__} and {type(columns).__name__}." \
+                            "Please provide valid lists.")
+
         self.load_data()
         if self.file_type in ["neon","emit"]:
             pixels = []
@@ -416,6 +424,9 @@ class HyTools:
 
         """
 
+        if not isinstance(index, (int, np.int16, np.int32, np.int64)):
+            raise TypeError(f"Only integer is allowed for index, but got a {type(index).__name__}. Please provide a valid integer.")
+
         self.load_data()
         if self.file_type == "neon" or self.file_type == "emit":
             line = self.data[index,:,:]
@@ -444,6 +455,9 @@ class HyTools:
             numpy.ndarray: Column array (lines, bands).
 
         """
+
+        if not isinstance(index, (int, np.int16, np.int32, np.int64)):
+            raise TypeError(f"Only integer is allowed for index, but got a {type(index).__name__}. Please provide a valid integer.")
 
         self.load_data()
         if self.file_type == "neon" or self.file_type == "emit":

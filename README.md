@@ -116,7 +116,7 @@ band = hy_obj.get_band(10)
 column = hy_obj.get_column(1)
 line = hy_obj.get_line(234)
 chunk = hy_obj.get_chunk(0,100,0,100)
-pixels = hy_obj.get_pixels([102,434],[324,345])
+pixels = hy_obj.get_pixels([102,434,433],[324,345,345])
 
 # Create a writer object to write to new file
 writer = ht.io.WriteENVI('output_envi',hy_obj.get_header())

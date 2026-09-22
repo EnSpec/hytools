@@ -613,7 +613,7 @@ def envi_read_pixels(data,lines,columns,interleave):
     elif interleave == "bil":
         pixels = data[lines,:,columns]
     elif interleave == "bsq":
-        pixels = data[:,lines,columns]
+        pixels = np.moveaxis(data[:,lines,columns],0,1)
     return pixels
 
 
