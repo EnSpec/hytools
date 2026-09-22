@@ -24,7 +24,7 @@ import ray
 import numpy as np
 import h5py
 from .universal import universal_brdf,apply_universal
-from .flex import flex_brdf,apply_flex,ndvi_stratify, get_kernel_samples, ndvi_bins, get_band_samples
+from .flex import flex_brdf,apply_flex,ndvi_stratify, get_kernel_samples, ndvi_bins, get_band_samples, solve_bins
 from ..masks import mask_create
 from ..misc import set_brdf, update_brdf, progbar
 
@@ -94,37 +94,23 @@ def calc_flex_single_post(combine_data_dict,brdf_dict,load_reflectance_mode):
 
     ndvi_stratify_samples(combine_data_dict)
 
-    coeffs = {}
-    good_band_count=0
-    for band_num,band in enumerate(bad_bands):
-        if ~band:
-            coeffs[band_num] = {}
+    band_nums = [b for b, bad in enumerate(bad_bands) if ~bad]
 
-            if load_reflectance_mode==0:
-                band_samples = combine_data_dict["reflectance_samples"][:,good_band_count]   #ray.get([a.do.remote(get_band_samples,
-                                     #{'band_num':band_num}) for a in actors])
-            else:
-                combine_refl = []
-                for h5name in combine_data_dict["reflectance_samples"]:
-                    h5_obj = h5py.File(h5name, "r")
-                    sub_refl_samples = h5_obj["reflectance_samples"][()][:,good_band_count]
-                    combine_refl += [sub_refl_samples]
-                    h5_obj.close()
-                band_samples = np.concatenate(combine_refl,axis=0)
+    # the pooled reflectance samples, (samples, good bands): in memory, or read once per
+    # sample file instead of once per band
+    if load_reflectance_mode==0:
+        Y = combine_data_dict["reflectance_samples"]
+    else:
+        combine_refl = []
+        for h5name in combine_data_dict["reflectance_samples"]:
+            with h5py.File(h5name, "r") as h5_obj:
+                combine_refl.append(h5_obj["reflectance_samples"][()])
+        Y = np.concatenate(combine_refl,axis=0)
 
-            band_coeffs= []
-            for bin_num in combine_data_dict['brdf_dict']['bins']:
-
-                bin_mask =  (combine_data_dict["ndvi_classes"]== bin_num)
-
-                X = np.concatenate([combine_data_dict["kernels_samples"],np.ones((bin_mask.shape[0],1))],axis=1)[bin_mask]    #kernel_samples[:,:3][bin_mask]
-                y = band_samples[bin_mask]
-                band_coeffs.append(np.linalg.lstsq(X, y,rcond=-1)[0].flatten().tolist())
-            coeffs[band_num]  = band_coeffs
-            progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
-            good_band_count+=1
-
-    print('\n')
+    X = np.concatenate([combine_data_dict["kernels_samples"],
+                        np.ones((combine_data_dict["ndvi_classes"].shape[0],1))],axis=1)
+    coeffs = solve_bins(X, combine_data_dict["ndvi_classes"], Y,
+                        list(combine_data_dict['brdf_dict']['bins']), band_nums)
 
     combine_data_dict["brdf_dict"]['coeffs'] = coeffs
 
