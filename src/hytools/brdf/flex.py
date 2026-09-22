@@ -141,6 +141,29 @@ def get_band_samples(hy_obj,args):
                            corrections = hy_obj.corrections)
     return band[hy_obj.ancillary['ndvi_classes'] !=0]
 
+def solve_bins(X, classes, Y, bins, band_nums):
+    '''Least squares fit of every NDVI bin, all bands at once.
+
+    In a bin every band shares the same design matrix X (volume kernel, geometric
+    kernel, 1), so the bands are independent right-hand sides of one least squares
+    problem and one call to lstsq per bin gives the coefficients of all of them. This
+    replaces a loop over bands x bins that re-masked the full sample arrays for every
+    pair; the coefficients are identical.
+
+    X : (samples, 3) kernel matrix
+    classes : (samples,) NDVI bin number of each sample, 0 = unused
+    Y : (samples, bands) reflectance of the good bands, in band_nums order
+    bins : the bin numbers, in order
+    band_nums : image band index of each column of Y
+
+    Returns {band_num: [[f_vol, f_geo, f_iso] per bin]}, the layout of brdf['coeffs'].
+    '''
+    coeffs = np.zeros((len(bins), X.shape[1], Y.shape[1]))
+    for i, bin_num in enumerate(bins):
+        bin_mask = (classes == bin_num)
+        coeffs[i] = np.linalg.lstsq(X[bin_mask], Y[bin_mask], rcond=-1)[0]
+    return {int(band_num): coeffs[:, :, j].tolist() for j, band_num in enumerate(band_nums)}
+
 def calc_flex_single(hy_obj,brdf_dict):
     ''' Calculate BRDF coefficents for a single image
     '''
@@ -158,19 +181,12 @@ def calc_flex_single(hy_obj,brdf_dict):
     ndvi_stratify(hy_obj)
     kernel_samples= get_kernel_samples(hy_obj)
 
-    # Calculate coefficients for each band and class
-    for band_num,band in enumerate(hy_obj.bad_bands):
-        if ~band:
-            hy_obj.brdf['coeffs'][band_num] = {}
-            band_samples = hy_obj.do(get_band_samples, {'band_num':band_num})
-            coeffs= []
-
-            for bin_num in hy_obj.brdf['bins']:
-                bin_mask = (kernel_samples[:,3] == bin_num)
-                X = kernel_samples[:,:3][bin_mask]
-                y = band_samples[bin_mask]
-                coeffs.append(np.linalg.lstsq(X, y,rcond=-1)[0].flatten().tolist())
-            hy_obj.brdf['coeffs'][band_num]  = coeffs
+    # Gather the samples of every good band, then fit each bin for all bands at once
+    band_nums = [b for b, bad in enumerate(hy_obj.bad_bands) if ~bad]
+    Y = np.stack([hy_obj.do(get_band_samples, {'band_num':band_num})
+                  for band_num in band_nums], axis=1)
+    hy_obj.brdf['coeffs'] = solve_bins(kernel_samples[:,:3], kernel_samples[:,3], Y,
+                                       list(hy_obj.brdf['bins']), band_nums)
 
 def calc_flex_group(actors,brdf_dict):
     ''' Calculate BRDF coefficents for a group of images
@@ -200,24 +216,19 @@ def calc_flex_group(actors,brdf_dict):
     kernel_samples = np.concatenate(kernel_samples)
 
     bad_bands = ray.get(actors[0].do.remote(lambda x: x.bad_bands))
-    coeffs = {}
+    band_nums = [b for b, bad in enumerate(bad_bands) if ~bad]
 
-    for band_num,band in enumerate(bad_bands):
-        if ~band:
-            coeffs[band_num] = {}
-            band_samples = ray.get([a.do.remote(get_band_samples,
-                                     {'band_num':band_num}) for a in actors])
-            band_samples = np.concatenate(band_samples)
-            band_coeffs= []
-            for bin_num in bins:
-                bin_mask = (kernel_samples[:,3] == bin_num)
-                X = kernel_samples[:,:3][bin_mask]
-                y = band_samples[bin_mask]
-                band_coeffs.append(np.linalg.lstsq(X, y,rcond=-1)[0].flatten().tolist())
-            coeffs[band_num]  = band_coeffs
-            progbar(np.sum(~bad_bands[:band_num+1]),np.sum(~bad_bands))
-
+    # Gather the samples of every good band, then fit each bin for all bands at once
+    Y = []
+    for j, band_num in enumerate(band_nums):
+        band_samples = ray.get([a.do.remote(get_band_samples,
+                                 {'band_num':band_num}) for a in actors])
+        Y.append(np.concatenate(band_samples))
+        progbar(j+1, len(band_nums))
     print('\n')
+
+    coeffs = solve_bins(kernel_samples[:,:3], kernel_samples[:,3], np.stack(Y, axis=1),
+                        list(bins), band_nums)
 
     #Update BRDF coeffs
     _ = ray.get([a.do.remote(update_brdf,{'key':'coeffs',
